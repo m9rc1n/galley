@@ -15,11 +15,11 @@
     <section id="site"></section>
 
     <section id="token" hidden>
-      <h2>GitHub token <span class="muted">· private repositories only</span></h2>
+      <h2>GitHub token <span class="muted">· private repositories and comments</span></h2>
       <p class="muted">
         Public repositories work without one. For private ones, create a
-        <a id="token-link" target="_blank" rel="noopener noreferrer">fine-grained token</a> with read-only
-        <b>Contents</b> and <b>Pull requests</b> access. It is stored only in this browser.
+        <a id="token-link" target="_blank" rel="noopener noreferrer">fine-grained token</a> with <b>Contents: read-only</b> and <b>Pull requests: read-only</b> to read.
+        To post comments from the reader, use <b>Pull requests: read and write</b>. It is stored only in this browser.
       </p>
       <form id="token-form">
         <input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" />
@@ -30,7 +30,7 @@
 
     <footer class="muted">
       Open a pull or merge request and press <b>Read</b>. In the reader: <kbd>J</kbd>/<kbd>K</kbd> changes,
-      <kbd>[</kbd>/<kbd>]</kbd> documents, <kbd>C</kbd> clean view, <kbd>Esc</kbd> back.
+      <kbd>[</kbd>/<kbd>]</kbd> documents, <kbd>C</kbd> clean view, <kbd>Esc</kbd> close.
     </footer>
     <script src="popup.js"></script>
   </body>

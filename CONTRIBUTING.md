@@ -22,7 +22,7 @@ npm run typecheck  # TypeScript
 npm run build      # both browser builds
 ```
 
-CI runs the same three. If you change what the reader looks like, include a screenshot; `npm run store-assets` redraws the store graphics from the real reader.
+CI runs the same three. Reader changes should also pass `node scripts/check-reader.mjs` with the demo running; set `CHROME_PATH` if Chrome is installed elsewhere. If you change what the reader looks like, include a screenshot; `npm run store-assets` redraws the store graphics from the real reader.
 
 ## Guidelines
 

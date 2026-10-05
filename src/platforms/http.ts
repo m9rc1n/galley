@@ -1,10 +1,16 @@
 export class HttpError extends Error {
+  readonly status: number;
+  readonly url: string;
+  readonly headers: Headers | null;
   constructor(
-    readonly status: number,
-    readonly url: string,
-    readonly headers: Headers | null,
+    status: number,
+    url: string,
+    headers: Headers | null,
   ) {
     super(`HTTP ${status} for ${url}`);
+    this.status = status;
+    this.url = url;
+    this.headers = headers;
   }
 }
 

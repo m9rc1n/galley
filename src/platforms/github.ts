@@ -1,3 +1,5 @@
+import { getToken } from '../ui/settings.ts';
+import { commentContext, diffRange, requireBody, validateTarget } from './comments.ts';
 import { reconstructBase } from '../core/patch.ts';
 import { encodePath, isMarkdownPath } from '../core/paths.ts';
 import type { GitHubContext } from './detect.ts';
@@ -56,11 +58,13 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
   if (token) headers.Authorization = `Bearer ${token}`;
   const api = async <T>(path: string) => {
     try {
-      return await getJson<T>(`${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}${path}`, { headers, credentials: 'omit' });
+      return await getJson<T>(`${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}${path}`, { headers, credentials: 'omit', cache: 'no-store' });
     } catch (err) {
       throw explain(err, Boolean(token));
     }
   };
+
+  const { data: pr } = await api<{ base: { sha: string }; head: { sha: string } }>(`/pulls/${ctx.number}`);
 
   const files: GitHubFile[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -69,8 +73,10 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
     if (data.length < 100) break;
   }
 
-  // raw_url is https://<host>/<owner>/<repo>/raw/<head sha>/<path>
-  const headSha = files.map((f) => /\/raw\/([0-9a-f]{40})\//.exec(f.raw_url)?.[1]).find(Boolean) ?? '';
+  // Use PR metadata: a removed file’s raw_url can point at the base commit.
+  const { data: snapshot } = await api<{ head: { sha: string }; base: { sha: string } }>(`/pulls/${ctx.number}`);
+  if (snapshot.head.sha !== pr.head.sha || snapshot.base.sha !== pr.base.sha) throw new ReaderError('This pull request changed while loading.', 'Reopen the reader to load the latest version.');
+  const headSha = pr.head.sha;
   const repoUrl = `${ctx.origin}/${ctx.owner}/${ctx.repo}`;
   // Same-origin raw URLs work for public and private repositories alike: the browser session
   // authorises them and GitHub redirects to raw.githubusercontent.com.
@@ -79,7 +85,6 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
   let mergeBase: Promise<string> | null = null;
   const getMergeBase = () =>
     (mergeBase ??= (async () => {
-      const { data: pr } = await api<{ base: { sha: string }; head: { sha: string } }>(`/pulls/${ctx.number}`);
       const { data: cmp } = await api<{ merge_base_commit: { sha: string } }>(`/compare/${pr.base.sha}...${pr.head.sha}`);
       return cmp.merge_base_commit.sha;
     })());
@@ -106,6 +111,37 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
       // Large diffs come without a patch: fetch the old version at the merge base instead.
       const base = await getText(raw(await getMergeBase(), ref.oldPath));
       return { base, head };
+    },
+    async prepareComment(target) {
+      validateTarget(docs, target);
+      const file = (target.doc as GitHubDoc).file;
+      const range = diffRange(file.patch, target);
+      const kind = range ? 'inline' : 'file';
+      return {
+        kind,
+        label: range ? 'Post inline on GitHub' : 'Post file comment on GitHub (paragraph quoted)',
+        async post(body) {
+          requireBody(body);
+          const currentToken = await getToken(ctx.origin);
+          if (!currentToken) throw new ReaderError('Add a GitHub token to comment.', 'In the Galley popup, save a token with Contents: read and Pull requests: read and write. Your draft is kept.');
+          const writeHeaders = { ...headers, Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' };
+          try {
+            const { data: latest } = await getJson<{ head: { sha: string }; base: { sha: string } }>(`${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.number}`, { headers: writeHeaders, credentials: 'omit', cache: 'no-store' });
+            if (latest.head.sha !== headSha || latest.base.sha !== pr.base.sha) throw new ReaderError('This pull request changed while you were reading.', 'Copy your draft and reopen the reader to comment on the latest version.');
+            const side = target.side === 'base' ? 'LEFT' : 'RIGHT';
+            const payload = range
+              ? { body: commentContext(target, body), path: target.doc.path, commit_id: headSha, line: target.endLine, side, ...(target.startLine < target.endLine ? { start_line: target.startLine, start_side: side } : {}) }
+              : { body: commentContext(target, body), path: target.doc.path, commit_id: headSha, subject_type: 'file' };
+            const { data } = await getJson<{ html_url: string }>(`${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.number}/comments`, { method: 'POST', headers: writeHeaders, credentials: 'omit', body: JSON.stringify(payload) });
+            return { url: data.html_url };
+          } catch (err) {
+            if (err instanceof HttpError && err.status === 403) throw new ReaderError('GitHub did not allow this comment.', 'Check Pull requests: read and write access, repository permissions and any SSO authorization. Your draft is kept.');
+            if (err instanceof HttpError && err.status === 422) throw new ReaderError('GitHub could not attach this comment to the selected lines.', 'The diff may have changed. Copy your draft and reopen the reader.');
+            if (err instanceof HttpError && err.status === 0) throw new ReaderError('Could not confirm whether GitHub posted your comment.', 'Check the platform before trying again to avoid a duplicate. Your draft is kept.');
+            throw explain(err, true);
+          }
+        },
+      };
     },
     links() {
       return {

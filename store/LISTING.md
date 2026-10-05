@@ -45,7 +45,7 @@ PRIVATE BY DESIGN
 • Galley itself only contacts the GitHub or GitLab site you are using. Images embedded in documents load from where they are hosted.
 • Rendered documents are sanitised, so content from forks cannot run scripts or imitate Galley's change markers.
 
-Galley is read-only: comments still go through the platform's own review tools.
+Read all changed documents in a continuous stream, with changed paragraphs shown first. Reveal nearby unchanged context at any gap. Click a paragraph or select text, then post a normal platform comment from the reader. GitLab uses your signed-in session; GitHub commenting needs a token with Pull requests: read and write.
 
 GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. Galley is not affiliated with or endorsed by either company.
 ```

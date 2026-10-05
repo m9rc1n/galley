@@ -1,7 +1,8 @@
-import { ReaderError, type DocContents, type DocRef, type DocStatus, type ReviewSource } from '../platforms/types.ts';
+import { ReaderError, type DocContents, type DocRef, type DocStatus, type ReviewSource, type CommentTarget, type CommentPlan } from '../platforms/types.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
 import { renderDocument, type RenderedDoc } from './render.ts';
+import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
 import { DEFAULT_SETTINGS, TEXT_SIZES, loadSettings, saveSettings, type Settings } from './settings.ts';
 
 const STATUS_LABEL: Record<DocStatus, string> = { added: 'New', removed: 'Deleted', modified: 'Edited', renamed: 'Renamed' };
@@ -14,7 +15,7 @@ const TEMPLATE = `
   <div class="mr-progress"><div></div></div>
   <header class="mr-topbar">
     <div class="mr-tb-left">
-      <button class="mr-btn" data-act="close" title="Back to the diff (Esc)">${icons.back}<span class="mr-hide-sm">Back</span></button>
+      <button class="mr-btn" data-act="close" title="Close reader (Esc)" aria-label="Close reader (Esc)">${icons.close}</button>
       <span class="mr-brand">galley${__GALLEY_DEV__ ? '<span class="mr-dev">dev</span>' : ''}</span>
       <span class="mr-pr-title"></span>
     </div>
@@ -49,8 +50,13 @@ const TEMPLATE = `
       <dt><kbd>]</kbd> <kbd>[</kbd></dt><dd>Next / previous document</dd>
       <dt><kbd>C</kbd></dt><dd>Changes on / off</dd>
       <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Text size</dd>
-      <dt><kbd>Esc</kbd></dt><dd>Back to the diff</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close reader</dd>
     </dl>
+  </div>
+  <div class="mr-scope" role="group" aria-label="Paragraph filter">
+    <button class="mr-btn" data-scope="changed" aria-pressed="true">Changed paragraphs</button>
+    <button class="mr-btn" data-scope="all" aria-pressed="false">Entire files</button>
+    <span class="mr-guide-hint">Click a paragraph or select text to comment</span>
   </div>
   <nav class="mr-toc" aria-label="Contents"></nav>
   <main class="mr-main">
@@ -59,6 +65,12 @@ const TEMPLATE = `
       <div class="mr-doc"></div>
     </article>
   </main>
+  <form class="mr-composer" hidden>
+    <div class="mr-comment-context"><label for="mr-comment">Comment on <span class="mr-comment-target">a paragraph</span></label><button type="button" class="mr-btn" data-act="follow">Follow reading</button></div>
+    <blockquote class="mr-comment-quote" hidden></blockquote>
+    <div class="mr-comment-row"><textarea id="mr-comment" rows="2" placeholder="Write a review comment…" aria-describedby="mr-comment-status"></textarea><button type="submit" class="mr-btn mr-primary mr-submit" disabled>Post comment</button></div>
+    <p id="mr-comment-status" class="mr-comment-status" role="status" aria-live="polite"></p>
+  </form>
   <div class="mr-pill" hidden>
     <button class="mr-btn" data-act="prev" title="Previous change (K)" aria-label="Previous change">${icons.up}</button>
     <span class="mr-pill-label" aria-live="polite"></span>
@@ -137,7 +149,7 @@ class Reader {
   private readonly shadow = this.host.attachShadow({ mode: 'open' });
   private readonly root: HTMLElement;
   private readonly el: Record<
-    'progress' | 'topbar' | 'prTitle' | 'fileBtn' | 'fileStatus' | 'filePath' | 'fileCount' | 'files' | 'settings' | 'toc' | 'article' | 'gutter' | 'doc' | 'pill' | 'pillLabel',
+    'progress' | 'topbar' | 'prTitle' | 'fileBtn' | 'fileStatus' | 'filePath' | 'fileCount' | 'files' | 'settings' | 'toc' | 'article' | 'gutter' | 'doc' | 'pill' | 'pillLabel' | 'composer' | 'commentTarget' | 'commentQuote' | 'commentStatus',
     HTMLElement
   >;
   private settings: Settings = { ...DEFAULT_SETTINGS };
@@ -148,8 +160,15 @@ class Reader {
   private headings: Array<{ el: HTMLElement; link: HTMLElement }> = [];
   private markTargets: HTMLElement[] = [];
   private lastStep: { el: HTMLElement; at: number } | null = null;
-  private renderToken = 0;
-  private lastScrollTop = 0;
+  private views: Array<{ doc: DocRef; section: HTMLElement; rendered: RenderedDoc | null }> = [];
+  private target: CommentTarget | null = null;
+  private targetEls: HTMLElement[] = [];
+  private pinned = false;
+  private plan: CommentPlan | null = null;
+  private planToken = 0;
+  private submitting = false;
+  private readonly textarea: HTMLTextAreaElement;
+  private readonly submit: HTMLButtonElement;
   private frame = 0;
   private needLayout = false;
   private closed = false;
@@ -179,7 +198,19 @@ class Reader {
       doc: q('.mr-doc'),
       pill: q('.mr-pill'),
       pillLabel: q('.mr-pill-label'),
+      composer: q('.mr-composer'),
+      commentTarget: q('.mr-comment-target'),
+      commentQuote: q('.mr-comment-quote'),
+      commentStatus: q('.mr-comment-status'),
     };
+    q('.mr-scope').append(this.el.pill);
+    this.textarea = q('#mr-comment') as HTMLTextAreaElement;
+    this.submit = q('.mr-submit') as HTMLButtonElement;
+    this.el.composer.addEventListener('submit', (e) => { e.preventDefault(); void this.postComment(); });
+    this.textarea.addEventListener('focus', () => { if (this.target) this.pinned = true; });
+    this.textarea.addEventListener('input', () => { if (this.target) this.pinned = true; this.updateSubmit(); });
+    this.root.addEventListener('mouseup', (e) => this.captureSelection(e));
+    this.root.addEventListener('keyup', (e) => { if (e.key === 'Shift') this.captureSelection(); });
     this.el.doc.replaceChildren(this.skeleton());
 
     this.prevOverflow = document.documentElement.style.overflow;
@@ -189,10 +220,15 @@ class Reader {
     this.root.focus({ preventScroll: true });
 
     this.root.addEventListener('click', (e) => this.onClick(e));
+    this.root.addEventListener('galley:context', () => {
+      if (this.rendered) this.buildToc(this.rendered);
+      this.schedule(true);
+    });
     this.root.addEventListener('scroll', () => this.schedule(false), { passive: true });
     for (const type of ['keydown', 'keyup', 'keypress']) window.addEventListener(type, this.shield, true);
     this.dark.addEventListener('change', this.onSchemeChange);
     this.resize.observe(this.el.doc);
+    this.resize.observe(this.el.composer);
 
     this.applySettings();
     void loadSettings().then((s) => {
@@ -209,7 +245,19 @@ class Reader {
       this.showMessage('No markdown changes here', 'This change set does not touch any markdown files.');
       return;
     }
-    void this.show(Math.min(Math.max(start, 0), source.docs.length - 1));
+    this.index = Math.min(Math.max(start, 0), source.docs.length - 1);
+    this.views = source.docs.map((doc, i) => {
+      const section = h('section', `mr-document${doc.status === 'removed' ? ' doc-removed' : ''}`);
+      section.setAttribute('aria-label', doc.path);
+      section.dataset.document = String(i);
+      section.append(this.skeleton());
+      return { doc, section, rendered: null };
+    });
+    this.el.doc.replaceChildren(...this.views.map((view) => view.section));
+    this.updateFileButton();
+    this.el.composer.hidden = false;
+    this.el.commentStatus.textContent = 'Click a paragraph or select text. Comments post to the platform and are visible to your teammates.';
+    void this.loadAll(this.index);
   }
 
   close(): void {
@@ -257,40 +305,51 @@ class Reader {
     return p;
   }
 
-  private async show(index: number): Promise<void> {
-    const source = this.source!;
-    const doc = source.docs[index];
-    const token = ++this.renderToken;
+  private async loadAll(start: number): Promise<void> {
+    // Keep source order and limit requests to three documents at once.
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < this.views.length && !this.closed) {
+        const index = cursor++;
+        await this.loadView(index);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, this.views.length) }, worker));
+    if (!this.closed && start) this.show(start);
+  }
+
+  private async loadView(index: number): Promise<void> {
+    const view = this.views[index];
+    try {
+      const contents = await this.load(view.doc);
+      if (this.closed) return;
+      const r = renderDocument(document, { path: view.doc.status === 'removed' ? view.doc.oldPath : view.doc.path, status: view.doc.status, ...contents, links: this.source!.links(view.doc) });
+      view.rendered = r;
+      view.section.replaceChildren(this.buildArticle(view.doc, r));
+      filterDocument(r, this.settings.scope === 'changed');
+      if (index === this.index) { this.rendered = r; this.buildToc(r); }
+      this.schedule(true);
+    } catch (err) {
+      if (this.closed) return;
+      const box = h('div', 'mr-message');
+      box.append(h('h2', '', view.doc.path), h('p', '', err instanceof Error ? err.message : String(err)));
+      const retry = actionButton('Try again', 'retry-doc', 'mr-outline');
+      retry.dataset.doc = String(index);
+      box.append(retry);
+      view.section.replaceChildren(box);
+      this.schedule(true);
+    }
+  }
+
+  private show(index: number): void {
+    const view = this.views[index];
+    if (!view) return;
     this.index = index;
+    this.rendered = view.rendered;
     this.closeMenus();
     this.updateFileButton();
-    this.rendered = null;
-    this.el.doc.replaceChildren(this.skeleton());
-    this.el.toc.replaceChildren();
-    this.el.gutter.replaceChildren();
-    this.el.pill.hidden = true;
-    this.root.classList.toggle('doc-removed', doc.status === 'removed');
-    this.root.scrollTop = 0;
-    try {
-      const contents = await this.load(doc);
-      if (token !== this.renderToken || this.closed) return;
-      const rendered = renderDocument(document, {
-        path: doc.status === 'removed' ? doc.oldPath : doc.path,
-        status: doc.status,
-        base: contents.base,
-        head: contents.head,
-        links: source.links(doc),
-      });
-      this.rendered = rendered;
-      this.el.doc.replaceChildren(this.buildArticle(doc, rendered));
-      this.buildToc(rendered);
-      this.el.pill.hidden = rendered.changes.length === 0;
-      this.schedule(true);
-      const next = source.docs[index + 1];
-      if (next) this.load(next).catch(() => {});
-    } catch (err) {
-      if (token === this.renderToken) this.showError(err);
-    }
+    if (view.rendered) this.buildToc(view.rendered);
+    this.scrollToEl(view.section, 0.12, false);
   }
 
   private buildArticle(doc: DocRef, r: RenderedDoc): DocumentFragment {
@@ -314,7 +373,8 @@ class Reader {
     } else {
       frag.append(h('h1', 'mr-title', r.title ?? prettyName(doc.path)), ...intro);
     }
-    frag.append(r.content, this.footer());
+    frag.append(r.content);
+    if (!r.blocks.some((block) => block.kind !== 'same')) frag.append(h('p', 'mr-empty-changes', 'No changed paragraphs. Choose Entire files to read this document.'));
     return frag;
   }
 
@@ -333,31 +393,11 @@ class Reader {
     return line;
   }
 
-  private footer(): HTMLElement {
-    const end = h('footer', 'mr-end');
-    const docs = this.source!.docs;
-    const next = docs[this.index + 1];
-    if (next) {
-      const b = h('button', 'mr-next');
-      b.dataset.act = 'doc';
-      b.dataset.doc = String(this.index + 1);
-      const label = h('span');
-      label.append(h('small', '', `Next document · ${this.index + 2} of ${docs.length}`), h('span', 'mr-path', next.path));
-      b.append(label);
-      b.insertAdjacentHTML('beforeend', icons.arrowRight);
-      end.append(b);
-    } else {
-      end.append(h('p', 'mr-end-note', docs.length > 1 ? 'That was the last changed document.' : 'End of document.'));
-      end.append(actionButton('Back to the diff', 'close', 'mr-outline'));
-    }
-    return end;
-  }
-
   private buildToc(r: RenderedDoc): void {
     this.headings = [];
     const toc = this.el.toc;
     toc.replaceChildren();
-    const all = [...r.content.querySelectorAll<HTMLElement>('h1, h2, h3')].filter((el) => el !== r.lead && !el.closest('.mr-ghost'));
+    const all = [...r.content.querySelectorAll<HTMLElement>('h1, h2, h3')].filter((el) => el !== r.lead && !el.closest('.mr-ghost') && !el.hidden);
     if (all.length < 3) return;
     const top = Math.min(...all.map((el) => Number(el.tagName[1])));
     toc.append(h('p', 'mr-toc-title', 'Contents'));
@@ -440,7 +480,7 @@ class Reader {
       wasOpen ||= !menu.hidden;
       menu.hidden = true;
     }
-    for (const b of this.shadow.querySelectorAll('[aria-expanded]')) b.setAttribute('aria-expanded', 'false');
+    for (const b of this.shadow.querySelectorAll('.mr-topbar [aria-expanded]')) b.setAttribute('aria-expanded', 'false');
     return wasOpen;
   }
 
@@ -453,6 +493,9 @@ class Reader {
   private applySettings(): void {
     const s = this.settings;
     const r = this.root;
+    for (const view of this.views) if (view.rendered) filterDocument(view.rendered, s.scope === 'changed');
+    if (this.rendered) this.buildToc(this.rendered);
+    for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-scope]')) b.setAttribute('aria-pressed', String(b.dataset.scope === s.scope));
     r.classList.toggle('mode-changes', s.mode === 'changes');
     r.classList.toggle('mode-clean', s.mode === 'clean');
     r.classList.toggle('font-sans', s.font === 'sans');
@@ -484,7 +527,7 @@ class Reader {
   }
 
   private visibleChanges(): HTMLElement[] {
-    return (this.rendered?.changes ?? []).filter((el) => el.getClientRects().length > 0);
+    return this.views.flatMap((view) => view.rendered?.changes ?? []).filter((el) => el.getClientRects().length > 0);
   }
 
   private step(direction: 1 | -1): void {
@@ -522,8 +565,25 @@ class Reader {
   };
 
   private onKey(e: KeyboardEvent): void {
-    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.defaultPrevented) return;
+    if (e.key === 'Escape') {
+      if (this.submitting) { e.preventDefault(); return; }
+      if (!this.closeMenus()) this.close();
+      e.preventDefault();
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.composedPath()[0] === this.textarea) { e.preventDefault(); void this.postComment(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     const target = e.composedPath()[0];
+    if (e.key === 'Tab') {
+      const controls = [...this.shadow.querySelectorAll<HTMLElement>('button, a[href], input, textarea, select, summary, [tabindex="0"]')]
+        .filter((el) => el.getClientRects().length && !el.matches(':disabled'));
+      const index = controls.indexOf(this.shadow.activeElement as HTMLElement);
+      const next = e.shiftKey ? (index <= 0 ? controls.length - 1 : index - 1) : (index + 1) % controls.length;
+      controls[next]?.focus();
+      e.preventDefault();
+      return;
+    }
     if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable]')) return;
     switch (e.key) {
       case 'Escape':
@@ -568,11 +628,15 @@ class Reader {
     if (anchor) {
       e.preventDefault();
       const id = decodeURIComponent(anchor.getAttribute('href')!.slice(1));
-      const dest = id && (this.shadow.getElementById(id) ?? this.shadow.getElementById(`user-content-${id}`));
+      const content = anchor.closest('.mr-content');
+      const dest = id ? [...(content?.querySelectorAll('[id]') ?? [])].find((el) => el.id === id || el.id === `user-content-${id}`) : undefined;
+      if (dest?.closest('[hidden]')) this.update({ scope: 'all' });
       if (dest) this.scrollToEl(dest, 0.12);
       return;
     }
 
+    const scope = target.closest<HTMLElement>('[data-scope]');
+    if (scope) return this.update({ scope: scope.dataset.scope as Settings['scope'] });
     const mode = target.closest<HTMLElement>('[data-mode]');
     if (mode) return this.update({ mode: mode.dataset.mode as Settings['mode'] });
     const setting = target.closest<HTMLElement>('[data-setting] [data-value]');
@@ -602,6 +666,15 @@ class Reader {
       case 'doc':
         void this.show(Number(action.dataset.doc));
         return;
+      case 'retry-doc':
+        void this.loadView(Number(action.dataset.doc));
+        return;
+      case 'follow':
+        if (this.submitting) return;
+        this.pinned = false;
+        this.target = null;
+        this.guide();
+        return;
       case 'retry':
         if (this.source) void this.show(this.index);
         return;
@@ -616,6 +689,126 @@ class Reader {
         if (dest) this.scrollToEl(dest);
         return;
       }
+    }
+  }
+
+  // ---------------------------------------------------------------- comments & reading guide
+
+  private updateSubmit(): void {
+    this.submit.disabled = this.submitting || !this.plan || !this.textarea.value.trim();
+  }
+
+  private guide(): void {
+    if (this.pinned || this.submitting || this.textarea.value) return;
+    const line = this.root.clientHeight * FOCUS_LINE;
+    const candidates = this.views.flatMap((view) => (view.rendered?.blocks ?? []).map((block) => ({ view, block })))
+      .filter(({ block }) => block.el.getClientRects().length && block.el.getBoundingClientRect().bottom > 90 && block.el.getBoundingClientRect().top < this.root.clientHeight - this.el.composer.offsetHeight);
+    const current = candidates.find(({ block }) => block.el.getBoundingClientRect().top <= line && block.el.getBoundingClientRect().bottom >= line)
+      ?? candidates.reduce<typeof candidates[number] | undefined>((best, entry) => !best || Math.abs(entry.block.el.getBoundingClientRect().top - line) < Math.abs(best.block.el.getBoundingClientRect().top - line) ? entry : best, undefined);
+    if (current) this.setTarget(paragraphTarget(current.view.doc, current.block), [current.block.el]);
+  }
+
+  private captureSelection(event?: MouseEvent): void {
+    if (this.submitting || this.textarea.value || (event?.target as Element | undefined)?.closest('.mr-composer')) return;
+    const selection = (this.shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.() ?? document.getSelection();
+    if (selection && !selection.isCollapsed && selection.rangeCount) {
+      const range = selection.getRangeAt(0);
+      const view = this.views.find((view) => view.section.contains(range.startContainer) && view.section.contains(range.endContainer));
+      const target = view?.rendered && selectionTarget(view.doc, view.rendered.blocks, range);
+      if (!target || !view?.rendered) {
+        this.clearTarget();
+        this.pinned = true;
+        this.el.commentStatus.textContent = 'Select text in one file and one version (old or new) to attach a comment.';
+        return;
+      }
+      this.pinned = true;
+      this.setTarget(target, view.rendered.blocks.filter((block) => range.intersectsNode(block.el)).map((block) => block.el));
+    } else if (event) {
+      const node = event.target as Node;
+      const view = this.views.find((view) => view.section.contains(node));
+      const block = view?.rendered?.blocks.find((block) => block.el === node || block.el.contains(node));
+      if (view && block && !(node as Element).closest('a, button, summary, input')) {
+        const side = (node as Element).closest('del.mr-del, .mr-ghost-row') ? 'base' : block.head ? 'head' : 'base';
+        this.pinned = true;
+        this.setTarget(paragraphTarget(view.doc, block, side), [block.el]);
+      }
+    }
+  }
+
+  private clearTarget(): void {
+    this.planToken++;
+    this.target = null;
+    this.plan = null;
+    for (const el of this.targetEls) el.classList.remove('mr-reading');
+    this.targetEls = [];
+    this.el.commentTarget.textContent = 'a paragraph';
+    this.el.commentQuote.hidden = true;
+    this.updateSubmit();
+  }
+
+  private setTarget(target: CommentTarget | null, elements: HTMLElement[]): void {
+    if (!target) return;
+    if (this.target?.doc === target.doc && this.target.side === target.side && this.target.startLine === target.startLine && this.target.endLine === target.endLine && this.target.quote === target.quote) {
+      this.el.commentQuote.hidden = !this.pinned || !target.quote;
+      if (this.plan) this.el.commentStatus.textContent = `${this.plan.label}. ${this.pinned ? 'Target pinned.' : 'Target follows your reading position.'}`;
+      return;
+    }
+    this.clearTarget();
+    this.target = target;
+    this.targetEls = elements;
+    for (const el of elements) el.classList.add('mr-reading');
+    this.el.commentTarget.textContent = `${target.side === 'base' ? target.doc.oldPath : target.doc.path} · ${target.side === 'base' ? 'old' : 'new'} paragraph lines ${target.startLine}–${target.endLine}`;
+    this.el.commentQuote.textContent = target.quote;
+    this.el.commentQuote.hidden = !this.pinned || !target.quote;
+    const token = ++this.planToken;
+    const prepare = this.source?.prepareComment;
+    if (!prepare) {
+      this.el.commentStatus.textContent = 'Commenting is unavailable for this source.';
+      return;
+    }
+    this.el.commentStatus.textContent = 'Preparing comment target…';
+    void prepare(target).then((plan) => {
+      if (token !== this.planToken || this.closed) return;
+      this.plan = plan;
+      this.submit.textContent = 'Post comment';
+      this.el.commentStatus.textContent = `${plan.label}. ${this.pinned ? 'Target pinned.' : 'Target follows your reading position.'}`;
+      this.updateSubmit();
+    }, (err) => {
+      if (token === this.planToken && !this.closed) this.el.commentStatus.textContent = err instanceof Error ? err.message : String(err);
+    });
+  }
+
+  private async postComment(): Promise<void> {
+    if (!this.plan || !this.target || !this.textarea.value.trim() || this.submitting) return;
+    const plan = this.plan, target = this.target, elements = [...this.targetEls];
+    this.submitting = true;
+    this.pinned = true;
+    this.textarea.disabled = true;
+    this.updateSubmit();
+    this.el.commentStatus.textContent = 'Posting comment…';
+    try {
+      const result = await plan.post(this.textarea.value);
+      if (this.closed) return;
+      this.textarea.value = '';
+      const link = h('a', '', 'Comment posted · View on platform');
+      link.href = result.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      this.el.commentStatus.replaceChildren(link);
+      // Keep posted feedback beside the actual paragraph, even after moving to another file.
+      const note = h('p', 'mr-comment-receipt');
+      const receipt = link.cloneNode(true) as HTMLAnchorElement;
+      receipt.textContent = `Comment on ${target.side === 'base' ? 'old' : 'new'} lines ${target.startLine}–${target.endLine} · View thread`;
+      note.append(receipt);
+      elements[elements.length - 1]?.after(note);
+      this.schedule(true);
+    } catch (err) {
+      if (this.closed) return;
+      this.el.commentStatus.textContent = err instanceof ReaderError ? `${err.message} ${err.hint}` : err instanceof Error ? err.message : String(err);
+    } finally {
+      this.submitting = false;
+      this.textarea.disabled = false;
+      this.updateSubmit();
     }
   }
 
@@ -634,12 +827,20 @@ class Reader {
 
   private onScroll(): void {
     const root = this.root;
+    root.style.setProperty('--composer-height', `${this.el.composer.offsetHeight}px`);
     const top = root.scrollTop;
     const max = root.scrollHeight - root.clientHeight;
     this.el.progress.style.transform = `scaleX(${max > 0 ? Math.min(1, top / max) : 0})`;
-    const menusOpen = !this.el.files.hidden || !this.el.settings.hidden;
-    this.el.topbar.classList.toggle('is-hidden', top > this.lastScrollTop && top > 160 && !menusOpen);
-    this.lastScrollTop = top;
+    let currentDoc = this.index;
+    this.views.forEach((view, i) => { if (view.section.getBoundingClientRect().top <= 150) currentDoc = i; });
+    if (currentDoc !== this.index) {
+      this.index = currentDoc;
+      this.rendered = this.views[currentDoc].rendered;
+      this.updateFileButton();
+      if (this.rendered) this.buildToc(this.rendered);
+      else this.el.toc.replaceChildren();
+    }
+    this.guide();
 
     let activeHeading = -1;
     this.headings.forEach((hd, i) => {
@@ -667,16 +868,16 @@ class Reader {
     const gutter = this.el.gutter;
     gutter.replaceChildren();
     this.markTargets = [];
-    const r = this.rendered;
-    if (!r) return;
     const origin = this.el.article.getBoundingClientRect().top;
     const spans: Array<{ top: number; bottom: number; kind: string; target: HTMLElement; point: boolean }> = [];
-    for (const el of r.content.querySelectorAll<HTMLElement>('[data-mr-change]')) {
+    for (const el of this.el.doc.querySelectorAll<HTMLElement>('[data-mr-change]')) {
+      const content = el.closest('.mr-content')!;
+      if (el.closest('[hidden]')) continue;
       const kind = el.dataset.mrChange!;
       let point = false;
       let rect = el.getBoundingClientRect();
       if (!el.getClientRects().length) {
-        const next = nextVisible(el, r.content);
+        const next = nextVisible(el, content);
         if (!next) continue;
         rect = next.getBoundingClientRect();
         point = true;
@@ -698,7 +899,7 @@ class Reader {
       mark.title = label[s.kind] ?? '';
       mark.dataset.act = 'mark';
       mark.dataset.i = String(i);
-      this.markTargets.push(s.point ? (nextVisible(s.target, r.content) as HTMLElement) ?? s.target : s.target);
+      this.markTargets.push(s.point ? (nextVisible(s.target, s.target.closest('.mr-content')!) as HTMLElement) ?? s.target : s.target);
       gutter.append(mark);
     });
   }

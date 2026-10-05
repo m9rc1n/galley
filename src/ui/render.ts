@@ -15,7 +15,16 @@ export interface RenderInput {
   links: RepoLinks;
 }
 
+export interface RenderedBlock {
+  el: HTMLElement;
+  kind: BlockChange['kind'];
+  base?: Unit;
+  head?: Unit;
+}
+
 export interface RenderedDoc {
+  /** Trusted source mapping; document HTML cannot forge comment targets. */
+  blocks: RenderedBlock[];
   /** The article body, sanitised and annotated with change markers. */
   content: HTMLElement;
   /** First element of every run of consecutive changes, in reading order. */
@@ -240,7 +249,8 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
   return true;
 }
 
-function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLinks): void {
+function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLinks): Map<HTMLElement, HTMLElement> {
+  const replacements = new Map<HTMLElement, HTMLElement>();
   for (const img of root.querySelectorAll('img')) {
     const src = img.getAttribute('src');
     if (src) {
@@ -272,10 +282,12 @@ function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLin
       figure.append(caption);
     }
     p.replaceWith(figure);
+    replacements.set(p, figure);
   }
+  return replacements;
 }
 
-function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], base: ParsedDoc, nonce: string): HTMLElement[] {
+function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], base: ParsedDoc, nonce: string, blocks: RenderedBlock[]): HTMLElement[] {
   const byId = blocksById(root, nonce);
 
   // Each removed block goes right before the next block that still exists.
@@ -295,10 +307,17 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
   };
 
   for (const change of changes) {
+    const live = change.head && byId.get(change.head.id);
+    if (live) blocks.push({ el: live, ...change });
+    const ghost = (anchor: Element | null) => {
+      const el = insertGhost(doc, root, change.base!, base, anchor);
+      blocks.push({ el, kind: 'removed', base: change.base });
+      return el;
+    };
     if (change.kind === 'same') {
       inRun = false;
     } else if (change.kind === 'removed') {
-      touch(insertGhost(doc, root, change.base!, base, anchorFor.get(change) ?? null));
+      touch(ghost(anchorFor.get(change) ?? null));
     } else {
       const el = byId.get(change.head!.id);
       if (!el) continue;
@@ -321,7 +340,7 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
         mark(el, 'modified', 'mr-subtle');
         touch(el);
       } else if (changeRatio(ops) > REWRITE_RATIO || !applyOps(el, ops)) {
-        touch(insertGhost(doc, root, change.base!, base, el));
+        touch(ghost(el));
         mark(el, 'added', 'mr-rewritten');
       } else {
         mark(el, 'modified');
@@ -341,20 +360,36 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   const words = (plainText(root).match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
   let changes: HTMLElement[] = [];
+  const blocks: RenderedBlock[] = [];
   const stats = { added: 0, removed: 0, modified: 0 };
   if (input.status !== 'added' && !removedDoc) {
     const base = parseDocument(input.base);
     const blockChanges = diffUnits(base.units, head.units);
-    changes = applyChanges(doc, root, blockChanges, base, head.nonce);
+    changes = applyChanges(doc, root, blockChanges, base, head.nonce, blocks);
     for (const c of blockChanges) if (c.kind !== 'same') stats[c.kind]++;
+  } else {
+    const byId = blocksById(root, head.nonce);
+    for (const unit of head.units) {
+      const el = byId.get(unit.id);
+      if (!el) continue;
+      const kind = removedDoc ? 'removed' : 'added';
+      mark(el, kind);
+      blocks.push({ el, kind, ...(removedDoc ? { base: unit } : { head: unit }) });
+    }
+    changes = blocks.length ? [blocks[0].el] : [];
+    stats[removedDoc ? 'removed' : 'added'] = blocks.length;
   }
-  decorate(doc, root, input.path, input.links);
+  const replacements = decorate(doc, root, input.path, input.links);
+  for (const block of blocks) block.el = replacements.get(block.el) ?? block.el;
+  changes = changes.map((el) => replacements.get(el) ?? el);
+  blocks.sort((a, b) => a.el.compareDocumentPosition(b.el) & 4 ? -1 : 1);
 
   const fm = new Map(head.frontmatter?.fields ?? []);
   const first = [...root.children].find((el) => !el.matches('details.mr-meta, .mr-ghost'));
   const lead = first?.tagName === 'H1' ? (first as HTMLElement) : null;
   return {
     content: root,
+    blocks,
     changes,
     stats,
     lead,

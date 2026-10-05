@@ -1,6 +1,6 @@
 # Galley privacy policy
 
-_Last updated: 4 October 2026_
+_Last updated: 5 October 2026_
 
 Galley is a browser extension that shows the markdown documents changed in GitHub pull requests and GitLab merge requests as readable, typeset articles. It is open-source software published by Marcin Urbanski and contributors ("we"); the source code is at <https://github.com/m9rc1n/galley>.
 
@@ -14,9 +14,11 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 **Pull and merge request content.** On GitHub and GitLab pages, Galley reads the page address to recognise pull and merge requests. When you open the reader, it requests the list of changed files and the contents of the changed markdown files from that same GitHub or GitLab site (on GitHub.com, through GitHub's API at api.github.com), using your existing session there or your GitHub token (see below). The content is rendered on your device, kept in memory only while the page is open, and not sent anywhere else.
 
-**GitHub access token (optional).** If you add a GitHub token so Galley can read private repositories, the token is stored in your browser's extension storage on your device. It is sent only to the GitHub API of the site you saved it for, to authorise Galley's requests. You can remove it in the Galley popup at any time, and it is deleted when you uninstall Galley.
+**GitHub access token (optional).** If you add a GitHub token so Galley can read private repositories or post review comments, the token is stored in your browser's extension storage on your device. It is sent only to the GitHub API of the site you saved it for, to authorise Galley's requests. You can remove it in the Galley popup at any time, and it is deleted when you uninstall Galley.
 
-**Preferences.** Your theme, typeface, text size and display mode are stored in your browser's extension storage.
+**Review comments.** When you press Post comment in the reader, Galley sends your comment, the quoted selection or paragraph, and its file/source-line context to the GitHub or GitLab review you are reading. The platform stores it as a normal review comment or discussion, visible according to that repository's access rules. Drafts stay in memory while the reader is open and are not sent until you post. The demo stores its simulated comments in that tab's session storage only.
+
+**Preferences.** Your theme, typeface, text size display mode and paragraph filter are stored in your browser's extension storage.
 
 **Sites you enable.** If you enable Galley on a self-hosted GitLab or GitHub Enterprise site, your browser records that permission for that one domain. You can disable it in the Galley popup or in your browser's extension settings.
 

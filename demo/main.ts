@@ -32,6 +32,18 @@ const source: ReviewSource = {
   diffUrl: location.href,
   docs,
   load: contents,
+  async prepareComment(target) {
+    return {
+      kind: 'inline',
+      label: 'Post demo comment (stays in this browser)',
+      async post(body) {
+        const comments = JSON.parse(sessionStorage.getItem('galley:demo-comments') ?? '[]');
+        comments.push({ ...target, body });
+        sessionStorage.setItem('galley:demo-comments', JSON.stringify(comments));
+        return { url: '#demo-comment' };
+      },
+    };
+  },
   links: () => ({ raw: (path) => `samples/head/${path}`, blob: (path) => `samples/head/${path}` }),
 };
 
