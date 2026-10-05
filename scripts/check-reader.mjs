@@ -56,6 +56,19 @@ try {
   const posted = await inspect(() => JSON.parse(sessionStorage.getItem('galley:demo-comments'))[0]);
   assert.equal(posted.quote, 'design'); assert.equal(posted.body, 'Could we explain this more clearly?'); assert.equal(posted.doc.path, 'docs/rfcs/0042-reading-first-reviews.md');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-comment-receipt').length), 1);
+  // Explicitly retargeting a draft preserves its text and enables posting at the new paragraph.
+  await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot, textarea = s.querySelector('textarea');
+    textarea.value = 'A draft to retarget'; textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    s.querySelector('[data-act="follow"]').click();
+  });
+  await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-submit').disabled);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('textarea').value), 'A draft to retarget');
+  assert.notEqual(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-comment-target').textContent), selected.target);
+  await inspect(() => {
+    const textarea = document.querySelector('#galley-reader').shadowRoot.querySelector('textarea');
+    textarea.value = ''; textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   // Full context toggle is independent of Changes/Clean; file links now scroll in-place.
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-scope="all"]').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-content [hidden]').length), 0);

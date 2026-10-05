@@ -210,7 +210,6 @@ class Reader {
     this.textarea.addEventListener('focus', () => { if (this.target) this.pinned = true; });
     this.textarea.addEventListener('input', () => { if (this.target) this.pinned = true; this.updateSubmit(); });
     this.root.addEventListener('mouseup', (e) => this.captureSelection(e));
-    this.root.addEventListener('keyup', (e) => { if (e.key === 'Shift') this.captureSelection(); });
     this.el.doc.replaceChildren(this.skeleton());
 
     this.prevOverflow = document.documentElement.style.overflow;
@@ -561,6 +560,10 @@ class Reader {
   private readonly shield = (e: Event) => {
     if (e.target !== this.host) return;
     if (e.type === 'keydown') this.onKey(e as KeyboardEvent);
+    if (e.type === 'keyup' && (e as KeyboardEvent).key === 'Shift') {
+      const target = e.composedPath()[0];
+      if (!(target instanceof Element && target.closest('.mr-composer'))) this.captureSelection();
+    }
     e.stopPropagation();
   };
 
@@ -672,8 +675,13 @@ class Reader {
       case 'follow':
         if (this.submitting) return;
         this.pinned = false;
-        this.target = null;
-        this.guide();
+        this.clearTarget();
+        this.guide(true);
+        if (this.textarea.value) {
+          this.pinned = true;
+          this.el.commentQuote.hidden = !this.target;
+        }
+        if (!this.target) this.el.commentStatus.textContent = 'Scroll to a paragraph to choose a comment target.';
         return;
       case 'retry':
         if (this.source) void this.show(this.index);
@@ -698,8 +706,8 @@ class Reader {
     this.submit.disabled = this.submitting || !this.plan || !this.textarea.value.trim();
   }
 
-  private guide(): void {
-    if (this.pinned || this.submitting || this.textarea.value) return;
+  private guide(force = false): void {
+    if (this.submitting || (!force && (this.pinned || this.textarea.value))) return;
     const line = this.root.clientHeight * FOCUS_LINE;
     const candidates = this.views.flatMap((view) => (view.rendered?.blocks ?? []).map((block) => ({ view, block })))
       .filter(({ block }) => block.el.getClientRects().length && block.el.getBoundingClientRect().bottom > 90 && block.el.getBoundingClientRect().top < this.root.clientHeight - this.el.composer.offsetHeight);
