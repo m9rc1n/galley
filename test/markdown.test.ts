@@ -27,25 +27,30 @@ test('every leaf block becomes a unit that knows its source lines', () => {
     ],
   );
   assert.equal(doc.units[1].key, 'paragraph:Intro paragraph wrapped.');
-  assert.match(doc.html, /<span class="mr-tight" data-mr-u="2">one<\/span>/);
-  assert.match(doc.html, /<h1 data-mr-u="0" id="title">/);
-  assert.match(doc.html, /<pre data-mr-u="4" data-lang="js"><code>x\(\)\n<\/code><\/pre>/);
-  assert.match(doc.html, /<div class="mr-table" data-mr-u="5"><table>/);
+  // Block ids carry a random per-render nonce, so raw HTML in the document cannot forge them.
+  assert.match(doc.nonce, /^[0-9a-f]{16}$/);
+  assert.notEqual(parseDocument('x').nonce, doc.nonce);
+  const u = (id: number) => `data-mr-u="${doc.nonce}:${id}"`;
+  assert.ok(doc.html.includes(`<span class="mr-tight" ${u(2)}>one</span>`));
+  assert.ok(doc.html.includes(`<h1 ${u(0)} id="title">`));
+  assert.ok(doc.html.includes(`<pre ${u(4)} data-lang="js"><code>x()\n</code></pre>`));
+  assert.ok(doc.html.includes(`<div class="mr-table" ${u(5)}><table>`));
 });
 
 test('front matter is the first unit and renders as a metadata card', () => {
   const doc = parseDocument('---\nstatus: Draft\n---\n\nBody text.\n');
   assert.equal(doc.units[0].kind, 'frontmatter');
   assert.deepEqual(doc.units[1].lines, [4, 5]);
-  assert.match(doc.html, /<details class="mr-meta" data-mr-u="0">/);
+  assert.ok(doc.html.includes(`<details class="mr-meta" data-mr-u="${doc.nonce}:0">`));
   assert.match(doc.html, /<dt>status<\/dt> <dd>Draft<\/dd>/);
 });
 
 test('task lists and alerts render like on GitHub and GitLab', () => {
-  const { html } = parseDocument('- [x] done\n- [ ] todo\n\n> [!WARNING]\n> Careful.\n');
-  assert.match(html, /<li class="mr-task-item"><span class="mr-tight" data-mr-u="0"><input type="checkbox" class="mr-task" disabled checked>done/);
+  const { html, nonce } = parseDocument('- [x] done\n- [ ] todo\n\n> [!WARNING]\n> Careful.\n');
+  assert.ok(html.includes(`<li class="mr-task-item"><span class="mr-tight" data-mr-u="${nonce}:0"><input type="checkbox" class="mr-task" disabled checked>done`));
   assert.match(html, /<input type="checkbox" class="mr-task" disabled>todo/);
-  assert.match(html, /<blockquote class="mr-alert mr-alert-warning" data-alert="Warning">/);
+  // The alert title comes from the class (in CSS), not from an attribute.
+  assert.match(html, /<blockquote class="mr-alert mr-alert-warning">/);
   assert.doesNotMatch(html, /\[!WARNING\]/);
 });
 

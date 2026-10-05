@@ -42,8 +42,8 @@ WORKS WHERE YOU REVIEW
 
 PRIVATE BY DESIGN
 • No servers, no accounts, no analytics. Documents are rendered in your browser.
-• Requests go only to the GitHub or GitLab site you are using.
-• Rendered documents are sanitised, so content from forks cannot run scripts.
+• Galley itself only contacts the GitHub or GitLab site you are using. Images embedded in documents load from where they are hosted.
+• Rendered documents are sanitised, so content from forks cannot run scripts or imitate Galley's change markers.
 
 Galley is read-only: comments still go through the platform's own review tools.
 
@@ -103,8 +103,6 @@ Host permissions
 
 ```
 github.com and gitlab.com: the content script detects pull and merge request pages, shows the Read button, and loads the changed markdown files with the user's existing session.
-api.github.com: lists the files changed in a GitHub pull request, with their diffs, through GitHub's REST API.
-raw.githubusercontent.com: GitHub redirects raw file downloads, including images inside documents, to this domain.
 Optional https://*/* and http://*/*: never granted at install. Requested at runtime for a single domain, only when the user enables Galley for their self-managed GitLab or GitHub Enterprise server from the popup.
 ```
 

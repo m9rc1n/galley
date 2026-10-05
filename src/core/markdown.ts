@@ -30,13 +30,19 @@ export interface FrontMatter {
 }
 
 export interface ParsedDoc {
-  /** Rendered HTML (not yet sanitised). Every unit carries a `data-mr-u` attribute. */
+  /** Rendered HTML (not yet sanitised). Every unit carries `data-mr-u="<nonce>:<id>"`. */
   html: string;
   units: Unit[];
   frontmatter: FrontMatter | null;
+  /**
+   * Random per-render value in every block id. Raw HTML in the document can copy the attribute,
+   * but not the nonce, so a forged id can never take over a real block (see render.ts).
+   */
+  nonce: string;
 }
 
 interface RenderEnv extends Env {
+  nonce: string;
   units: Unit[];
   lines: string[];
   slugs: Map<string, number>;
@@ -141,7 +147,7 @@ function addUnit(env: RenderEnv, token: Token, kind: UnitKind, text: string, lev
     level,
     source,
   });
-  token.attrSet('data-mr-u', String(id));
+  token.attrSet('data-mr-u', `${env.nonce}:${id}`);
 }
 
 function annotateUnits(state: StateCore): void {
@@ -227,8 +233,8 @@ function alerts(state: StateCore): void {
     const m = first?.type === 'text' ? /^\[!(note|tip|important|warning|caution)\][ \t]*/i.exec(first.content) : null;
     if (!first || !m) continue;
     const kind = m[1].toLowerCase();
+    // The title ("Note", "Warning"…) comes from the class in CSS, not from an attribute raw HTML could set.
     tokens[i].attrJoin('class', `mr-alert mr-alert-${kind}`);
-    tokens[i].attrSet('data-alert', kind[0].toUpperCase() + kind.slice(1));
     first.content = first.content.slice(m[0].length);
     if (!first.content) children.splice(0, children[1]?.type === 'softbreak' ? 2 : 1);
   }
@@ -271,30 +277,37 @@ function createMarkdown() {
 
 const md = createMarkdown();
 
-export function renderFrontMatter(fm: FrontMatter, id: number | null): string {
+export function renderFrontMatter(fm: FrontMatter, unitId: string | null): string {
   const rows = fm.fields
     .map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt> <dd>${escapeHtml(v)}</dd></div>\n`)
     .join('');
   const body = rows ? `<dl>\n${rows}</dl>` : `<pre><code>${escapeHtml(fm.raw)}</code></pre>`;
-  const attr = id === null ? '' : ` data-mr-u="${id}"`;
+  const attr = unitId === null ? '' : ` data-mr-u="${unitId}"`;
   return `<details class="mr-meta"${attr}><summary>Front matter</summary>\n${body}</details>\n`;
+}
+
+function newNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 export function parseDocument(src: string): ParsedDoc {
   const { body, frontmatter, lineCount } = splitFrontMatter(src.replace(/\r\n?/g, '\n'));
-  const env: RenderEnv = { units: [], lines: body.split('\n'), slugs: new Map(), listDepth: 0 };
+  const nonce = newNonce();
+  const env: RenderEnv = { nonce, units: [], lines: body.split('\n'), slugs: new Map(), listDepth: 0 };
   if (frontmatter) {
     const text = normalize(frontmatter.raw);
     env.units.push({ id: 0, kind: 'frontmatter', key: `frontmatter:${text}`, text, lines: [0, lineCount], inList: false, level: 0, source: '' });
   }
   const tokens = md.parse(body, env);
   const html = md.renderer.render(tokens, md.options, env);
-  return { html: (frontmatter ? renderFrontMatter(frontmatter, 0) : '') + html, units: env.units, frontmatter };
+  return { html: (frontmatter ? renderFrontMatter(frontmatter, `${nonce}:0`) : '') + html, units: env.units, frontmatter, nonce };
 }
 
 /** HTML for a single unit rendered on its own (no `data-mr-u` attributes). */
 export function renderUnit(unit: Unit, doc: ParsedDoc): string {
   if (unit.kind === 'frontmatter') return doc.frontmatter ? renderFrontMatter(doc.frontmatter, null) : '';
-  return md.render(unit.source, { units: [], lines: unit.source.split('\n'), slugs: new Map(), listDepth: 0 } satisfies RenderEnv)
-    .replace(/ data-mr-u="\d+"/g, '');
+  return md
+    .render(unit.source, { nonce: '', units: [], lines: unit.source.split('\n'), slugs: new Map(), listDepth: 0 } satisfies RenderEnv)
+    .replace(/ data-mr-u="[^"]*"/g, '');
 }

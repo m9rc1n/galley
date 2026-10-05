@@ -38,8 +38,10 @@
   },
   "devDependencies": {
     "@types/chrome": "^0.3.4",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^22.20.5",
     "esbuild": "^0.28.2",
+    "jsdom": "^29.1.1",
     "linkedom": "^0.18.13",
     "puppeteer-core": "^25.12.0",
     "typescript": "^7.0.2"

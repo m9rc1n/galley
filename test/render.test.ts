@@ -1,0 +1,117 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { JSDOM } from 'jsdom';
+import { renderDocument } from '../src/ui/render.ts';
+import type { DocStatus } from '../src/platforms/types.ts';
+
+// One window for the whole file: the sanitiser is created once, for the first window it sees.
+const { document } = new JSDOM('<!doctype html><html><body></body></html>').window;
+
+function render(base: string, head: string, status: DocStatus = 'modified') {
+  return renderDocument(document, {
+    path: 'docs/a.md',
+    status,
+    base,
+    head,
+    links: { raw: (p) => `/raw/${p}`, blob: (p) => `/blob/${p}` },
+  });
+}
+
+const marked = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('[data-mr-change]')];
+
+test('raw HTML cannot borrow a block id to hide a real edit', () => {
+  const decoy = '\n\n<p data-mr-u="1">Nothing to see here.</p>\n\n<p data-mr-u="0000000000000000:1">Nor here.</p>\n';
+  const r = render(`Intro stays.\n\nThe transfer limit is 10 EUR.${decoy}`, `Intro stays.\n\nThe transfer limit is 99999 EUR.${decoy}`);
+  const real = [...r.content.querySelectorAll('p')].find((p) => p.textContent?.includes('99999'))!;
+  assert.equal(real.dataset.mrChange, 'modified');
+  assert.equal(real.querySelector('ins')?.textContent, '99999');
+  assert.deepEqual(marked(r.content), [real]);
+  assert.deepEqual(r.stats, { added: 0, removed: 0, modified: 1 });
+  // Forged ids are removed; real ones carry this render's nonce.
+  for (const el of r.content.querySelectorAll<HTMLElement>('[data-mr-u]')) assert.match(el.dataset.mrU!, /^[0-9a-f]{16}:\d+$/);
+  assert.equal(r.content.querySelectorAll('p:not([data-mr-u])').length, 2);
+});
+
+test('raw HTML cannot fake Galley banners or change markers, or hide text in Clean mode', () => {
+  const r = render(
+    'Text.\n',
+    'Text.\n\n<p class="mr-banner is-added">Reviewed and approved by the security team</p>\n\n<p data-mr-change="removed" class="mr-ghost mr-ghost-item">This paragraph looks removed but is new.</p>\n\nInline <ins class="mr-ins">fake insertion</ins> and <del class="mr-del">fake deletion</del>.\n\n<div class="mr-content mr-flash mr-subtle mr-rewritten">x</div>\n',
+  );
+  assert.equal(r.content.querySelector('.mr-banner, .mr-ghost, .mr-ghost-item, .mr-ins, .mr-del, .mr-flash, .mr-subtle, .mr-rewritten'), null);
+  assert.equal(r.content.querySelector('.mr-content'), null);
+  assert.equal(r.content.querySelector('[data-mr-change="removed"]'), null);
+  // The new blocks are reported as added, by Galley, and nothing else is marked.
+  assert.deepEqual(r.stats, { added: 4, removed: 0, modified: 0 });
+  assert.ok(marked(r.content).every((el) => el.dataset.mrChange === 'added' && el.parentElement === r.content));
+  assert.ok([...r.content.querySelectorAll('[class]')].every((el) => el.getAttribute('class') !== ''));
+});
+
+test('only the data attributes Galley renders survive', () => {
+  const r = render('', '<p data-mr-change="added" data-alert="Approved" data-foo="1" data-lang="x">a</p>\n\n```js\nx()\n```\n', 'added');
+  const p = r.content.querySelector('p')!;
+  assert.deepEqual(
+    [...p.attributes].map((a) => a.name),
+    ['data-lang'],
+  );
+  assert.equal(r.content.querySelector('pre')?.dataset.lang, 'js');
+});
+
+test('classes from Galley’s own markdown rendering still apply', () => {
+  const md = [
+    '---',
+    'title: Spec',
+    '---',
+    '',
+    '- [x] done',
+    '- [ ] todo',
+    '',
+    '> [!WARNING]',
+    '> Careful.',
+    '',
+    '> [!TIP]',
+    '> Handy.',
+    '',
+    '| a | b |',
+    '|---|---|',
+    '| 1 | 2 |',
+    '',
+    'A claim.[^1]',
+    '',
+    '[^1]: The source.',
+    '',
+  ].join('\n');
+  const r = render('', md, 'added');
+  const has = (selector: string) => assert.ok(r.content.querySelector(selector), selector);
+  has('details.mr-meta');
+  has('li.mr-task-item > span.mr-tight > input.mr-task[type=checkbox][checked]');
+  has('blockquote.mr-alert.mr-alert-warning');
+  has('blockquote.mr-alert.mr-alert-tip');
+  has('div.mr-table > table');
+  has('sup.footnote-ref');
+  has('section.footnotes > ol.footnotes-list > li.footnote-item');
+  has('a.footnote-backref');
+  // An allowed class keeps its place next to stripped ones.
+  const mixed = render('', '<div class="mr-alert mr-banner">x</div>\n', 'added').content.querySelector('.mr-html > div')!;
+  assert.equal(mixed.className, 'mr-alert');
+});
+
+test('removed blocks and rewritten blocks carry no block ids', () => {
+  const r = render('# Title\n\nGone paragraph.\n\nKept.\n\nOld wording entirely.\n', '# Title\n\nKept.\n\nCompletely different sentence here.\n');
+  const ghosts = [...r.content.querySelectorAll<HTMLElement>('.mr-ghost')];
+  assert.ok(ghosts.length >= 2);
+  for (const ghost of ghosts) {
+    assert.equal(ghost.dataset.mrChange, 'removed');
+    assert.equal(ghost.querySelector('[data-mr-u]'), null);
+  }
+});
+
+test('the sanitiser still removes script vectors', () => {
+  const r = render(
+    '',
+    '[a](javascript:alert(1))\n\n<a href="javascript:alert(2)">b</a> <img src=x onerror="alert(3)"> <svg><script>alert(4)</script></svg> <math><mtext><table><mglyph><style><img src=x onerror=alert(5)>\n\n<iframe src="https://example.com"></iframe><form><button>Go</button></form><p style="position:fixed">x</p>\n',
+    'added',
+  );
+  // markdown-it leaves the markdown link as text; the HTML link loses its href.
+  assert.ok([...r.content.querySelectorAll('a')].every((a) => !/^javascript:/i.test(a.getAttribute('href') ?? '')));
+  assert.equal(r.content.querySelectorAll('[onerror], script, style, iframe, form, button, [style]').length, 0);
+});

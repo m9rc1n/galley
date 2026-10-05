@@ -595,7 +595,7 @@
 }
 
 .mr-content blockquote.mr-alert::before {
-  content: attr(data-alert);
+  content: "Note";
   display: block;
   margin-bottom: 0.25em;
   color: var(--alert);
@@ -604,6 +604,22 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.mr-content blockquote.mr-alert-tip::before {
+  content: "Tip";
+}
+
+.mr-content blockquote.mr-alert-important::before {
+  content: "Important";
+}
+
+.mr-content blockquote.mr-alert-warning::before {
+  content: "Warning";
+}
+
+.mr-content blockquote.mr-alert-caution::before {
+  content: "Caution";
 }
 
 .mr-content .mr-alert-tip {

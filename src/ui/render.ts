@@ -31,21 +31,77 @@ export interface RenderedDoc {
 /** Above this share of changed text, an edit is shown as "old block removed, new block added". */
 const REWRITE_RATIO = 0.6;
 
+/**
+ * The only classes that survive sanitising: the ones Galley's own markdown rendering produces.
+ * Raw HTML in a document may not borrow anything else (banners, change markers, removed-block
+ * styling), so it cannot imitate Galley's interface or hide text. Change markers are added
+ * after sanitising and never come from the document.
+ */
+const RENDERER_CLASSES = new Set([
+  'mr-tight',
+  'mr-table',
+  'mr-html',
+  'mr-meta',
+  'mr-task',
+  'mr-task-item',
+  'mr-alert',
+  'mr-alert-note',
+  'mr-alert-tip',
+  'mr-alert-important',
+  'mr-alert-warning',
+  'mr-alert-caution',
+  'footnotes',
+  'footnotes-sep',
+  'footnotes-list',
+  'footnote-item',
+  'footnote-ref',
+  'footnote-backref',
+]);
+
 let purifier: ReturnType<typeof DOMPurify> | null = null;
 
 function sanitize(doc: Document, html: string): DocumentFragment {
-  purifier ??= DOMPurify(doc.defaultView ?? window);
+  if (!purifier) {
+    purifier = DOMPurify(doc.defaultView ?? window);
+    purifier.addHook('uponSanitizeAttribute', (_node, data) => {
+      if (data.attrName !== 'class') return;
+      data.attrValue = data.attrValue
+        .split(/\s+/)
+        .filter((name) => RENDERER_CLASSES.has(name))
+        .join(' ');
+      if (!data.attrValue) data.keepAttr = false;
+    });
+  }
   return purifier.sanitize(html, {
     RETURN_DOM_FRAGMENT: true,
     FORBID_TAGS: ['style', 'form', 'iframe', 'frame', 'frameset', 'object', 'embed', 'base', 'link', 'meta', 'button', 'textarea', 'select'],
     FORBID_ATTR: ['style'],
+    // No data-* attributes from documents, except the two Galley renders itself.
+    ALLOW_DATA_ATTR: false,
+    ADD_ATTR: ['data-mr-u', 'data-lang'],
   }) as unknown as DocumentFragment;
+}
+
+/**
+ * Map block ids to elements, accepting only ids stamped with this render's nonce. A copy of the
+ * attribute written in raw HTML (to make a decoy stand in for a real block) is removed.
+ */
+function blocksById(root: HTMLElement, nonce: string): Map<number, HTMLElement> {
+  const byId = new Map<number, HTMLElement>();
+  for (const el of root.querySelectorAll<HTMLElement>('[data-mr-u]')) {
+    const [stamp, id] = (el.dataset.mrU ?? '').split(':');
+    if (stamp === nonce && id && !byId.has(Number(id))) byId.set(Number(id), el);
+    else el.removeAttribute('data-mr-u');
+  }
+  return byId;
 }
 
 function fragmentFor(doc: Document, unit: Unit, parsed: ParsedDoc): DocumentFragment {
   const frag = sanitize(doc, renderUnit(unit, parsed));
-  // Removed headings must not compete with live headings for anchor targets.
+  // Removed headings must not compete with live headings for anchor targets, and removed blocks
+  // carry no block ids at all.
   for (const el of frag.querySelectorAll('[id]')) el.removeAttribute('id');
+  for (const el of frag.querySelectorAll('[data-mr-u]')) el.removeAttribute('data-mr-u');
   return frag;
 }
 
@@ -219,9 +275,8 @@ function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLin
   }
 }
 
-function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], base: ParsedDoc): HTMLElement[] {
-  const byId = new Map<number, HTMLElement>();
-  for (const el of root.querySelectorAll<HTMLElement>('[data-mr-u]')) byId.set(Number(el.dataset.mrU), el);
+function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], base: ParsedDoc, nonce: string): HTMLElement[] {
+  const byId = blocksById(root, nonce);
 
   // Each removed block goes right before the next block that still exists.
   const anchorFor = new Map<BlockChange, Element | null>();
@@ -290,7 +345,7 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   if (input.status !== 'added' && !removedDoc) {
     const base = parseDocument(input.base);
     const blockChanges = diffUnits(base.units, head.units);
-    changes = applyChanges(doc, root, blockChanges, base);
+    changes = applyChanges(doc, root, blockChanges, base, head.nonce);
     for (const c of blockChanges) if (c.kind !== 'same') stats[c.kind]++;
   }
   decorate(doc, root, input.path, input.links);

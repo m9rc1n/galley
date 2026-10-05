@@ -86,10 +86,11 @@ Private repositories need a token, because GitHub's API does not accept the brow
 
 ## Privacy and security
 
-- No server, no analytics. Requests go only to the GitHub or GitLab instance you are on, plus `api.github.com` and `raw.githubusercontent.com` for GitHub.
+- No server, no analytics. Galley itself only contacts the GitHub or GitLab instance you are on. On GitHub.com that includes `api.github.com`, and the `raw.githubusercontent.com` downloads that raw files redirect to.
 - Everything rendered is sanitised: no scripts, iframes, forms or inline styles. Pull requests can come from forks.
+- Raw HTML in a document cannot use Galley's own classes or attributes, so it cannot fake change markers, banners or block IDs.
 - Images inside documents load from wherever they are hosted. GitHub's own preview proxies external images; Galley does not.
-- Permissions: github.com, gitlab.com and the two GitHub hosts above. Other domains only after you enable them in the popup.
+- Permissions: github.com and gitlab.com. Other domains only after you enable them in the popup. Calls to GitHub's API are ordinary cross-origin requests from the page and need no extra permission.
 
 ## Limitations
 
