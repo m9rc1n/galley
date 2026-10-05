@@ -136,6 +136,8 @@
 
 .mr-brand {
   flex: none;
+  line-height: 1;
+  transform: translateY(-2px);
   font-family: var(--serif);
   font-size: 18px;
   font-weight: 700;
