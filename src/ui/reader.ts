@@ -1,4 +1,5 @@
 import { ReaderError, type DocContents, type DocRef, type DocStatus, type ReviewSource, type CommentTarget, type CommentPlan } from '../platforms/types.ts';
+import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
 import { renderDocument, type RenderedDoc } from './render.ts';
@@ -25,38 +26,35 @@ const TEMPLATE = `
       </button>
     </div>
     <div class="mr-tb-right">
-      <div class="mr-seg" role="group" aria-label="Show changes">
-        <button data-mode="changes" aria-pressed="true" title="Highlight what changed (C)">Changes</button>
-        <button data-mode="clean" aria-pressed="false" title="Read the new version only (C)">Clean</button>
-      </div>
-      <button class="mr-btn mr-aa" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings">Aa</button>
+      <button class="mr-btn mr-viewed" data-act="viewed" aria-pressed="false" disabled hidden>Mark viewed</button>
+      <button class="mr-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
     </div>
   </header>
+  <p class="mr-viewed-feedback" role="status" hidden></p>
   <div class="mr-menu mr-files" role="menu" aria-label="Changed documents" hidden></div>
-  <div class="mr-menu mr-settings" role="dialog" aria-label="Reading settings" hidden>
-    <div class="mr-set-row"><span>Theme</span>
-      <div class="mr-seg" data-setting="theme">
-        <button data-value="auto">Auto</button><button data-value="light">Light</button><button data-value="sepia">Sepia</button><button data-value="dark">Dark</button>
-      </div>
-    </div>
-    <div class="mr-set-row"><span>Typeface</span>
-      <div class="mr-seg" data-setting="font"><button data-value="serif" class="mr-serif-sample">Serif</button><button data-value="sans">Sans</button></div>
-    </div>
-    <div class="mr-set-row"><span>Text size</span>
-      <div class="mr-seg"><button data-act="smaller" aria-label="Smaller text">A−</button><button data-act="larger" aria-label="Larger text">A+</button></div>
-    </div>
-    <dl class="mr-keys">
-      <dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Next / previous change</dd>
-      <dt><kbd>]</kbd> <kbd>[</kbd></dt><dd>Next / previous document</dd>
-      <dt><kbd>C</kbd></dt><dd>Changes on / off</dd>
-      <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Text size</dd>
-      <dt><kbd>Esc</kbd></dt><dd>Close reader</dd>
-    </dl>
-  </div>
-  <div class="mr-scope" role="group" aria-label="Paragraph filter">
-    <button class="mr-btn" data-scope="changed" aria-pressed="true">Changed paragraphs</button>
-    <button class="mr-btn" data-scope="all" aria-pressed="false">Entire files</button>
-    <span class="mr-guide-hint">Click a paragraph or select text to comment</span>
+  <div class="mr-settings" hidden>
+    <div class="mr-settings-backdrop" data-act="close-settings"></div>
+    <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
+      <header class="mr-settings-heading"><h2 id="mr-settings-title">Reading settings</h2><button class="mr-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
+      <section class="mr-settings-section"><h3>Review</h3>
+        <div class="mr-set-row"><span>Content</span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed paragraphs</button><button data-scope="all" aria-pressed="false">Entire files</button></div></div>
+        <p class="mr-settings-note">Reveal hidden paragraphs beside each change for more context.</p>
+        <div class="mr-set-row"><span>Highlighting</span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Changes</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
+      </section>
+      <section class="mr-settings-section"><h3>Appearance</h3>
+        <div class="mr-set-row"><span>Theme</span><div class="mr-seg" data-setting="theme" role="group" aria-label="Theme"><button data-value="auto">Auto</button><button data-value="light">Light</button><button data-value="sepia">Sepia</button><button data-value="dark">Dark</button></div></div>
+        <div class="mr-set-row"><span>Typeface</span><div class="mr-seg" data-setting="font" role="group" aria-label="Typeface"><button data-value="serif" class="mr-serif-sample">Serif</button><button data-value="sans">Sans</button></div></div>
+        <div class="mr-set-row"><span>Text size</span><div class="mr-seg"><button data-act="smaller" aria-label="Smaller text">A−</button><button data-act="larger" aria-label="Larger text">A+</button></div></div>
+      </section>
+      <section class="mr-settings-section"><h3>Keyboard</h3><dl class="mr-keys">
+        <dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Next / previous change</dd>
+        <dt><kbd>]</kbd> <kbd>[</kbd></dt><dd>Next / previous document</dd>
+        <dt><kbd>C</kbd></dt><dd>Changes on / off</dd>
+        <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Text size</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close settings / reader</dd>
+      </dl></section>
+      <p class="mr-settings-note">Click a paragraph or select text to attach a comment.</p>
+    </aside>
   </div>
   <nav class="mr-toc" aria-label="Contents"></nav>
   <main class="mr-main">
@@ -149,7 +147,7 @@ class Reader {
   private readonly shadow = this.host.attachShadow({ mode: 'open' });
   private readonly root: HTMLElement;
   private readonly el: Record<
-    'progress' | 'topbar' | 'prTitle' | 'fileBtn' | 'fileStatus' | 'filePath' | 'fileCount' | 'files' | 'settings' | 'toc' | 'article' | 'gutter' | 'doc' | 'pill' | 'pillLabel' | 'composer' | 'commentTarget' | 'commentQuote' | 'commentStatus',
+    'progress' | 'topbar' | 'prTitle' | 'fileBtn' | 'filePath' | 'fileStatus' | 'viewed' | 'viewedFeedback' | 'fileCount' | 'files' | 'settings' | 'toc' | 'article' | 'gutter' | 'doc' | 'pill' | 'pillLabel' | 'composer' | 'commentTarget' | 'commentQuote' | 'commentStatus',
     HTMLElement
   >;
   private settings: Settings = { ...DEFAULT_SETTINGS };
@@ -161,6 +159,9 @@ class Reader {
   private markTargets: HTMLElement[] = [];
   private lastStep: { el: HTMLElement; at: number } | null = null;
   private views: Array<{ doc: DocRef; section: HTMLElement; rendered: RenderedDoc | null }> = [];
+  private readonly viewed = new Map<DocRef, { value: boolean; ready: boolean; busy: boolean; key?: string; error?: string }>();
+  private viewedLoading: Promise<void> | null = null;
+  private drawerFocus: HTMLElement | null = null;
   private target: CommentTarget | null = null;
   private targetEls: HTMLElement[] = [];
   private pinned = false;
@@ -187,8 +188,10 @@ class Reader {
       topbar: q('.mr-topbar'),
       prTitle: q('.mr-pr-title'),
       fileBtn: q('.mr-file-btn'),
-      fileStatus: q('.mr-file-btn .mr-status'),
       filePath: q('.mr-file-btn .mr-path'),
+      fileStatus: q('.mr-file-btn .mr-status'),
+      viewed: q('.mr-viewed'),
+      viewedFeedback: q('.mr-viewed-feedback'),
       fileCount: q('.mr-file-btn .mr-count'),
       files: q('.mr-files'),
       settings: q('.mr-settings'),
@@ -203,7 +206,7 @@ class Reader {
       commentQuote: q('.mr-comment-quote'),
       commentStatus: q('.mr-comment-status'),
     };
-    q('.mr-scope').append(this.el.pill);
+    q('.mr-tb-right').prepend(this.el.pill);
     this.textarea = q('#mr-comment') as HTMLTextAreaElement;
     this.submit = q('.mr-submit') as HTMLButtonElement;
     this.el.composer.addEventListener('submit', (e) => { e.preventDefault(); void this.postComment(); });
@@ -252,6 +255,8 @@ class Reader {
       section.append(this.skeleton());
       return { doc, section, rendered: null };
     });
+    for (const doc of source.docs) this.viewed.set(doc, { value: false, ready: false, busy: false });
+    if (source.viewed) void this.initNativeViewed();
     this.el.doc.replaceChildren(...this.views.map((view) => view.section));
     this.updateFileButton();
     this.el.composer.hidden = false;
@@ -328,6 +333,8 @@ class Reader {
       filterDocument(r, this.settings.scope === 'changed');
       if (index === this.index) { this.rendered = r; this.buildToc(r); }
       this.schedule(true);
+      if (!this.source!.viewed) await this.initLocalViewed(view.doc, contents);
+      else this.updateViewed();
     } catch (err) {
       if (this.closed) return;
       const box = h('div', 'mr-message');
@@ -353,10 +360,6 @@ class Reader {
 
   private buildArticle(doc: DocRef, r: RenderedDoc): DocumentFragment {
     const frag = document.createDocumentFragment();
-    const kicker = h('p', 'mr-kicker');
-    kicker.append(statusBadge(doc.status), h('span', 'mr-path', doc.status === 'renamed' ? `${doc.oldPath} → ${doc.path}` : doc.path));
-    frag.append(kicker);
-
     const intro: HTMLElement[] = [];
     if (r.description) intro.push(h('p', 'mr-subtitle', r.description));
     intro.push(this.byline(doc, r));
@@ -380,9 +383,7 @@ class Reader {
   private byline(doc: DocRef, r: RenderedDoc): HTMLElement {
     const line = h('div', 'mr-byline');
     line.append(h('span', '', `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE))} min read`));
-    if (doc.status === 'added') line.append(chip('added', 'New document'));
-    else if (doc.status === 'removed') line.append(chip('removed', 'Deleted'));
-    else {
+    if (doc.status !== 'added' && doc.status !== 'removed') {
       const { added, modified, removed } = r.stats;
       if (!added && !modified && !removed) line.append(h('span', '', doc.status === 'renamed' ? 'Moved, text unchanged' : 'No visible text changes'));
       if (modified) line.append(chip('modified', `${modified} edited`));
@@ -424,24 +425,32 @@ class Reader {
 
   private updateFileButton(): void {
     const docs = this.source!.docs;
-    const doc = docs[this.index];
     this.el.fileBtn.hidden = false;
-    this.el.fileStatus.className = `mr-status is-${doc.status}`;
+    const doc = docs[this.index];
+    this.el.fileCount.textContent = `${this.index + 1}/${docs.length}`;
+    this.el.fileBtn.title = `${doc.status === 'renamed' ? `${doc.oldPath} → ` : ''}${doc.path} · Browse documents`;
+    this.el.fileBtn.setAttribute('aria-label', `Browse documents: ${doc.path}, file ${this.index + 1} of ${docs.length}`);
     this.el.fileStatus.textContent = STATUS_LABEL[doc.status];
-    this.el.filePath.textContent = doc.path;
-    this.el.fileCount.textContent = docs.length > 1 ? `${this.index + 1}/${docs.length}` : '';
-    this.el.fileBtn.title = doc.path;
+    this.el.fileStatus.className = `mr-status is-${doc.status}`;
+    const slash = doc.path.lastIndexOf('/');
+    this.el.filePath.replaceChildren(h('span', 'mr-path-dir', doc.path.slice(0, slash + 1)), h('span', 'mr-path-name', doc.path.slice(slash + 1)));
     const menu = this.el.files;
     menu.replaceChildren();
+    const progress = h('p', 'mr-files-progress', `${[...this.viewed.values()].filter((state) => state.value).length} of ${docs.length} viewed`);
+    progress.setAttribute('role', 'presentation');
+    menu.append(progress);
     docs.forEach((d, i) => {
       const item = h('button', 'mr-menu-item');
       item.setAttribute('role', 'menuitem');
       item.dataset.act = 'doc';
       item.dataset.doc = String(i);
+      item.title = d.path;
       if (i === this.index) item.setAttribute('aria-current', 'true');
       item.append(statusBadge(d.status), h('span', 'mr-path', d.path));
+      if (this.viewed.get(d)?.value) item.append(h('span', 'mr-file-check', '✓ Viewed'));
       menu.append(item);
     });
+    this.updateActiveViewed();
   }
 
   private skeleton(): HTMLElement {
@@ -471,16 +480,98 @@ class Reader {
     this.closeMenus();
     menu.hidden = !open;
     button?.setAttribute('aria-expanded', String(open));
+    if (menu === this.el.settings && open) {
+      this.drawerFocus = button;
+      for (const el of this.root.querySelectorAll<HTMLElement>('.mr-topbar, .mr-main, .mr-toc, .mr-composer')) el.inert = true;
+      this.root.classList.add('settings-open');
+      this.el.settings.querySelector<HTMLElement>('button[data-act="close-settings"]')!.focus();
+    }
   }
 
   private closeMenus(): boolean {
-    let wasOpen = false;
-    for (const menu of [this.el.files, this.el.settings]) {
-      wasOpen ||= !menu.hidden;
-      menu.hidden = true;
-    }
+    const drawerOpen = !this.el.settings.hidden;
+    const wasOpen = drawerOpen || !this.el.files.hidden;
+    this.el.files.hidden = this.el.settings.hidden = true;
     for (const b of this.shadow.querySelectorAll('.mr-topbar [aria-expanded]')) b.setAttribute('aria-expanded', 'false');
+    if (drawerOpen) {
+      for (const el of this.root.querySelectorAll<HTMLElement>('.mr-topbar, .mr-main, .mr-toc, .mr-composer')) el.inert = false;
+      this.root.classList.remove('settings-open');
+      this.drawerFocus?.focus({ preventScroll: true });
+      this.drawerFocus = null;
+    }
     return wasOpen;
+  }
+
+  // Viewed status is optional; failures never remove the document or imply a successful save.
+  private async initLocalViewed(doc: DocRef, contents: DocContents): Promise<void> {
+    const state = this.viewed.get(doc)!;
+    state.busy = true; state.error = undefined;
+    this.updateViewed();
+    try {
+      state.key = await viewedKey(this.source!.diffUrl, doc, contents);
+      state.value = await loadViewed(state.key);
+      state.ready = true;
+    } catch (err) { state.error = err instanceof Error ? err.message : String(err); }
+    finally { state.busy = false; if (!this.closed) this.updateViewed(); }
+  }
+
+  private initNativeViewed(): Promise<void> {
+    if (this.viewedLoading) return this.viewedLoading;
+    this.viewedLoading = (async () => {
+      for (const state of this.viewed.values()) state.busy = true;
+      this.updateViewed();
+      try {
+        const paths = await this.source!.viewed!.load();
+        for (const [doc, state] of this.viewed) { state.value = paths.includes(doc.path); state.ready = true; state.error = undefined; }
+      } catch (err) {
+        for (const state of this.viewed.values()) state.error = err instanceof Error ? err.message : String(err);
+      } finally {
+        this.viewedLoading = null;
+        for (const state of this.viewed.values()) state.busy = false;
+        if (!this.closed) this.updateViewed();
+      }
+    })();
+    return this.viewedLoading;
+  }
+
+  private updateViewed(): void {
+    this.updateFileButton();
+  }
+
+  private updateActiveViewed(): void {
+    const view = this.views[this.index];
+    const state = this.viewed.get(view.doc)!;
+    const button = this.el.viewed as HTMLButtonElement;
+    button.hidden = false;
+    button.dataset.doc = String(this.index);
+    button.disabled = !view.rendered || state.busy || (!state.ready && !state.error);
+    button.setAttribute('aria-pressed', String(state.value));
+    button.setAttribute('aria-label', `${state.value ? 'Unmark' : 'Mark'} ${view.doc.path} as viewed`);
+    button.textContent = state.busy ? state.ready ? 'Saving…' : 'Loading…' : !state.ready && state.error ? 'Retry viewed' : state.value ? '✓ Viewed' : 'Mark viewed';
+    button.title = state.error ?? this.source!.viewed?.label ?? 'Saved in this browser; resets when this file changes';
+    this.el.viewedFeedback.hidden = !state.error;
+    this.el.viewedFeedback.textContent = state.error ?? '';
+  }
+
+  private async toggleViewed(index: number): Promise<void> {
+    const view = this.views[index];
+    if (!view) return;
+    const state = this.viewed.get(view.doc)!;
+    if (state.busy) return;
+    if (!state.ready) {
+      if (this.source!.viewed) await this.initNativeViewed();
+      else await this.initLocalViewed(view.doc, await this.load(view.doc));
+      return;
+    }
+    const value = !state.value;
+    state.busy = true; state.error = undefined;
+    this.updateViewed();
+    try {
+      if (this.source!.viewed) await this.source!.viewed.set(view.doc, value);
+      else await saveViewed(state.key!, value);
+      state.value = value;
+    } catch (err) { state.error = err instanceof Error ? err.message : String(err); }
+    finally { state.busy = false; if (!this.closed) this.updateViewed(); }
   }
 
   private update(patch: Partial<Settings>): void {
@@ -570,8 +661,7 @@ class Reader {
   private onKey(e: KeyboardEvent): void {
     if (e.defaultPrevented) return;
     if (e.key === 'Escape') {
-      if (this.submitting) { e.preventDefault(); return; }
-      if (!this.closeMenus()) this.close();
+      if (!this.closeMenus() && !this.submitting) this.close();
       e.preventDefault();
       return;
     }
@@ -579,7 +669,8 @@ class Reader {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const target = e.composedPath()[0];
     if (e.key === 'Tab') {
-      const controls = [...this.shadow.querySelectorAll<HTMLElement>('button, a[href], input, textarea, select, summary, [tabindex="0"]')]
+      const focusRoot = this.el.settings.hidden ? this.root : this.el.settings;
+      const controls = [...focusRoot.querySelectorAll<HTMLElement>('button, a[href], input, textarea, select, summary, [tabindex="0"]')]
         .filter((el) => el.getClientRects().length && !el.matches(':disabled'));
       const index = controls.indexOf(this.shadow.activeElement as HTMLElement);
       const next = e.shiftKey ? (index <= 0 ? controls.length - 1 : index - 1) : (index + 1) % controls.length;
@@ -587,6 +678,7 @@ class Reader {
       e.preventDefault();
       return;
     }
+    if (!this.el.settings.hidden) return;
     if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable]')) return;
     switch (e.key) {
       case 'Escape':
@@ -624,7 +716,7 @@ class Reader {
 
   private onClick(e: MouseEvent): void {
     const target = e.target as Element;
-    const inMenu = target.closest('.mr-menu, [data-act="files"], [data-act="settings"]');
+    const inMenu = target.closest('.mr-menu, .mr-settings, [data-act="files"], [data-act="settings"]');
     if (!inMenu) this.closeMenus();
 
     const anchor = target.closest<HTMLAnchorElement>('.mr-content a[href^="#"]');
@@ -654,10 +746,16 @@ class Reader {
       case 'close':
         return this.close();
       case 'files':
-        if ((this.source?.docs.length ?? 0) > 1) this.toggleMenu(this.el.files, action);
+        if ((this.source?.docs.length ?? 0) > 0) this.toggleMenu(this.el.files, action);
         return;
       case 'settings':
         return this.toggleMenu(this.el.settings, action);
+      case 'close-settings':
+        this.closeMenus();
+        return;
+      case 'viewed':
+        void this.toggleViewed(Number(action.dataset.doc));
+        return;
       case 'smaller':
         return this.update({ size: Math.max(0, this.settings.size - 1) });
       case 'larger':
@@ -717,6 +815,7 @@ class Reader {
   }
 
   private captureSelection(event?: MouseEvent): void {
+    if (event && !(event.target as Element).closest('.mr-content')) return;
     if (this.submitting || this.textarea.value || (event?.target as Element | undefined)?.closest('.mr-composer')) return;
     const selection = (this.shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.() ?? document.getSelection();
     if (selection && !selection.isCollapsed && selection.rangeCount) {

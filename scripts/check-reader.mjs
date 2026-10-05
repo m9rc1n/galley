@@ -14,7 +14,7 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1440, height: 1000 });
-  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'light' }]);
   await page.goto(process.env.DEMO_URL ?? 'http://localhost:4173', { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('.mr-content').length === 3);
   const inspect = (fn, ...args) => page.evaluate(fn, ...args);
@@ -28,6 +28,40 @@ try {
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').getAttribute('aria-expanded')), 'false');
   await page.screenshot({ path: join(screenshots, 'galley-reader-desktop.png') });
+  // Toolbar controls stay centred, ordered and within the viewport at every supported width.
+  for (const width of [1440, 1100, 900, 768, 760, 390, 320]) {
+    await page.setViewport({ width, height: 1000 });
+    const aligned = await inspect(() => {
+      const s = document.querySelector('#galley-reader').shadowRoot;
+      return [...s.querySelectorAll('.mr-topbar button')].filter((el) => el.getClientRects().length && !el.closest('[hidden]')).map((el) => {
+        const r = el.getBoundingClientRect(); return { act: el.dataset.act, left: r.left, right: r.right, center: (r.top + r.bottom) / 2 };
+      });
+    });
+    for (let i = 0; i < aligned.length; i++) {
+      assert.ok(aligned[i].left >= 0 && aligned[i].right <= width, JSON.stringify({ width, aligned }));
+      assert.ok(Math.abs(aligned[i].center - 28) < 1, JSON.stringify({ width, aligned }));
+      if (i) assert.ok(aligned[i].left >= aligned[i - 1].right, JSON.stringify({ width, aligned }));
+    }
+  }
+  await page.setViewport({ width: 1440, height: 1000 });
+  // Current file identity and Viewed progress share the sticky bar; settings live in a drawer.
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-topbar [data-mode], .mr-topbar [data-scope]').length), 0);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn .mr-path').textContent), 'docs/rfcs/0042-reading-first-reviews.md');
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-file-header').length), 0);
+  await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').disabled);
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'true');
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-files-progress').textContent), '1 of 3 viewed');
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.act), 'close-settings');
+  for (let i = 0; i < 18; i++) {
+    await page.keyboard.press('Tab');
+    assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.closest('.mr-settings') !== null), true);
+  }
+  await page.screenshot({ path: join(screenshots, 'galley-reader-settings.png') });
+  await page.keyboard.press('Escape');
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-settings').hidden), true);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.act), 'settings');
   // Select a phrase using Chrome's actual shadow-root selection.
   const selected = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
@@ -116,7 +150,7 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 150));
   const layout = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    return ['.mr-composer', '.mr-topbar', '.mr-scope', 'textarea', '.mr-submit', '.mr-content > pre'].map((selector) => { const rect = s.querySelector(selector).getBoundingClientRect(); return { selector, left: rect.left, right: rect.right }; });
+    return ['.mr-composer', '.mr-topbar', '.mr-file-btn', 'textarea', '.mr-submit', '.mr-content > pre'].map((selector) => { const rect = s.querySelector(selector).getBoundingClientRect(); return { selector, left: rect.left, right: rect.right }; });
   });
   for (const rect of layout) { assert.ok(rect.left >= 0, JSON.stringify(rect)); assert.ok(rect.right <= 390, JSON.stringify(rect)); }
   const mobileCode = await inspect(() => {
@@ -126,10 +160,18 @@ try {
   assert.ok(mobileCode.content > mobileCode.width, JSON.stringify(mobileCode));
   assert.ok(mobileCode.page <= 390, JSON.stringify(mobileCode));
   await page.screenshot({ path: join(screenshots, 'galley-reader-mobile.png') });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
+  const drawer = await inspect(() => {
+    const panel = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-settings-panel');
+    return { left: panel.getBoundingClientRect().left, right: panel.getBoundingClientRect().right, width: panel.scrollWidth, client: panel.clientWidth };
+  });
+  assert.ok(drawer.left >= 0 && drawer.right <= 390 && drawer.width === drawer.client, JSON.stringify(drawer));
+  await page.screenshot({ path: join(screenshots, 'galley-reader-settings-mobile.png') });
+  await page.keyboard.press('Escape');
   await page.setViewport({ width: 1440, height: 1000 });
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    s.querySelector('[data-act="settings"]').click(); s.querySelector('[data-value="dark"]').click(); s.querySelector('[data-act="settings"]').click();
+    s.querySelector('[data-act="settings"]').click(); s.querySelector('[data-value="dark"]').click(); s.querySelector('.mr-settings [data-act="close-settings"]').click();
   });
   await page.screenshot({ path: join(screenshots, 'galley-reader-dark.png') });
   await inspect(() => {
@@ -139,10 +181,26 @@ try {
   });
   await new Promise((resolve) => setTimeout(resolve, 150));
   await page.screenshot({ path: join(screenshots, 'galley-reader-context.png') });
+  // The single sticky bar follows the file in view and its Viewed button targets that file.
+  await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot, root = s.querySelector('.mr-root'), section = s.querySelectorAll('.mr-document')[1];
+    root.scrollTop += section.getBoundingClientRect().top + 200 - 56;
+  });
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn .mr-path').textContent === 'README.md');
+  assert.equal(await inspect(() => Math.round(document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar').getBoundingClientRect().top)), 0);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').dataset.doc), '1');
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'true');
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-files-progress').textContent), '2 of 3 viewed');
   // Esc closes even with the comment input focused, and restores the page.
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('textarea').focus());
   await page.keyboard.press('Escape');
   assert.equal(await inspect(() => Boolean(document.querySelector('#galley-reader'))), false);
+  // Reopening restores the same file's progress; unmarking removes it.
+  await page.reload({ waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelector('.mr-viewed')?.getAttribute('aria-pressed') === 'true');
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'false');
   assert.deepEqual(errors, []);
-  console.log('Reader browser checks passed: continuous files, filtering, real selection, pinned draft, posting, mobile, dark theme, Escape.');
+  console.log('Reader browser checks passed: continuous files, filtering, real selection, pinned draft, posting, mobile, dark theme, current file in the sticky top bar, settings drawer focus, persisted Viewed progress, Escape.');
 } finally { await browser.close(); }

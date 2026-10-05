@@ -106,7 +106,7 @@
   top: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--measure)) minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   height: 56px;
@@ -137,7 +137,7 @@
 .mr-brand {
   flex: none;
   font-family: var(--serif);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -157,6 +157,7 @@
 }
 
 .mr-pr-title {
+  font-size: 13px;
   min-width: 0;
   overflow: hidden;
   color: var(--muted);
@@ -196,11 +197,6 @@
   flex: none;
 }
 
-.mr-aa {
-  font-family: var(--serif);
-  font-size: 17px;
-  font-weight: 700;
-}
 
 .mr-seg {
   display: inline-flex;
@@ -230,15 +226,11 @@
 }
 
 .mr-file-btn {
+  min-width: 0;
+  font-size: 13px;
   max-width: min(48vw, 560px);
 }
 
-.mr-file-btn .mr-path {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .mr-path {
   font-family: var(--mono);
@@ -299,15 +291,9 @@
 }
 
 .mr-files {
-  left: 50%;
-  transform: translateX(-50%);
+  right: 20px;
 }
 
-.mr-settings {
-  right: 16px;
-  width: 340px;
-  padding: 14px 16px;
-}
 
 .mr-menu-item {
   appearance: none;
@@ -397,15 +383,6 @@
   margin: 0 auto;
 }
 
-.mr-kicker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 22px;
-  color: var(--muted);
-  font-size: 13px;
-}
 
 .mr-title,
 .mr-content > h1.mr-lead {
@@ -1046,21 +1023,10 @@
 }
 
 .mr-pill {
-  position: fixed;
-  left: 50%;
-  bottom: 22px;
-  z-index: 15;
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 5px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  background: var(--bg);
-  box-shadow: var(--shadow);
-  color: var(--muted);
-  font-size: 13px;
-  transform: translateX(-50%);
+  margin: 0 8px 0 0;
 }
 
 .mr-pill[hidden] {
@@ -1226,21 +1192,8 @@
 
 /* Continuous review and the persistent comment composer. */
 .mr-root [hidden] { display: none !important; }
-.mr-scope {
-  position: sticky;
-  top: 56px;
-  z-index: 9;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 24px;
-  border-bottom: 1px solid var(--rule);
-  background: var(--bg);
-}
-.mr-scope [aria-pressed="true"] { background: var(--soft); font-weight: 600; }
-.mr-guide-hint { margin-left: auto; color: var(--muted); font-size: 12px; }
 .mr-main { padding-bottom: calc(var(--composer-height, 180px) + 110px); }
-.mr-document + .mr-document { margin-top: 90px; padding-top: 54px; border-top: 1px solid var(--rule); }
+.mr-document + .mr-document { margin-top: 90px; }
 .mr-content .mr-reading { outline: 2px solid color-mix(in srgb, var(--accent) 55%, var(--rule)); outline-offset: 8px; border-radius: 3px; }
 .mr-empty-changes { color: var(--muted); font-size: 15px; }
 .mr-comment-receipt { font-family: var(--sans); font-size: 12px; color: var(--accent); }
@@ -1282,11 +1235,7 @@
 .mr-submit:disabled { opacity: 0.45; cursor: default; }
 .mr-comment-status { margin: 7px 0 0; min-height: 18px; color: var(--muted); font-size: 12px; }
 .mr-comment-status a { color: var(--accent); }
-.mr-pill { position: static; margin-left: 8px; padding: 0; border: 0; background: transparent; box-shadow: none; transform: none; }
-.mr-guide-hint { margin-left: auto; }
 @media (max-width: 760px) {
-  .mr-scope { gap: 4px; padding: 6px 12px; }
-  .mr-guide-hint { display: none; }
   .mr-composer { padding: 8px 12px; }
   .mr-comment-context { align-items: flex-start; }
   .mr-comment-row { gap: 6px; }
@@ -1299,8 +1248,69 @@
 .mr-context-toggle:hover, .mr-context-toggle:focus-visible { color: var(--fg); border-color: var(--accent); background: var(--soft); }
 
 @media (max-width: 760px) {
-  .mr-scope { flex-wrap: wrap; }
-  .mr-pill { margin-left: auto; }
   .mr-pill-label { min-width: 0; padding: 0 2px; font-size: 11px; }
   .mr-pill .mr-btn { width: 26px; height: 26px; }
+}
+
+/* File identity and review actions share one sticky navigation bar. */
+.mr-pill-label { font-size: 12px; min-width: 0; color: var(--muted); }
+.mr-toc { top: 128px; }
+.mr-files-progress { margin: 6px 10px 10px; color: var(--muted); font-size: 12px; }
+.mr-menu-item .mr-path { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mr-tb-center { display: flex; align-items: center; min-width: 0; }
+.mr-file-btn { width: 100%; max-width: 100%; height: 34px; gap: 8px; }
+.mr-file-btn .mr-path { display: flex; flex: 1; min-width: 0; text-align: left; }
+.mr-file-btn .mr-count { flex: none; }
+.mr-path-dir, .mr-path-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mr-path-dir { flex: 0 1 auto; }
+.mr-path-name { flex: 0 1 auto; }
+.mr-file-check { flex: none; font-size: 11px; color: var(--accent); }
+
+.mr-viewed { height: 34px; padding: 0 10px; font-size: 12px; color: var(--muted); border: 1px solid var(--rule); }
+.mr-viewed[aria-pressed="true"] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--rule)); background: var(--add-wash); }
+.mr-viewed:disabled { opacity: 0.55; cursor: wait; }
+.mr-viewed-feedback { position: fixed; top: 56px; right: 16px; z-index: 15; max-width: min(500px, calc(100vw - 56px)); margin: 0; padding: 8px 12px; font-size: 12px; background: var(--bg); color: var(--del); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); }
+.mr-main { padding-top: 32px; }
+
+/* A modal drawer keeps configuration within reach without crowding the review. */
+.mr-root.settings-open { overflow-y: hidden; }
+.mr-settings { position: fixed; inset: 0; z-index: 40; width: auto; padding: 0; }
+.mr-settings-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.22); }
+.mr-settings-panel {
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  box-sizing: border-box;
+  width: min(420px, 100%);
+  padding: 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  color: var(--fg);
+  border-left: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+}
+.mr-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 30px; }
+.mr-settings-heading h2 { margin: 0; font: 600 19px/1.3 var(--sans); letter-spacing: -0.02em; }
+.mr-settings-section { margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--rule); }
+.mr-settings-section h3 { margin: 0 0 16px; color: var(--muted); font: 600 11px/1.4 var(--sans); text-transform: uppercase; letter-spacing: 0.1em; }
+.mr-settings .mr-set-row { display: flex; align-items: flex-start; flex-direction: column; gap: 8px; margin: 16px 0; }
+.mr-settings-note { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 12px 0 0; }
+.mr-settings .mr-keys { margin: 0; padding-top: 0; border-top: 0; }
+@media (max-width: 1200px) {
+  .mr-topbar { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .mr-pr-title, .mr-pill-label { display: none; }
+}
+@media (max-width: 760px) {
+  .mr-topbar { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; }
+  .mr-tb-center { justify-content: flex-start; }
+  .mr-tb-right { gap: 4px; }
+  .mr-pill { display: none; }
+  .mr-file-btn .mr-status, .mr-file-btn .mr-count, .mr-path-dir { display: none; }
+  .mr-file-btn .mr-path { font-size: 11px; }
+  .mr-tb-right { min-width: 0; }
+  .mr-count { display: inline; }
+  .mr-pill { margin-right: 0; }
+  .mr-pill-label { padding: 0 3px; font-size: 11px; }
+  .mr-viewed { font-size: 11px; padding: 0 7px; }
+  .mr-settings-panel { width: min(380px, calc(100% - 16px)); padding: 20px; }
 }

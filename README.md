@@ -53,7 +53,7 @@ Open a pull or merge request that changes `.md` files and press **Read** in the 
 | <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Post the comment in the focused composer |
 | <kbd>Esc</kbd> | Close the reader |
 
-The **Aa** menu has the theme (auto, light, sepia, dark), serif or sans text, and text size. The **×** button closes the reader (its tooltip shows **Esc**). File-menu entries and document shortcuts scroll to the selected file without replacing the others. **Changes/Clean** controls the change markup independently of the paragraph filter. Long documents get a contents rail on wide screens, with a dot next to every section that changed.
+The **Reading settings** button opens a drawer with the paragraph filter, Changes/Clean highlighting, theme (auto, light, sepia, dark), serif or sans text, and text size. Esc closes the drawer first, then the reader. The sticky top bar shows the current file path and Viewed action, updating as you scroll between files. The **×** button closes the reader (its tooltip shows **Esc**). File-menu entries and document shortcuts scroll to the selected file without replacing the others. **Changes/Clean** controls the change markup independently of the paragraph filter. Long documents get a contents rail on wide screens, with a dot next to every section that changed.
 
 ### GitLab (gitlab.com and self-managed)
 
@@ -73,7 +73,9 @@ Comments use the platform's own review APIs: [GitHub review comments](https://do
 
 GitLab uses your signed-in session and the page's CSRF token. GitHub requires a token with **Pull requests: read and write**. When the source range is outside the available diff (including omitted or truncated patches), the composer explicitly identifies a quoted GitHub file comment or a GitLab discussion instead of an inline comment. Posting checks the current review revision first. A failed post keeps the draft, and writes are never retried automatically; if a network failure leaves the result uncertain, check the platform before posting again.
 
-The demo saves comments in browser session storage and never sends them to GitHub or GitLab.
+Use **Mark viewed** in the top bar to track your review without collapsing the file. The Files menu shows viewed progress and a check beside completed files. With a GitHub token, Galley reads and updates GitHub's native [Viewed status](https://docs.github.com/en/graphql/reference/pulls#markfileasviewed), including unmarking. These requests check that the review revision is still current; failures leave the previous flag intact and show an error. Without a GitHub token, and on GitLab, progress stays in this browser. Local progress uses a fingerprint of that file's old and new contents, so it resets when the file changes while unrelated file updates preserve it. The button tooltip identifies where progress is saved.
+
+The demo saves comments in browser session storage and Viewed progress locally, and never sends them to GitHub or GitLab.
 
 ## How it works
 

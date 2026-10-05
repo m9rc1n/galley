@@ -1,3 +1,4 @@
+import { githubViewed } from './github-viewed.ts';
 import { getToken } from '../ui/settings.ts';
 import { commentContext, diffRange, requireBody, validateTarget } from './comments.ts';
 import { reconstructBase } from '../core/patch.ts';
@@ -98,6 +99,7 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
     subtitle: `${ctx.owner}/${ctx.repo} · #${ctx.number}`,
     diffUrl: `${repoUrl}/pull/${ctx.number}/files`,
     docs,
+    viewed: token ? githubViewed(ctx, docs, headSha, pr.base.sha) : undefined,
     async load(ref) {
       const { file } = ref as GitHubDoc;
       const head = ref.status === 'removed' ? '' : await getText(raw(headSha, ref.path));

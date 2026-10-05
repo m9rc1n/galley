@@ -18,6 +18,8 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 **Review comments.** When you press Post comment in the reader, Galley sends your comment, the quoted selection or paragraph, and its file/source-line context to the GitHub or GitLab review you are reading. The platform stores it as a normal review comment or discussion, visible according to that repository's access rules. Drafts stay in memory while the reader is open and are not sent until you post. The demo stores its simulated comments in that tab's session storage only.
 
+**Viewed progress.** With a GitHub token, Galley reads your native file Viewed status and updates it only when you mark or unmark a file. Without a token, and on GitLab, Galley stores local Viewed flags using a fingerprint of the review URL, file path and contents. File content is not stored with these flags. This progress is saved in extension storage (local storage in the demo), stays on your device, and resets when that file changes.
+
 **Preferences.** Your theme, typeface, text size display mode and paragraph filter are stored in your browser's extension storage.
 
 **Sites you enable.** If you enable Galley on a self-hosted GitLab or GitHub Enterprise site, your browser records that permission for that one domain. You can disable it in the Galley popup or in your browser's extension settings.

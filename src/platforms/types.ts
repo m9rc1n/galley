@@ -39,6 +39,12 @@ export interface ReviewSource {
   docs: DocRef[];
   load(doc: DocRef): Promise<DocContents>;
   links(doc: DocRef): RepoLinks;
+  /** Native platform review progress, if the current authentication supports it. */
+  viewed?: {
+    label: string;
+    load(): Promise<string[]>;
+    set(doc: DocRef, viewed: boolean): Promise<void>;
+  };
   prepareComment?(target: CommentTarget): Promise<CommentPlan>;
 }
 
