@@ -674,15 +674,17 @@
 
 /* Code can use the space beside the prose column, up to the viewport edge.
    Keeping its left edge aligned preserves the contents rail and change gutter. */
-.mr-content > pre,
-.mr-content > .mr-ghost > pre {
+.mr-content pre {
   box-sizing: border-box;
-  width: max(100%, min(1120px, calc(50vw + var(--measure) / 2 - 24px)));
+  width: max(100%, min(1120px, calc(100% + 50vw - var(--measure) / 2 - 24px)));
+}
+
+.mr-content table pre {
+  width: 100%;
 }
 
 @media (max-width: 760px) {
-  .mr-content > pre,
-  .mr-content > .mr-ghost > pre {
+  .mr-content pre {
     width: 100%;
   }
 }

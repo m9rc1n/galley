@@ -83,6 +83,17 @@ try {
   });
   assert.ok(codeLayout.width > codeLayout.prose * 1.4, JSON.stringify(codeLayout));
   assert.ok(codeLayout.left >= 0 && codeLayout.right <= 1440, JSON.stringify(codeLayout));
+  const nestedCode = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot, quote = s.querySelector('.mr-content blockquote');
+    const pre = document.createElement('pre');
+    pre.textContent = 'A long nested snippet '.repeat(8);
+    quote.append(pre);
+    const rect = pre.getBoundingClientRect();
+    const result = { width: rect.width, parent: quote.getBoundingClientRect().width, right: rect.right };
+    pre.remove();
+    return result;
+  });
+  assert.ok(nestedCode.width > nestedCode.parent * 1.3 && nestedCode.right <= 1440, JSON.stringify(nestedCode));
   await new Promise((resolve) => setTimeout(resolve, 150));
   await page.screenshot({ path: join(screenshots, 'galley-reader-code.png') });
   await inspect(() => {
