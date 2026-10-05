@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>mreadie</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <span class="brand">mreadie</span>
+      <span class="muted">Read merge requests like articles</span>
+    </header>
+
+    <section id="site"></section>
+
+    <section id="token" hidden>
+      <h2>GitHub token <span class="muted">· private repositories only</span></h2>
+      <p class="muted">
+        Public repositories work without one. For private ones, create a
+        <a id="token-link" target="_blank" rel="noopener noreferrer">fine-grained token</a> with read-only
+        <b>Contents</b> and <b>Pull requests</b> access. It is stored only in this browser.
+      </p>
+      <form id="token-form">
+        <input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" />
+        <button type="submit">Save</button>
+      </form>
+      <p id="token-status" class="muted"></p>
+    </section>
+
+    <footer class="muted">
+      Open a pull or merge request and press <b>Read</b>. In the reader: <kbd>J</kbd>/<kbd>K</kbd> changes,
+      <kbd>[</kbd>/<kbd>]</kbd> documents, <kbd>C</kbd> clean view, <kbd>Esc</kbd> back.
+    </footer>
+    <script src="popup.js"></script>
+  </body>
+</html>
