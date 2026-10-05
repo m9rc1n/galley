@@ -672,6 +672,21 @@
   tab-size: 4;
 }
 
+/* Code can use the space beside the prose column, up to the viewport edge.
+   Keeping its left edge aligned preserves the contents rail and change gutter. */
+.mr-content > pre,
+.mr-content > .mr-ghost > pre {
+  box-sizing: border-box;
+  width: max(100%, min(1120px, calc(50vw + var(--measure) / 2 - 24px)));
+}
+
+@media (max-width: 760px) {
+  .mr-content > pre,
+  .mr-content > .mr-ghost > pre {
+    width: 100%;
+  }
+}
+
 .mr-content pre code {
   padding: 0;
   border-radius: 0;

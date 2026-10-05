@@ -72,6 +72,19 @@ try {
   // Full context toggle is independent of Changes/Clean; file links now scroll in-place.
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-scope="all"]').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-content [hidden]').length), 0);
+  const codeLayout = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    const code = s.querySelector('.mr-content > pre'), article = s.querySelector('.mr-article');
+    const rect = code.getBoundingClientRect();
+    s.querySelector('.mr-root').scrollTop += rect.top - 220;
+    s.getSelection().removeAllRanges();
+    code.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    return { width: rect.width, prose: article.getBoundingClientRect().width, left: rect.left, right: rect.right };
+  });
+  assert.ok(codeLayout.width > codeLayout.prose * 1.4, JSON.stringify(codeLayout));
+  assert.ok(codeLayout.left >= 0 && codeLayout.right <= 1440, JSON.stringify(codeLayout));
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await page.screenshot({ path: join(screenshots, 'galley-reader-code.png') });
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     s.querySelector('[data-mode="clean"]').click();
@@ -92,9 +105,15 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 150));
   const layout = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    return ['.mr-composer', '.mr-topbar', '.mr-scope', 'textarea', '.mr-submit'].map((selector) => { const rect = s.querySelector(selector).getBoundingClientRect(); return { selector, left: rect.left, right: rect.right }; });
+    return ['.mr-composer', '.mr-topbar', '.mr-scope', 'textarea', '.mr-submit', '.mr-content > pre'].map((selector) => { const rect = s.querySelector(selector).getBoundingClientRect(); return { selector, left: rect.left, right: rect.right }; });
   });
   for (const rect of layout) { assert.ok(rect.left >= 0, JSON.stringify(rect)); assert.ok(rect.right <= 390, JSON.stringify(rect)); }
+  const mobileCode = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot, code = s.querySelector('.mr-content > pre');
+    return { width: code.clientWidth, content: code.scrollWidth, page: s.querySelector('.mr-root').scrollWidth };
+  });
+  assert.ok(mobileCode.content > mobileCode.width, JSON.stringify(mobileCode));
+  assert.ok(mobileCode.page <= 390, JSON.stringify(mobileCode));
   await page.screenshot({ path: join(screenshots, 'galley-reader-mobile.png') });
   await page.setViewport({ width: 1440, height: 1000 });
   await inspect(() => {

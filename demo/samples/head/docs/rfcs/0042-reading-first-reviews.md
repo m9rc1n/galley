@@ -42,8 +42,9 @@ A small browser extension adds a **Read** button to merge requests that change m
 Paragraphs are matched by their text, not by line numbers, so re-wrapping a paragraph produces no noise.[^wrap] When a block was rewritten almost completely, the reader shows the old and the new version one after another instead of a confetti of tiny edits.
 
 ```ts
+const renderOptions = { showInsertedWords: true, showRemovedParagraphs: true, preserveSourceLines: true };
 const changes = diffUnits(base.units, head.units);
-for (const change of changes) annotate(change);
+for (const change of changes) annotate(change, renderOptions);
 ```
 
 > [!NOTE]
