@@ -22,4 +22,4 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Check that the release build contains no dev-only code
-        run: '! grep -q "mreadie-launcher-dev" dist/chrome/content.js'
+        run: '! grep -q "galley-launcher-dev" dist/chrome/content.js'

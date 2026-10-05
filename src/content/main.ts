@@ -4,7 +4,7 @@ import type { ReviewSource } from '../platforms/types.ts';
 import { Launcher } from '../ui/launcher.ts';
 import { openReader } from '../ui/reader.ts';
 
-const LOADED = '__mreadieLoaded';
+const LOADED = '__galleyLoaded';
 
 function start(): void {
   const launcher = new Launcher();
@@ -65,7 +65,7 @@ function start(): void {
 
   // A token saved in the toolbar popup takes effect without reloading the page.
   chrome.storage?.onChanged?.addListener((changes) => {
-    if (!changes['mreadie:tokens'] || !current) return;
+    if (!changes['galley:tokens'] || !current) return;
     sources.delete(current.key);
     current = null;
     refresh();

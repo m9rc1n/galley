@@ -1,10 +1,10 @@
-# Publishing mreadie to the Chrome Web Store
+# Publishing Galley to the Chrome Web Store
 
 The package, graphics, listing copy and privacy texts are ready in this repository. The steps that need you (the account, payment, legal identity, hosting) are marked **You**.
 
 ## 1. Developer account (You, once)
 
-1. Sign in at the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) with the Google account that should own mreadie. For a company, use a shared or group account rather than a personal one.
+1. Sign in at the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) with the Google account that should own Galley. For a company, use a shared or group account rather than a personal one.
 2. Pay the one-time US$5 registration fee.
 3. Verify the contact email and fill in the publisher name.
 4. Complete the trader / non-trader declaration required by the EU Digital Services Act. If you publish on behalf of a company, you are most likely a trader: the store then shows your legal name, address, email and phone number to users in the EU.
@@ -14,7 +14,7 @@ The package, graphics, listing copy and privacy texts are ready in this reposito
 `PRIVACY.md` is complete: it names the project and points to the GitHub issues page for questions. Use its public address as the privacy policy URL in the dashboard:
 
 ```
-https://github.com/m9rc1n/mreadie/blob/main/PRIVACY.md
+https://github.com/m9rc1n/galley/blob/main/PRIVACY.md
 ```
 
 If you prefer a standalone page, `npm run privacy-page` renders `store/privacy-policy.html`, which you can host anywhere (GitHub Pages works).
@@ -26,7 +26,7 @@ npm ci
 npm run release
 ```
 
-This runs the tests and the type check, then writes `dist/mreadie-chrome-<version>.zip`. Before uploading:
+This runs the tests and the type check, then writes `dist/galley-chrome-<version>.zip`. Before uploading:
 
 - Load `dist/chrome` in a fresh Chrome profile (`chrome://extensions`, Developer mode, Load unpacked).
 - Open a pull request and a merge request that change markdown, including one in a private project you can access, and press **Read**.

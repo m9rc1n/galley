@@ -1,12 +1,12 @@
-# Contributing to mreadie
+# Contributing to Galley
 
-Thanks for helping. mreadie is small, so the process is too.
+Thanks for helping. Galley is small, so the process is too.
 
 ## Set up
 
 ```bash
-git clone https://github.com/m9rc1n/mreadie.git
-cd mreadie
+git clone https://github.com/m9rc1n/galley.git
+cd galley
 npm install
 npm run dev        # dev build in dist/dev with live reload; load it once via chrome://extensions → Load unpacked
 npm run demo       # or: try the reader on a sample merge request, no extension needed

@@ -6,6 +6,7 @@ import { copyFile, mkdir, readFile, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
+import { iconSvg } from './icons.mjs';
 import { startDemoServer } from './serve.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -32,11 +33,7 @@ function findChrome() {
   return found;
 }
 
-// Same geometry as scripts/icons.mjs.
-const ICON = `<svg viewBox="0 0 116 116" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect width="116" height="116" rx="26" fill="#4a4a4a"/><rect x="1.5" y="1.5" width="113" height="113" rx="24.5" fill="#191919"/>
-  <rect x="26" y="28" width="64" height="12" rx="6" fill="#fff"/><rect x="26" y="52" width="50" height="12" rx="6" fill="#3fb950"/>
-  <rect x="26" y="76" width="64" height="12" rx="6" fill="#fff"/><rect x="9" y="50" width="7" height="16" rx="3.5" fill="#3fb950"/></svg>`;
+const ICON = iconSvg();
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -52,25 +49,25 @@ async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
   await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: scale });
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: settings.theme === 'dark' ? 'dark' : 'light' }]);
   await page.goto(`${base}/?closed`);
-  await page.evaluate((s) => localStorage.setItem('mreadie:settings', JSON.stringify(s)), settings);
+  await page.evaluate((s) => localStorage.setItem('galley:settings', JSON.stringify(s)), settings);
   await page.goto(`${base}/?doc=${doc}`, { waitUntil: 'networkidle0' });
-  await page.waitForFunction(() => document.querySelector('#mreadie-reader')?.shadowRoot?.querySelector('.mr-content'));
+  await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot?.querySelector('.mr-content'));
   await sleep(300);
   if (heading) {
     await page.evaluate((text) => {
-      const s = document.querySelector('#mreadie-reader').shadowRoot;
+      const s = document.querySelector('#galley-reader').shadowRoot;
       const el = [...s.querySelectorAll('.mr-content h1, .mr-content h2, .mr-content h3, .mr-content p')].find((h) => h.textContent.startsWith(text));
       const scroller = s.querySelector('.mr-root');
       scroller.scrollTop += el.getBoundingClientRect().top - 100;
     }, heading);
     await sleep(300);
     // Scrolling down hides the top bar, as on Medium; show it in the picture.
-    await page.evaluate(() => document.querySelector('#mreadie-reader').shadowRoot.querySelector('.mr-topbar').classList.remove('is-hidden'));
+    await page.evaluate(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar').classList.remove('is-hidden'));
   }
-  if (menu) await page.evaluate((act) => document.querySelector('#mreadie-reader').shadowRoot.querySelector(`[data-act="${act}"]`).click(), menu);
+  if (menu) await page.evaluate((act) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-act="${act}"]`).click(), menu);
   await page.waitForFunction(
     () =>
-      [...document.querySelector('#mreadie-reader').shadowRoot.querySelectorAll('img')]
+      [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('img')]
         .filter((img) => img.getBoundingClientRect().top < innerHeight)
         .every((img) => img.complete),
     { timeout: 5000 },
@@ -93,7 +90,7 @@ const entry = await browser.newPage();
 await entry.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 });
 await entry.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
 await entry.goto(`${base}/?closed`, { waitUntil: 'networkidle0' });
-await entry.waitForFunction(() => document.querySelector('#mreadie-launcher') && document.querySelectorAll('#diff tr').length > 10);
+await entry.waitForFunction(() => document.querySelector('#galley-launcher') && document.querySelectorAll('#diff tr').length > 10);
 await sleep(600);
 await save(entry, 'screenshot-2-entry.jpg');
 

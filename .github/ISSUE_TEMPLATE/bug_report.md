@@ -7,7 +7,7 @@ labels: bug
 **Where**
 - [ ] GitHub.com   [ ] GitHub Enterprise   [ ] GitLab.com   [ ] self-managed GitLab
 - Browser and version:
-- mreadie version (toolbar icon → extensions page):
+- Galley version (toolbar icon → extensions page):
 
 **Link to a public pull/merge request that shows it** (or a minimal markdown sample)
 

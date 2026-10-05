@@ -1,4 +1,5 @@
-// Draws the extension icon (a page of text with one changed line) as PNGs, without dependencies.
+// Draws the extension icon as PNGs, without dependencies: a column of proof text where one line
+// is partly an insertion, with a change marker in the margin.
 //   node scripts/icons.mjs  → src/icons/icon{16,32,48,128}.png
 // The 128 px icon follows the Chrome Web Store rule: 96 px of artwork inside 16 px of transparent padding.
 // The dev build (`npm run dev`) uses the same icon with an orange accent.
@@ -16,13 +17,23 @@ export const ORANGE = [240, 138, 36, 255];
 const shapes = (accent) => [
   [0, 0, 116, 116, 26, EDGE], // hairline edge so the tile stays visible on dark toolbars
   [1.5, 1.5, 113, 113, 24.5, INK],
-  [26, 28, 64, 12, 6, PAPER],
-  [26, 52, 50, 12, 6, accent],
-  [26, 76, 64, 12, 6, PAPER],
-  [9, 50, 7, 16, 3.5, accent],
+  [26, 28, 64, 12, 6, PAPER], // a line of text
+  [26, 52, 24, 12, 6, PAPER], // a line that was edited: the original words…
+  [56, 52, 34, 12, 6, accent], //   …and the inserted ones
+  [26, 76, 46, 12, 6, PAPER], // last line of the paragraph
+  [9, 50, 7, 16, 3.5, accent], // change marker in the margin
 ];
 const DESIGN = 116;
 const PADDING = { 16: 1, 32: 2, 48: 3, 128: 16 };
+
+/** The same artwork as an SVG string, for the store graphics. */
+export function iconSvg(accent = GREEN) {
+  const rgb = ([r, g, b]) => `rgb(${r},${g},${b})`;
+  const rects = shapes(accent)
+    .map(([x, y, w, h, r, c]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${rgb(c)}"/>`)
+    .join('');
+  return `<svg viewBox="0 0 ${DESIGN} ${DESIGN}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${rects}</svg>`;
+}
 
 function inside([x, y, w, h, r], px, py) {
   const dx = Math.max(x + r - px, 0, px - (x + w - r));
@@ -110,7 +121,7 @@ export async function writeIcons(dir, accent = GREEN) {
   for (const size of [16, 32, 48, 128]) await writeFile(`${dir}/icon${size}.png`, png(size, render(size, shapes(accent))));
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await writeIcons(fileURLToPath(new URL('../src/icons', import.meta.url)));
   console.log('icons written to src/icons/');
 }

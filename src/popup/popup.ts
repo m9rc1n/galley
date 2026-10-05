@@ -5,7 +5,7 @@ const BUILT_IN = new Set(['https://github.com', 'https://gitlab.com']);
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 function scriptId(origin: string): string {
-  return `mreadie-${origin.replace(/[^a-z0-9]+/gi, '-')}`;
+  return `galley-${origin.replace(/[^a-z0-9]+/gi, '-')}`;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
@@ -34,7 +34,7 @@ async function renderSite(origin: string | null, tabId: number | undefined): Pro
   const section = $('#site');
   section.replaceChildren();
   if (!origin) {
-    section.append(statusLine(false, 'Open a GitHub or GitLab page to use mreadie.'));
+    section.append(statusLine(false, 'Open a GitHub or GitLab page to use Galley.'));
     return;
   }
   const host = new URL(origin).host;
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
   if (origin !== 'https://gitlab.com') await renderToken(enterprise ? origin! : 'https://github.com');
 }
 
-if (__MREADIE_DEV__) {
+if (__GALLEY_DEV__) {
   const tag = el('span', 'dev', 'dev');
   document.querySelector('.brand')!.append(tag);
 }

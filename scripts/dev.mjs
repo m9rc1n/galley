@@ -1,6 +1,6 @@
 // Development build for your local Chrome: dist/dev, rebuilt on every change, with live reload.
 //   npm run dev   then, once: chrome://extensions → Developer mode → Load unpacked → dist/dev
-// The dev build is called "mreadie (dev)", has an orange icon and DEV badges, and includes source
+// The dev build is called "Galley (dev)", has an orange icon and DEV badges, and includes source
 // maps. After each rebuild of the content script, the dev worker swaps it in and refreshes the
 // active GitHub/GitLab tab (see src/dev/reload.ts). The popup picks up changes when reopened.
 import { createHash } from 'node:crypto';
@@ -20,7 +20,7 @@ const time = () => new Date().toLocaleTimeString();
 // ---------------------------------------------------------------- live reload
 // A minimal WebSocket server: the dev build's service worker connects and waits for "reload".
 const clients = new Set();
-const server = createServer((_, res) => res.end('mreadie dev reload server\n'));
+const server = createServer((_, res) => res.end('Galley dev reload server\n'));
 server.on('upgrade', (req, socket) => {
   const key = req.headers['sec-websocket-key'];
   if (!key || !String(req.headers.origin ?? '').startsWith('chrome-extension://')) {
@@ -49,11 +49,11 @@ setInterval(() => send('ping'), 20_000); // also keeps the extension's service w
 // ---------------------------------------------------------------- build
 async function writeStatic() {
   const manifest = JSON.parse(await readFile(`${root}src/manifest.json`, 'utf8'));
-  manifest.name = 'mreadie (dev)';
-  manifest.short_name = 'mreadie dev';
+  manifest.name = 'Galley (dev)';
+  manifest.short_name = 'Galley dev';
   manifest.version = pkg.version;
   manifest.version_name = `${pkg.version}-dev`;
-  manifest.action.default_title = 'mreadie (dev)';
+  manifest.action.default_title = 'Galley (dev)';
   manifest.background = { service_worker: 'dev-reload.js' };
   manifest.permissions = [...manifest.permissions, 'alarms'];
   // Content scripts are registered by the dev worker instead, so they can be swapped after rebuilds.
@@ -63,7 +63,7 @@ async function writeStatic() {
   await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
 }
 
-const NEEDS_MANUAL_RELOAD = 'reload "mreadie (dev)" once on chrome://extensions to apply it';
+const NEEDS_MANUAL_RELOAD = 'reload "Galley (dev)" once on chrome://extensions to apply it';
 const done = {
   content: () => {
     console.log(`${time()}  content script rebuilt${clients.size ? ' → refreshing the active tab' : ''}`);
@@ -115,7 +115,7 @@ for (const [entry, file, kind] of [
     charset: 'utf8',
     sourcemap: 'inline',
     logLevel: 'silent',
-    define: { __MREADIE_DEV__: 'true', __MREADIE_MATCHES__: JSON.stringify(matches) },
+    define: { __GALLEY_DEV__: 'true', __GALLEY_MATCHES__: JSON.stringify(matches) },
     plugins: [notify(kind)],
   });
   await ctx.watch();
@@ -134,12 +134,12 @@ server.on('error', (err) => {
 });
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`
-mreadie ${pkg.version} dev build → ${out}
+Galley ${pkg.version} dev build → ${out}
 
   First time only:
     1. Open chrome://extensions and switch on Developer mode (top right).
     2. Click "Load unpacked" and choose the folder above.
-    3. Turn off the store version of mreadie, if you have it, while you develop.
+    3. Turn off the store version of Galley, if you have it, while you develop.
 
   Then edit anything in src/. Each save rebuilds; content script changes refresh the active
   GitHub or GitLab tab automatically. Leave this running; stop it with Ctrl+C.

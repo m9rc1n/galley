@@ -34,18 +34,18 @@ function explain(err: unknown, hasToken: boolean): Error {
       'GitHub API rate limit reached.',
       hasToken
         ? 'Wait a few minutes and try again.'
-        : 'Without a token GitHub allows 60 requests per hour. Add a read-only token in the mreadie toolbar popup to raise the limit.',
+        : 'Without a token GitHub allows 60 requests per hour. Add a read-only token in the Galley toolbar popup to raise the limit.',
       !hasToken,
     );
   }
   if (err.status === 403 && err.headers?.get('x-github-sso')) {
     return new ReaderError('Your GitHub token is not authorized for this organization.', 'Authorize the token for SSO in your GitHub token settings.', true);
   }
-  if (err.status === 401) return new ReaderError('GitHub rejected the token.', 'Replace it in the mreadie toolbar popup.', true);
+  if (err.status === 401) return new ReaderError('GitHub rejected the token.', 'Replace it in the Galley toolbar popup.', true);
   if (err.status === 404) {
     return hasToken
       ? new ReaderError('GitHub could not find this pull request with your token.', 'Make sure the token can read this repository (Contents and Pull requests: read-only).', true)
-      : new ReaderError('This pull request is in a private repository.', 'Add a read-only GitHub token in the mreadie toolbar popup to read private pull requests.', true);
+      : new ReaderError('This pull request is in a private repository.', 'Add a read-only GitHub token in the Galley toolbar popup to read private pull requests.', true);
   }
   if (err.status === 0) return new ReaderError('Could not reach GitHub.', 'Check your connection and try again.');
   return new ReaderError(`GitHub returned an error (${err.status}).`, 'Try again in a moment.');

@@ -12,8 +12,8 @@ export const TEXT_SIZES = [17, 18, 20, 22, 24];
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'auto', font: 'serif', size: 2, mode: 'changes' };
 
-const SETTINGS_KEY = 'mreadie:settings';
-const TOKENS_KEY = 'mreadie:tokens';
+const SETTINGS_KEY = 'galley:settings';
+const TOKENS_KEY = 'galley:tokens';
 
 /** chrome.storage.local in the extension; localStorage in the demo page. */
 function extensionStorage(): chrome.storage.StorageArea | null {

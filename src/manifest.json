@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "mreadie: Markdown reader for pull & merge requests",
-  "short_name": "mreadie",
+  "name": "Galley: Markdown reader for pull & merge requests",
+  "short_name": "Galley",
   "description": "Read markdown changes in GitHub pull requests and GitLab merge requests as typeset articles, with every edit marked in the text.",
-  "homepage_url": "https://github.com/m9rc1n/mreadie",
+  "homepage_url": "https://github.com/m9rc1n/galley",
   "version": "0.0.0",
   "minimum_chrome_version": "111",
   "icons": {
@@ -13,7 +13,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "mreadie",
+    "default_title": "Galley",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

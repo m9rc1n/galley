@@ -11,7 +11,7 @@ declare module 'markdown-it-footnote' {
 }
 
 /** true in the local development build (`npm run dev`), false in release builds. */
-declare const __MREADIE_DEV__: boolean;
+declare const __GALLEY_DEV__: boolean;
 
 /** Dev build only: the pages the content script runs on (from src/manifest.json). */
-declare const __MREADIE_MATCHES__: string[];
+declare const __GALLEY_MATCHES__: string[];

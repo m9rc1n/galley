@@ -1,10 +1,10 @@
-# mreadie
+# Galley
 
 Read markdown changes in GitHub pull requests and GitLab merge requests like an article, not like a diff.
 
-![A changed RFC in the mreadie reader](docs/reader-changes.png)
+![A changed RFC in the Galley reader](store/assets/screenshot-1-changes.jpg)
 
-RFCs, ADRs, runbooks and guides are reviewed in the same monospaced diff as code, so reviewers render the markdown in their heads and skim. mreadie adds a **Read** button to every pull/merge request that changes markdown files. Each changed document opens as a typeset article (a 680px serif column with Medium-style rhythm) and the changes are marked inside the text:
+RFCs, ADRs, runbooks and guides are reviewed in the same monospaced diff as code, so reviewers render the markdown in their heads and skim. Galley adds a **Read** button to every pull/merge request that changes markdown files. Each changed document opens as a typeset article (a 680px serif column with Medium-style rhythm) and the changes are marked inside the text:
 
 - inserted words are highlighted, removed words struck through;
 - new paragraphs, list items and sections get a green wash, removed ones stay in place in red;
@@ -14,7 +14,7 @@ RFCs, ADRs, runbooks and guides are reviewed in the same monospaced diff as code
 
 | Changes | Clean, dark |
 | --- | --- |
-| ![Table and paragraph edits](docs/reader-changes-detail.png) | ![Clean mode in the dark theme](docs/reader-clean-dark.png) |
+| ![Table and paragraph edits](store/assets/screenshot-3-tables.jpg) | ![Clean mode in the dark theme](store/assets/screenshot-4-clean-dark.jpg) |
 
 Version 0.1 is read-only: comments still go in the platform's diff view (see [Roadmap](#roadmap)).
 
@@ -22,15 +22,15 @@ Version 0.1 is read-only: comments still go in the platform's diff view (see [Ro
 
 **Without installing anything:** `npm install && npm run demo`, then open http://localhost:4173. The demo runs the real reader on a sample merge request.
 
-**From the Chrome Web Store:** coming soon; until then, install from a [release](https://github.com/m9rc1n/mreadie/releases) (download `mreadie-chrome-<version>.zip`, unzip it, then **Load unpacked** on `chrome://extensions`) or build it yourself (below).
+**From the Chrome Web Store:** coming soon; until then, install from a [release](https://github.com/m9rc1n/galley/releases) (download `galley-chrome-<version>.zip`, unzip it, then **Load unpacked** on `chrome://extensions`) or build it yourself (below).
 
 **In your own Chrome, as a developer:** see [Develop in your own Chrome](#develop-in-your-own-chrome) below.
 
 **As a plain unpacked extension:**
 
 ```bash
-git clone https://github.com/m9rc1n/mreadie.git
-cd mreadie
+git clone https://github.com/m9rc1n/galley.git
+cd galley
 npm install
 npm run build
 ```
@@ -56,13 +56,13 @@ The **Aa** menu has the theme (auto, light, sepia, dark), serif or sans text, an
 
 ### GitLab (gitlab.com and self-managed)
 
-Nothing to configure: mreadie reads the merge request with your signed-in session. On a self-managed instance, click the mreadie icon in the browser toolbar and choose **Enable on git.example.com**; the extension then gets access to that one domain. Nested groups and instances installed under a sub-path work.
+Nothing to configure: Galley reads the merge request with your signed-in session. On a self-managed instance, click the Galley icon in the browser toolbar and choose **Enable on git.example.com**; the extension then gets access to that one domain. Nested groups and instances installed under a sub-path work.
 
 ### GitHub (github.com and Enterprise Server)
 
-Public repositories work without setup. GitHub allows 60 API requests per hour without a token; mreadie uses one per pull request, plus two more when a file's diff is too large for the API to include.
+Public repositories work without setup. GitHub allows 60 API requests per hour without a token; Galley uses one per pull request, plus two more when a file's diff is too large for the API to include.
 
-Private repositories need a token, because GitHub's API does not accept the browser session. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with read-only **Contents** and **Pull requests** access to the repositories you review, then paste it into the mreadie popup. The token stays in the browser's extension storage and is only sent to the GitHub API. For GitHub Enterprise Server, enable the site in the popup and save a token for it there.
+Private repositories need a token, because GitHub's API does not accept the browser session. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with read-only **Contents** and **Pull requests** access to the repositories you review, then paste it into the Galley popup. The token stays in the browser's extension storage and is only sent to the GitHub API. For GitHub Enterprise Server, enable the site in the popup and save a token for it there.
 
 ## How it works
 
@@ -88,7 +88,7 @@ Private repositories need a token, because GitHub's API does not accept the brow
 
 - No server, no analytics. Requests go only to the GitHub or GitLab instance you are on, plus `api.github.com` and `raw.githubusercontent.com` for GitHub.
 - Everything rendered is sanitised: no scripts, iframes, forms or inline styles. Pull requests can come from forks.
-- Images inside documents load from wherever they are hosted. GitHub's own preview proxies external images; mreadie does not.
+- Images inside documents load from wherever they are hosted. GitHub's own preview proxies external images; Galley does not.
 - Permissions: github.com, gitlab.com and the two GitHub hosts above. Other domains only after you enable them in the popup.
 
 ## Limitations
@@ -114,7 +114,7 @@ Toward changing how we review merge requests together:
 
 [PUBLISHING.md](PUBLISHING.md) walks through the Chrome Web Store submission. What is already prepared:
 
-- `npm run release` runs the tests and the type check, then builds `dist/mreadie-chrome-<version>.zip`. The zip includes `THIRD_PARTY_NOTICES.txt` with the licences of the bundled libraries.
+- `npm run release` runs the tests and the type check, then builds `dist/galley-chrome-<version>.zip`. The zip includes `THIRD_PARTY_NOTICES.txt` with the licences of the bundled libraries.
 - [`store/LISTING.md`](store/LISTING.md) has the listing copy, the privacy-practices answers (single purpose, permission justifications, data disclosures) and the reviewer test instructions.
 - `npm run store-assets` renders the five 1280×800 screenshots, both promo tiles and the store icon into `store/assets/`, from the real reader.
 - [`PRIVACY.md`](PRIVACY.md) is the privacy policy. `npm run privacy-page` turns it into `store/privacy-policy.html` for hosting.
@@ -128,11 +128,11 @@ npm run dev
 
 Then, once: open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose `dist/dev`.
 
-- The dev build is called **mreadie (dev)**. It has an orange icon and DEV badges, so it can sit next to the store version; turn the store version off while you develop.
+- The dev build is called **Galley (dev)**. It has an orange icon and DEV badges, so it can sit next to the store version; turn the store version off while you develop.
 - Leave `npm run dev` running. Every save rebuilds:
   - content script changes appear in the active GitHub or GitLab tab within a couple of seconds;
   - popup changes show the next time you open the popup;
-  - manifest or dev-worker changes need one click on the reload icon of mreadie (dev) in `chrome://extensions`.
+  - manifest or dev-worker changes need one click on the reload icon of Galley (dev) in `chrome://extensions`.
 - Source maps are included, so DevTools shows the TypeScript sources.
 - The dev build keeps its own settings and GitHub token, separate from the store version.
 

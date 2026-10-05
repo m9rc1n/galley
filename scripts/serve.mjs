@@ -34,7 +34,7 @@ export function startDemoServer(port = Number(process.env.PORT ?? 4173)) {
   return new Promise((resolve) => server.listen(port, () => resolve(server)));
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const server = await startDemoServer();
-  console.log(`mreadie demo → http://localhost:${server.address().port}`);
+  console.log(`Galley demo → http://localhost:${server.address().port}`);
 }

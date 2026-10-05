@@ -4,14 +4,14 @@ Everything to paste into the [Chrome Web Store Developer Dashboard](https://chro
 
 ## Package
 
-Upload `dist/mreadie-chrome-<version>.zip`, built by `npm run release`.
+Upload `dist/galley-chrome-<version>.zip`, built by `npm run release`.
 
 ## Store listing
 
 **Title** (from the manifest, 50 of 75 characters)
 
 ```
-mreadie: Markdown reader for pull & merge requests
+Galley: Markdown reader for pull & merge requests
 ```
 
 **Summary** (from the manifest, 128 of 132 characters)
@@ -23,9 +23,9 @@ Read markdown changes in GitHub pull requests and GitLab merge requests as types
 **Description** (plain text; paste as-is)
 
 ```
-Reviewing an RFC, ADR, runbook or README in a pull request means reading raw markdown in a monospaced diff: hash marks for headings, brackets for links, and a re-wrapped paragraph that shows up as ten changed lines. mreadie turns that review back into reading.
+Reviewing an RFC, ADR, runbook or README in a pull request means reading raw markdown in a monospaced diff: hash marks for headings, brackets for links, and a re-wrapped paragraph that shows up as ten changed lines. Galley turns that review back into reading.
 
-On any GitHub pull request or GitLab merge request that changes markdown files, mreadie adds a Read button. Each changed document opens as a clean, typeset article, with the changes marked inside the text.
+On any GitHub pull request or GitLab merge request that changes markdown files, Galley adds a Read button. Each changed document opens as a clean, typeset article, with the changes marked inside the text.
 
 WHAT YOU GET
 • Typography made for long-form reading: a comfortable serif column, real headings, tables, images, task lists, footnotes and alerts.
@@ -45,9 +45,9 @@ PRIVATE BY DESIGN
 • Requests go only to the GitHub or GitLab site you are using.
 • Rendered documents are sanitised, so content from forks cannot run scripts.
 
-mreadie is read-only: comments still go through the platform's own review tools.
+Galley is read-only: comments still go through the platform's own review tools.
 
-GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. mreadie is not affiliated with or endorsed by either company.
+GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. Galley is not affiliated with or endorsed by either company.
 ```
 
 **Category:** Developer Tools
@@ -67,16 +67,16 @@ GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. mread
 | Small promo tile, 440×280 | `promo-small-440x280.jpg` | Yes |
 | Marquee promo tile, 1400×560 | `promo-marquee-1400x560.jpg` | No |
 
-**Homepage URL:** `https://github.com/m9rc1n/mreadie`
+**Homepage URL:** `https://github.com/m9rc1n/galley`
 
-**Support URL:** `https://github.com/m9rc1n/mreadie/issues`
+**Support URL:** `https://github.com/m9rc1n/galley/issues`
 
 ## Privacy practices
 
 **Single purpose**
 
 ```
-mreadie shows the markdown documents changed in a GitHub pull request or GitLab merge request as readable, typeset articles, with the changes highlighted.
+Galley shows the markdown documents changed in a GitHub pull request or GitLab merge request as readable, typeset articles, with the changes highlighted.
 ```
 
 **Permission justifications**
@@ -90,13 +90,13 @@ Saves the user's reading preferences (theme, typeface, text size, Changes or Cle
 `scripting`
 
 ```
-Used only when the user clicks "Enable on <domain>" in the popup for their own self-managed GitLab or GitHub Enterprise server: mreadie registers its bundled content script for that one domain and injects it into the open tab. No code is fetched or generated at runtime.
+Used only when the user clicks "Enable on <domain>" in the popup for their own self-managed GitLab or GitHub Enterprise server: Galley registers its bundled content script for that one domain and injects it into the open tab. No code is fetched or generated at runtime.
 ```
 
 `activeTab`
 
 ```
-Lets the popup read the address of the current tab when the user opens it, so it can show whether mreadie works on that site and offer to enable it there.
+Lets the popup read the address of the current tab when the user opens it, so it can show whether Galley works on that site and offer to enable it there.
 ```
 
 Host permissions
@@ -105,7 +105,7 @@ Host permissions
 github.com and gitlab.com: the content script detects pull and merge request pages, shows the Read button, and loads the changed markdown files with the user's existing session.
 api.github.com: lists the files changed in a GitHub pull request, with their diffs, through GitHub's REST API.
 raw.githubusercontent.com: GitHub redirects raw file downloads, including images inside documents, to this domain.
-Optional https://*/* and http://*/*: never granted at install. Requested at runtime for a single domain, only when the user enables mreadie for their self-managed GitLab or GitHub Enterprise server from the popup.
+Optional https://*/* and http://*/*: never granted at install. Requested at runtime for a single domain, only when the user enables Galley for their self-managed GitLab or GitHub Enterprise server from the popup.
 ```
 
 **Remote code:** No, I am not using remote code.
@@ -113,7 +113,7 @@ Optional https://*/* and http://*/*: never granted at install. Requested at runt
 **Data usage.** Check these two boxes and leave the others unchecked:
 
 - [x] **Authentication information**: the optional GitHub token, stored locally and sent only to the GitHub API.
-- [x] **Website content**: the pull and merge request pages and markdown files that mreadie reads and renders on the device.
+- [x] **Website content**: the pull and merge request pages and markdown files that Galley reads and renders on the device.
 
 Leave unchecked: personally identifiable information, health information, financial and payment information, personal communications, location, web history, user activity.
 
@@ -123,7 +123,7 @@ Tick all three certifications:
 - I do not use or transfer user data for purposes that are unrelated to my item's single purpose.
 - I do not use or transfer user data to determine creditworthiness or for lending purposes.
 
-**Privacy policy URL:** `https://github.com/m9rc1n/mreadie/blob/main/PRIVACY.md`
+**Privacy policy URL:** `https://github.com/m9rc1n/galley/blob/main/PRIVACY.md`
 
 ## Distribution
 

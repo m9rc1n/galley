@@ -12,7 +12,7 @@ const page = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>mreadie privacy policy</title>
+<title>Galley privacy policy</title>
 <style>
   :root { color-scheme: light dark; --bg: #ffffff; --fg: #242424; --muted: #6b6b6b; --rule: #e6e6e6; }
   @media (prefers-color-scheme: dark) { :root { --bg: #121212; --fg: #e6e6e6; --muted: #a0a0a0; --rule: #2e2e2e; } }

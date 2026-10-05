@@ -9,4 +9,4 @@ Open a merge request against `main`. Small fixes can be merged by any maintainer
 See [the style guide](docs/style-guide.md) before writing new pages, and [RFC 0042](docs/rfcs/0042-reading-first-reviews.md) for how documentation reviews work.
 
 > [!TIP]
-> Install the mreadie extension to review documentation changes as rendered articles.
+> Install the Galley extension to review documentation changes as rendered articles.

@@ -22,7 +22,7 @@ const common = {
   legalComments: 'eof',
   logLevel: 'warning',
   metafile: true,
-  define: { __MREADIE_DEV__: 'false' },
+  define: { __GALLEY_DEV__: 'false' },
   // Folds constants so dev-only branches disappear; names and whitespace stay readable for store review.
   minifySyntax: true,
 };
@@ -43,7 +43,7 @@ async function thirdPartyNotices() {
       if (m) dirs.add(m[1]);
     }
   }
-  let text = 'mreadie includes the following open-source software.\n\n';
+  let text = 'Galley includes the following open-source software.\n\n';
   for (const dir of [...dirs].sort()) {
     const meta = JSON.parse(await readFile(`${root}${dir}/package.json`, 'utf8'));
     const file = (await readdir(`${root}${dir}`)).find((f) => /^(licen[cs]e|copying)(\.(md|txt))?$/i.test(f));
@@ -72,17 +72,17 @@ async function assemble() {
     if (browser === 'firefox') {
       delete m.minimum_chrome_version;
       m.browser_specific_settings = {
-        gecko: { id: 'mreadie@mreadie.dev', strict_min_version: '128.0', data_collection_permissions: { required: ['none'] } },
+        gecko: { id: 'galley@m9rc1n.github.io', strict_min_version: '128.0', data_collection_permissions: { required: ['none'] } },
       };
     }
     await writeFile(`${out}/manifest.json`, `${JSON.stringify(m, null, 2)}\n`);
     if (zip) {
-      const file = `${root}dist/mreadie-${browser}-${pkg.version}.zip`;
+      const file = `${root}dist/galley-${browser}-${pkg.version}.zip`;
       await rm(file, { force: true });
       execFileSync('zip', ['-qrX', file, '.'], { cwd: out });
     }
   }
-  console.log(`mreadie ${pkg.version} built → dist/chrome, dist/firefox${zip ? ' (+ zips)' : ''}`);
+  console.log(`Galley ${pkg.version} built → dist/chrome, dist/firefox${zip ? ' (+ zips)' : ''}`);
 }
 
 if (watch) {

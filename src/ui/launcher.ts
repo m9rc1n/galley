@@ -49,15 +49,15 @@ export class Launcher {
     if (this.dismissed.has(key)) return;
     this.hide();
     const host = document.createElement('div');
-    host.id = __MREADIE_DEV__ ? 'mreadie-launcher-dev' : 'mreadie-launcher';
+    host.id = __GALLEY_DEV__ ? 'galley-launcher-dev' : 'galley-launcher';
     const shadow = host.attachShadow({ mode: 'open' });
-    const dev = __MREADIE_DEV__ ? '<span class="dev-tag">DEV</span>' : '';
-    shadow.innerHTML = `<style>${CSS}</style><div class="wrap${__MREADIE_DEV__ ? ' dev' : ''}"><button class="launch">${icons.book}<span>Read</span>${dev}<span class="count"></span></button><button class="dismiss" aria-label="Hide for this page" title="Hide for this page">×</button></div>`;
+    const dev = __GALLEY_DEV__ ? '<span class="dev-tag">DEV</span>' : '';
+    shadow.innerHTML = `<style>${CSS}</style><div class="wrap${__GALLEY_DEV__ ? ' dev' : ''}"><button class="launch">${icons.book}<span>Read</span>${dev}<span class="count"></span></button><button class="dismiss" aria-label="Hide for this page" title="Hide for this page">×</button></div>`;
     const launch = shadow.querySelector<HTMLButtonElement>('.launch')!;
     shadow.querySelector('.count')!.textContent = error ? '!' : String(count);
     launch.classList.toggle('is-error', error);
     launch.title = error
-      ? 'mreadie could not load the documents. Click for details.'
+      ? 'Galley could not load the documents. Click for details.'
       : `Read ${count} changed markdown document${count === 1 ? '' : 's'} as articles`;
     launch.addEventListener('click', onOpen);
     shadow.querySelector('.dismiss')!.addEventListener('click', () => {

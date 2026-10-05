@@ -10,12 +10,12 @@ const WORDS_PER_MINUTE = 230;
 const FOCUS_LINE = 0.3;
 
 const TEMPLATE = `
-<div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="mreadie reader">
+<div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley reader">
   <div class="mr-progress"><div></div></div>
   <header class="mr-topbar">
     <div class="mr-tb-left">
       <button class="mr-btn" data-act="close" title="Back to the diff (Esc)">${icons.back}<span class="mr-hide-sm">Back</span></button>
-      <span class="mr-brand">mreadie${__MREADIE_DEV__ ? '<span class="mr-dev">dev</span>' : ''}</span>
+      <span class="mr-brand">galley${__GALLEY_DEV__ ? '<span class="mr-dev">dev</span>' : ''}</span>
       <span class="mr-pr-title"></span>
     </div>
     <div class="mr-tb-center">
@@ -159,7 +159,7 @@ class Reader {
   private readonly prevFocus: Element | null;
 
   constructor(private readonly onClose?: () => void) {
-    this.host.id = __MREADIE_DEV__ ? 'mreadie-reader-dev' : 'mreadie-reader';
+    this.host.id = __GALLEY_DEV__ ? 'galley-reader-dev' : 'galley-reader';
     this.shadow.innerHTML = `<style>${css}</style>${TEMPLATE}`;
     const q = (sel: string) => this.shadow.querySelector<HTMLElement>(sel)!;
     this.root = q('.mr-root');
@@ -239,7 +239,7 @@ class Reader {
       a.href = 'https://github.com/settings/personal-access-tokens/new';
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
-      p.append(a, ' with read-only access to Contents and Pull requests, then click the mreadie icon in your browser toolbar to save it.');
+      p.append(a, ' with read-only access to Contents and Pull requests, then click the Galley icon in your browser toolbar to save it.');
       extra.push(p);
     }
     this.showMessage(e.message, e.hint, extra, Boolean(this.source));
