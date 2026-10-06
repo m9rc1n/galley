@@ -16,3 +16,16 @@ We render markdown in the browser with markdown-it and sanitise the result with 
 - Rendering is fast and works the same on every platform.
 - Platform-specific syntax, such as GitLab's `[[_TOC_]]`, may render slightly differently from the platform itself.
 - Every rendered document is sanitised, because merge requests can come from forks.
+
+## Review sequence
+
+```mermaid
+sequenceDiagram
+  participant Reviewer
+  participant Galley
+  participant Platform
+  Reviewer->>Galley: Select source lines
+  Galley->>Platform: Post review comment
+  Platform-->>Galley: Thread URL
+  Galley-->>Reviewer: Show posted comment
+```

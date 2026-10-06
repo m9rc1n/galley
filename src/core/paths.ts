@@ -47,3 +47,10 @@ export function encodePath(path: string): string {
 export function isMarkdownPath(path: string): boolean {
   return /\.(md|markdown|mdown|mkd|mdx)$/i.test(path);
 }
+
+/** Known text source/configuration files; never guess that an image or archive is code. */
+export function isCodePath(path: string): boolean {
+  const name = path.split('/').pop() ?? path;
+  return /\.(?:[cm]?jsx?|tsx?|py|rb|rake|go|rs|java|kt|kts|swift|m|mm|c|cc|cpp|cxx|h|hpp|cs|fs|fsx|php|vue|svelte|astro|html?|css|scss|sass|less|sh|bash|zsh|fish|ps1|bat|cmd|sql|graphql|gql|json|jsonc|ya?ml|toml|ini|conf|cfg|env|xml|svg|proto|ex|exs|erl|hrl|clj|cljs|cljc|edn|scala|sc|lua|r|dart|pl|pm|tf|hcl|nix|lock|txt|rst|adoc|asciidoc)$/i.test(name)
+    || /^(?:Dockerfile(?:\..+)?|Containerfile|Makefile|Gemfile|Rakefile|Procfile|Justfile|\.(?:gitignore|gitattributes|editorconfig|dockerignore|env(?:\..+)?))$/i.test(name);
+}

@@ -1,3 +1,4 @@
+import { mermaidSource, prepareDiagram, type Diagram } from './diagrams.ts';
 import { diffArrays } from 'diff';
 import DOMPurify from 'dompurify';
 import { diffUnits, similarity, type BlockChange } from '../core/blockdiff.ts';
@@ -15,7 +16,18 @@ export interface RenderInput {
   links: RepoLinks;
 }
 
+export interface RenderedBlock {
+  el: HTMLElement;
+  kind: BlockChange['kind'];
+  base?: Unit;
+  head?: Unit;
+}
+
 export interface RenderedDoc {
+  diagrams: Diagram[];
+  isCode: boolean;
+  /** Trusted source mapping; document HTML cannot forge comment targets. */
+  blocks: RenderedBlock[];
   /** The article body, sanitised and annotated with change markers. */
   content: HTMLElement;
   /** First element of every run of consecutive changes, in reading order. */
@@ -31,21 +43,77 @@ export interface RenderedDoc {
 /** Above this share of changed text, an edit is shown as "old block removed, new block added". */
 const REWRITE_RATIO = 0.6;
 
+/**
+ * The only classes that survive sanitising: the ones Galley's own markdown rendering produces.
+ * Raw HTML in a document may not borrow anything else (banners, change markers, removed-block
+ * styling), so it cannot imitate Galley's interface or hide text. Change markers are added
+ * after sanitising and never come from the document.
+ */
+const RENDERER_CLASSES = new Set([
+  'mr-tight',
+  'mr-table',
+  'mr-html',
+  'mr-meta',
+  'mr-task',
+  'mr-task-item',
+  'mr-alert',
+  'mr-alert-note',
+  'mr-alert-tip',
+  'mr-alert-important',
+  'mr-alert-warning',
+  'mr-alert-caution',
+  'footnotes',
+  'footnotes-sep',
+  'footnotes-list',
+  'footnote-item',
+  'footnote-ref',
+  'footnote-backref',
+]);
+
 let purifier: ReturnType<typeof DOMPurify> | null = null;
 
 function sanitize(doc: Document, html: string): DocumentFragment {
-  purifier ??= DOMPurify(doc.defaultView ?? window);
+  if (!purifier) {
+    purifier = DOMPurify(doc.defaultView ?? window);
+    purifier.addHook('uponSanitizeAttribute', (_node, data) => {
+      if (data.attrName !== 'class') return;
+      data.attrValue = data.attrValue
+        .split(/\s+/)
+        .filter((name) => RENDERER_CLASSES.has(name))
+        .join(' ');
+      if (!data.attrValue) data.keepAttr = false;
+    });
+  }
   return purifier.sanitize(html, {
     RETURN_DOM_FRAGMENT: true,
     FORBID_TAGS: ['style', 'form', 'iframe', 'frame', 'frameset', 'object', 'embed', 'base', 'link', 'meta', 'button', 'textarea', 'select'],
     FORBID_ATTR: ['style'],
+    // No data-* attributes from documents, except the two Galley renders itself.
+    ALLOW_DATA_ATTR: false,
+    ADD_ATTR: ['data-mr-u', 'data-lang'],
   }) as unknown as DocumentFragment;
+}
+
+/**
+ * Map block ids to elements, accepting only ids stamped with this render's nonce. A copy of the
+ * attribute written in raw HTML (to make a decoy stand in for a real block) is removed.
+ */
+function blocksById(root: HTMLElement, nonce: string): Map<number, HTMLElement> {
+  const byId = new Map<number, HTMLElement>();
+  for (const el of root.querySelectorAll<HTMLElement>('[data-mr-u]')) {
+    const [stamp, id] = (el.dataset.mrU ?? '').split(':');
+    if (stamp === nonce && id && !byId.has(Number(id))) byId.set(Number(id), el);
+    else el.removeAttribute('data-mr-u');
+  }
+  return byId;
 }
 
 function fragmentFor(doc: Document, unit: Unit, parsed: ParsedDoc): DocumentFragment {
   const frag = sanitize(doc, renderUnit(unit, parsed));
-  // Removed headings must not compete with live headings for anchor targets.
+  // Removed headings must not compete with live headings for anchor targets, and removed blocks
+  // carry no block ids at all.
   for (const el of frag.querySelectorAll('[id]')) el.removeAttribute('id');
+  for (const el of frag.querySelectorAll('[data-mr-u]')) el.removeAttribute('data-mr-u');
   return frag;
 }
 
@@ -184,7 +252,8 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
   return true;
 }
 
-function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLinks): void {
+function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLinks): Map<HTMLElement, HTMLElement> {
+  const replacements = new Map<HTMLElement, HTMLElement>();
   for (const img of root.querySelectorAll('img')) {
     const src = img.getAttribute('src');
     if (src) {
@@ -216,12 +285,13 @@ function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLin
       figure.append(caption);
     }
     p.replaceWith(figure);
+    replacements.set(p, figure);
   }
+  return replacements;
 }
 
-function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], base: ParsedDoc): HTMLElement[] {
-  const byId = new Map<number, HTMLElement>();
-  for (const el of root.querySelectorAll<HTMLElement>('[data-mr-u]')) byId.set(Number(el.dataset.mrU), el);
+function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], base: ParsedDoc, nonce: string, blocks: RenderedBlock[]): HTMLElement[] {
+  const byId = blocksById(root, nonce);
 
   // Each removed block goes right before the next block that still exists.
   const anchorFor = new Map<BlockChange, Element | null>();
@@ -240,10 +310,17 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
   };
 
   for (const change of changes) {
+    const live = change.head && byId.get(change.head.id);
+    if (live) blocks.push({ el: live, ...change });
+    const ghost = (anchor: Element | null) => {
+      const el = insertGhost(doc, root, change.base!, base, anchor);
+      blocks.push({ el, kind: 'removed', base: change.base });
+      return el;
+    };
     if (change.kind === 'same') {
       inRun = false;
     } else if (change.kind === 'removed') {
-      touch(insertGhost(doc, root, change.base!, base, anchorFor.get(change) ?? null));
+      touch(ghost(anchorFor.get(change) ?? null));
     } else {
       const el = byId.get(change.head!.id);
       if (!el) continue;
@@ -255,6 +332,11 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
       // Compare against the old block element itself, not the fragment around it (which ends in a newline).
       const frag = fragmentFor(doc, change.base!, base);
       const before = frag.firstElementChild ?? frag;
+      if (mermaidSource(change.base) !== null || mermaidSource(change.head) !== null) {
+        mark(el, 'modified');
+        touch(el);
+        continue;
+      }
       if ((change.head!.kind === 'code' && diffCode(doc, el, plainText(before))) || (change.head!.kind === 'table' && diffTable(doc, el, before))) {
         mark(el, 'modified');
         touch(el);
@@ -266,7 +348,7 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
         mark(el, 'modified', 'mr-subtle');
         touch(el);
       } else if (changeRatio(ops) > REWRITE_RATIO || !applyOps(el, ops)) {
-        touch(insertGhost(doc, root, change.base!, base, el));
+        touch(ghost(el));
         mark(el, 'added', 'mr-rewritten');
       } else {
         mark(el, 'modified');
@@ -286,20 +368,44 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   const words = (plainText(root).match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
   let changes: HTMLElement[] = [];
+  const blocks: RenderedBlock[] = [];
   const stats = { added: 0, removed: 0, modified: 0 };
   if (input.status !== 'added' && !removedDoc) {
     const base = parseDocument(input.base);
     const blockChanges = diffUnits(base.units, head.units);
-    changes = applyChanges(doc, root, blockChanges, base);
+    changes = applyChanges(doc, root, blockChanges, base, head.nonce, blocks);
     for (const c of blockChanges) if (c.kind !== 'same') stats[c.kind]++;
+  } else {
+    const byId = blocksById(root, head.nonce);
+    for (const unit of head.units) {
+      const el = byId.get(unit.id);
+      if (!el) continue;
+      const kind = removedDoc ? 'removed' : 'added';
+      mark(el, kind);
+      blocks.push({ el, kind, ...(removedDoc ? { base: unit } : { head: unit }) });
+    }
+    changes = blocks.length ? [blocks[0].el] : [];
+    stats[removedDoc ? 'removed' : 'added'] = blocks.length;
   }
-  decorate(doc, root, input.path, input.links);
+  const replacements = decorate(doc, root, input.path, input.links);
+  for (const block of blocks) block.el = replacements.get(block.el) ?? block.el;
+  changes = changes.map((el) => replacements.get(el) ?? el);
+  blocks.sort((a, b) => a.el.compareDocumentPosition(b.el) & 4 ? -1 : 1);
 
+  const diagrams: Diagram[] = [];
+  for (const block of blocks) {
+    const before = block.el;
+    const diagram = prepareDiagram(doc, block);
+    if (diagram) { diagrams.push(diagram); changes = changes.map((el) => el === before ? diagram.el : el); }
+  }
   const fm = new Map(head.frontmatter?.fields ?? []);
   const first = [...root.children].find((el) => !el.matches('details.mr-meta, .mr-ghost'));
   const lead = first?.tagName === 'H1' ? (first as HTMLElement) : null;
   return {
     content: root,
+    diagrams,
+    isCode: false,
+    blocks,
     changes,
     stats,
     lead,

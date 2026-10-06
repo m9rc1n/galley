@@ -27,6 +27,13 @@ Reviewers see the source in a monospaced diff: every heading is a row of hash ma
 
 ## How it works
 
+```mermaid
+flowchart LR
+  Source[Markdown source] --> Parse[Parse blocks]
+  Parse --> Reader[Reader]
+```
+
+
 A small browser extension adds a button to merge requests that change markdown files. It loads the old and the new version of each document and compares them line by line.
 
 | Change | Shown as |
