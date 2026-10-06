@@ -216,8 +216,8 @@ class Reader {
     this.textarea = q('#mr-comment') as HTMLTextAreaElement;
     this.submit = q('.mr-submit') as HTMLButtonElement;
     this.el.composer.addEventListener('submit', (e) => { e.preventDefault(); void this.postComment(); });
-    this.textarea.addEventListener('focus', () => { if (this.target) this.pinned = true; });
-    this.textarea.addEventListener('input', () => { if (this.target) this.pinned = true; this.updateSubmit(); });
+    this.textarea.addEventListener('focus', () => { if (this.target) this.pinned = true; this.syncTargetCue(); });
+    this.textarea.addEventListener('input', () => { if (this.target) this.pinned = true; this.syncTargetCue(); this.updateSubmit(); });
     this.root.addEventListener('mouseup', (e) => this.captureSelection(e));
     this.el.doc.replaceChildren(this.skeleton());
 
@@ -820,6 +820,7 @@ class Reader {
           this.pinned = true;
           this.el.commentQuote.hidden = !this.target;
         }
+        this.syncTargetCue();
         if (!this.target) this.el.commentStatus.textContent = 'Scroll to a paragraph to choose a comment target.';
         return;
       case 'retry':
@@ -883,12 +884,17 @@ class Reader {
     }
   }
 
+  private syncTargetCue(): void {
+    this.root.classList.toggle('has-pinned-target', Boolean(this.target) && this.pinned);
+  }
+
   private clearTarget(): void {
     this.planToken++;
     this.target = null;
     this.plan = null;
     for (const el of this.targetEls) el.classList.remove('mr-reading');
     this.targetEls = [];
+    this.syncTargetCue();
     this.el.commentTarget.textContent = 'a paragraph';
     this.el.commentQuote.hidden = true;
     this.updateSubmit();
@@ -897,6 +903,7 @@ class Reader {
   private setTarget(target: CommentTarget | null, elements: HTMLElement[]): void {
     if (!target) return;
     if (this.target?.doc === target.doc && this.target.side === target.side && this.target.startLine === target.startLine && this.target.endLine === target.endLine && this.target.quote === target.quote) {
+      this.syncTargetCue();
       this.el.commentQuote.hidden = !this.pinned || !target.quote;
       if (this.plan) this.el.commentStatus.textContent = `${this.plan.label}. ${this.pinned ? 'Target pinned.' : 'Target follows your reading position.'}`;
       return;
@@ -905,6 +912,7 @@ class Reader {
     this.target = target;
     this.targetEls = elements;
     for (const el of elements) el.classList.add('mr-reading');
+    this.syncTargetCue();
     this.el.commentTarget.textContent = `${target.side === 'base' ? target.doc.oldPath : target.doc.path} · ${target.side === 'base' ? 'old' : 'new'} ${target.doc.kind === 'code' ? 'source' : 'paragraph'} lines ${target.startLine}–${target.endLine}`;
     this.el.commentQuote.textContent = target.quote;
     this.el.commentQuote.hidden = !this.pinned || !target.quote;
@@ -931,6 +939,7 @@ class Reader {
     const plan = this.plan, target = this.target, elements = [...this.targetEls];
     this.submitting = true;
     this.pinned = true;
+    this.syncTargetCue();
     this.textarea.disabled = true;
     this.updateSubmit();
     this.el.commentStatus.textContent = 'Posting comment…';

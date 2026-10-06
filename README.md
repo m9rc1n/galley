@@ -16,7 +16,7 @@ RFCs, ADRs, runbooks and guides are reviewed in the same monospaced diff as code
 | --- | --- |
 | ![Table and paragraph edits](store/assets/screenshot-3-tables.jpg) | ![Clean mode in the dark theme](store/assets/screenshot-4-clean-dark.jpg) |
 
-The reader opens all changed documents in one continuous stream, showing changed paragraphs by default. Each hidden stretch has a **Show unchanged blocks** control for nearby context; **Entire files** restores every paragraph. A quiet outline follows your reading position. Click a paragraph or select a phrase to pin a comment target, then write in the bottom composer and post an ordinary GitHub or GitLab review comment.
+The reader opens all changed documents in one continuous stream, showing changed paragraphs by default. Each hidden stretch has an arrow control to expand or collapse nearby unchanged content; **Entire files** restores every paragraph. A subtle neutral underline follows your reading position and becomes slightly firmer when a comment target is pinned. Click a paragraph or select a phrase to pin a comment target, then write in the bottom composer and post an ordinary GitHub or GitLab review comment.
 
 ## Try it
 

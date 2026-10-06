@@ -42,9 +42,10 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
     const button = r.content.ownerDocument.createElement('button');
     button.type = 'button';
     button.className = 'mr-context-toggle';
-    button.textContent = `${isExpanded ? 'Hide' : 'Show'} ${gap.blocks.length} unchanged ${r.isCode ? gap.blocks.length === 1 ? 'line' : 'lines' : gap.blocks.length === 1 ? 'block' : 'blocks'}`;
+    button.textContent = `${gap.blocks.length} unchanged ${r.isCode ? gap.blocks.length === 1 ? 'line' : 'lines' : gap.blocks.length === 1 ? 'block' : 'blocks'}`;
+    button.setAttribute('aria-label', `${isExpanded ? 'Collapse' : 'Expand'} ${button.textContent}`);
     button.setAttribute('aria-expanded', String(isExpanded));
-    button.title = 'Reveal or collapse nearby context';
+    button.title = `${isExpanded ? 'Collapse' : 'Expand'} nearby unchanged content`;
     button.addEventListener('click', () => {
       for (const block of gap.blocks) isExpanded ? expanded.delete(block.el) : expanded.add(block.el);
       filterDocument(r, true);

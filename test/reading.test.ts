@@ -85,7 +85,9 @@ test('each hidden stretch can reveal and collapse context independently, retaini
   const before = r.blocks.find((block) => block.el.textContent === 'Kept before.')!.el;
   const after = r.blocks.find((block) => block.el.textContent === 'Kept after.')!.el;
   assert.equal(before.hidden, true); assert.equal(after.hidden, true);
+  assert.equal(r.content.querySelector('.mr-context-toggle')!.getAttribute('aria-label'), 'Expand 1 unchanged block');
   (r.content.querySelector('.mr-context-toggle') as HTMLButtonElement).click();
+  assert.equal(r.content.querySelector('.mr-context-toggle')!.getAttribute('aria-label'), 'Collapse 1 unchanged block');
   assert.equal(before.hidden, false); assert.equal(after.hidden, true);
   filterDocument(r, true);
   assert.equal(before.hidden, false);

@@ -134,7 +134,7 @@ try {
     const s = document.querySelector('#galley-reader').shadowRoot;
     s.querySelector('[data-mode="clean"]').click();
     s.querySelector('[data-act="files"]').click();
-    s.querySelector('[data-doc="1"]').click();
+    s.querySelector('[data-act="doc"][data-doc="1"]').click();
   });
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn .mr-path').textContent === 'README.md');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-content').length), 3);
