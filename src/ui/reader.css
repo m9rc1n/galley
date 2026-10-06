@@ -1203,20 +1203,24 @@
 .mr-root [hidden] { display: none !important; }
 .mr-main { padding-bottom: calc(var(--composer-height, 180px) + 110px); }
 .mr-document + .mr-document { margin-top: 90px; }
-/* A diffuse spotlight lifts the current block; the gutter locates its reading line. */
-.mr-root .mr-content .mr-reading:not(.mr-tight),
-.mr-root .mr-content li:has(> .mr-reading.mr-tight) {
-  --reading-wash: 0 0 0 0 transparent;
-  box-shadow: var(--reading-wash), 0 4px 22px -5px color-mix(in srgb, var(--fg) 12%, transparent), 0 0 18px 4px color-mix(in srgb, var(--fg) 4%, transparent);
-  border-radius: 6px;
-  transition: box-shadow 160ms ease;
+/* Pin a padded reading surface without moving text or animating between blocks. */
+.mr-article { isolation: isolate; }
+.mr-doc { position: relative; z-index: 1; }
+.mr-gutter { z-index: 2; }
+.mr-target-surface {
+  --target-pad-x: 20px;
+  --target-pad-y: 12px;
+  position: absolute;
+  z-index: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--fg) 1%, var(--bg));
+  box-shadow: 0 3px 18px -6px color-mix(in srgb, var(--fg) 16%, transparent), 0 0 12px color-mix(in srgb, var(--fg) 3%, transparent);
+  pointer-events: none;
 }
-.has-pinned-target .mr-content .mr-reading:not(.mr-tight),
-.has-pinned-target .mr-content li:has(> .mr-reading.mr-tight) {
-  box-shadow: var(--reading-wash), 0 5px 24px -5px color-mix(in srgb, var(--fg) 18%, transparent), 0 0 20px 4px color-mix(in srgb, var(--fg) 6%, transparent);
+.mr-target-surface.is-code-panel { --target-pad-x: 0px; --target-pad-y: 0px; background: transparent; border-radius: 10px; }
+@media (max-width: 760px) {
+  .mr-target-surface { --target-pad-x: 10px; --target-pad-y: 10px; border-radius: 10px; }
 }
-.mode-changes .mr-content [data-mr-change="added"].mr-reading { --reading-wash: 0 0 0 0.35em var(--add-wash); }
-.mode-changes .mr-content .mr-ghost.mr-reading { --reading-wash: 0 0 0 0.35em var(--del-bg); }
 .mr-reading-marker {
   position: absolute;
   left: -10px;
@@ -1391,7 +1395,6 @@
 .mr-code-line[data-mr-change="added"] { background: var(--add-wash); }
 .mr-code-line[data-mr-change="removed"] { background: var(--del-bg); color: var(--del); }
 .mr-content .mr-code-line.mr-ghost { margin: 0; padding-top: 0; padding-bottom: 0; border: 0; text-decoration: none; }
-.mr-root .mr-content .mr-code-line.mr-reading { border-radius: 0; }
 .mr-code-lines .mr-context-gap { padding: 0 12px; }
 .mode-clean .mr-code-line[data-mr-change="added"] { background: transparent; }
 @media (max-width: 760px) { .mr-code-lines { width: 100%; } .mr-code-line { grid-template-columns: 32px 32px 18px minmax(0, 1fr); font-size: 12px; } }

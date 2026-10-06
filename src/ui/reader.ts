@@ -170,6 +170,7 @@ class Reader {
   private target: CommentTarget | null = null;
   private targetEls: HTMLElement[] = [];
   private readonly readingMarker = h('div', 'mr-reading-marker');
+  private readonly targetSurface = h('div', 'mr-target-surface');
   private readingPoint: { element: HTMLElement; fraction: number } | null = null;
   private pinned = false;
   private plan: CommentPlan | null = null;
@@ -214,6 +215,9 @@ class Reader {
       commentStatus: q('.mr-comment-status'),
       empty: q('.mr-empty-reader'),
     };
+    this.targetSurface.hidden = true;
+    this.targetSurface.setAttribute('aria-hidden', 'true');
+    this.el.article.prepend(this.targetSurface);
     q('.mr-tb-right').prepend(this.el.pill);
     this.textarea = q('#mr-comment') as HTMLTextAreaElement;
     this.submit = q('.mr-submit') as HTMLButtonElement;
@@ -923,6 +927,7 @@ class Reader {
   }
 
   private paintReadingMarker(): void {
+    this.paintTargetSurface();
     const point = this.readingPoint;
     this.readingMarker.hidden = !point || !point.element.isConnected || Boolean(point.element.closest('[hidden]')) || !point.element.getClientRects().length;
     if (!point || this.readingMarker.hidden) return;
@@ -930,6 +935,26 @@ class Reader {
     const y = this.readingLineCenter(point.element, rect.top + rect.height * point.fraction);
     this.readingMarker.style.top = `${y - this.el.article.getBoundingClientRect().top}px`;
     this.readingMarker.classList.toggle('is-pinned', this.pinned);
+  }
+
+  /** A padded, stationary surface belongs to the pinned target, never the moving reading line. */
+  private paintTargetSurface(): void {
+    const surface = this.targetSurface;
+    const targets = this.pinned ? this.targetEls.filter((el) => el.isConnected && !el.closest('[hidden]') && el.getClientRects().length) : [];
+    surface.hidden = !targets.length;
+    if (surface.hidden) return;
+    surface.classList.toggle('is-code-panel', targets.every((el) => Boolean(el.closest('.mr-code-lines'))));
+    const rects = [...new Set(targets.map((el) => el.closest<HTMLElement>('.mr-code-lines') ?? (el.matches('.mr-tight') ? el.closest('li') ?? el : el)))].map((el) => el.getBoundingClientRect());
+    const origin = this.el.article.getBoundingClientRect();
+    const style = getComputedStyle(surface);
+    const x = parseFloat(style.getPropertyValue('--target-pad-x'));
+    const y = parseFloat(style.getPropertyValue('--target-pad-y'));
+    const left = Math.min(...rects.map((rect) => rect.left));
+    const top = Math.min(...rects.map((rect) => rect.top));
+    surface.style.left = `${left - origin.left - x}px`;
+    surface.style.top = `${top - origin.top - y}px`;
+    surface.style.width = `${Math.max(...rects.map((rect) => rect.right)) - left + x * 2}px`;
+    surface.style.height = `${Math.max(...rects.map((rect) => rect.bottom)) - top + y * 2}px`;
   }
 
   private clearTarget(): void {
