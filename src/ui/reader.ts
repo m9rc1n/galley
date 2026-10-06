@@ -169,6 +169,8 @@ class Reader {
   private drawerFocus: HTMLElement | null = null;
   private target: CommentTarget | null = null;
   private targetEls: HTMLElement[] = [];
+  private readonly readingMarker = h('div', 'mr-reading-marker');
+  private readingPoint: { element: HTMLElement; fraction: number } | null = null;
   private pinned = false;
   private plan: CommentPlan | null = null;
   private planToken = 0;
@@ -853,14 +855,14 @@ class Reader {
       .filter(({ block }) => block.el.getClientRects().length && block.el.getBoundingClientRect().bottom > 90 && block.el.getBoundingClientRect().top < this.root.clientHeight - this.el.composer.offsetHeight);
     const current = candidates.find(({ block }) => block.el.getBoundingClientRect().top <= line && block.el.getBoundingClientRect().bottom >= line)
       ?? candidates.reduce<typeof candidates[number] | undefined>((best, entry) => !best || Math.abs(entry.block.el.getBoundingClientRect().top - line) < Math.abs(best.block.el.getBoundingClientRect().top - line) ? entry : best, undefined);
-    if (current) this.setTarget(paragraphTarget(current.view.doc, current.block), [current.block.el]);
+    if (current) this.setTarget(paragraphTarget(current.view.doc, current.block), [current.block.el], line);
   }
 
   private captureSelection(event?: MouseEvent): void {
     if (event && !(event.target as Element).closest('.mr-content')) return;
     if (this.submitting || this.textarea.value || (event?.target as Element | undefined)?.closest('.mr-composer')) return;
     const selection = (this.shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.() ?? document.getSelection();
-    if (selection && !selection.isCollapsed && selection.rangeCount) {
+    if (selection && !selection.isCollapsed && selection.rangeCount && (!event || selection.getRangeAt(0).intersectsNode(event.target as Node))) {
       const range = selection.getRangeAt(0);
       const view = this.views.find((view) => view.section.contains(range.startContainer) && view.section.contains(range.endContainer));
       const target = view?.rendered && selectionTarget(view.doc, view.rendered.blocks, range);
@@ -871,7 +873,9 @@ class Reader {
         return;
       }
       this.pinned = true;
-      this.setTarget(target, view.rendered.blocks.filter((block) => range.intersectsNode(block.el)).map((block) => block.el));
+      const elements = view.rendered.blocks.filter((block) => range.intersectsNode(block.el)).map((block) => block.el);
+      const rect = [...range.getClientRects()].find((rect) => rect.width && rect.height);
+      this.setTarget(target, elements, rect ? rect.top + rect.height / 2 : undefined);
     } else if (event) {
       const node = event.target as Node;
       const view = this.views.find((view) => view.section.contains(node));
@@ -879,13 +883,53 @@ class Reader {
       if (view && block && !(node as Element).closest('a, button, summary, input')) {
         const side = (node as Element).closest('del.mr-del, .mr-ghost-row, [data-mr-side="base"]') ? 'base' : block.head ? 'head' : 'base';
         this.pinned = true;
-        this.setTarget(paragraphTarget(view.doc, block, side), [block.el]);
+        const surface = (node as Element).closest<HTMLElement>('.mr-diagram-version') ?? block.el;
+        this.setTarget(paragraphTarget(view.doc, block, side), [surface], event.clientY);
       }
     }
   }
 
   private syncTargetCue(): void {
     this.root.classList.toggle('has-pinned-target', Boolean(this.target) && this.pinned);
+    this.paintReadingMarker();
+  }
+
+  /** Keep the cue on the clicked visual line while its paragraph scrolls. */
+  private setReadingPoint(elements: HTMLElement[], clientY?: number): void {
+    let element = elements.find((el) => {
+      const rect = el.getBoundingClientRect();
+      return clientY !== undefined && rect.top <= clientY && rect.bottom >= clientY;
+    }) ?? elements[0];
+    if (!element) { this.readingPoint = null; return; }
+    // A diagram is a visual surface; its captions must not pull the cue off the image.
+    element = [...element.querySelectorAll<HTMLElement>('.mr-diagram-view')].find((view) => {
+      const rect = view.getBoundingClientRect();
+      return clientY !== undefined && rect.top <= clientY && rect.bottom >= clientY;
+    }) ?? element;
+    const rect = element.getBoundingClientRect();
+    const y = this.readingLineCenter(element, clientY ?? rect.top + rect.height / 2);
+    this.readingPoint = { element, fraction: rect.height ? (y - rect.top) / rect.height : 0.5 };
+  }
+
+  private readingLineCenter(element: HTMLElement, clientY: number): number {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const lineHeight = parseFloat(getComputedStyle(element).lineHeight) || 24;
+    const lines = [...range.getClientRects()].filter((rect) => rect.width > 0 && rect.height > 0 && rect.height <= lineHeight * 1.5);
+    const line = lines.reduce<DOMRect | undefined>((best, rect) => !best || Math.abs(rect.top + rect.height / 2 - clientY) < Math.abs(best.top + best.height / 2 - clientY) ? rect : best, undefined);
+    if (line) return line.top + line.height / 2;
+    const rect = element.getBoundingClientRect();
+    return Math.max(rect.top + Math.min(lineHeight, rect.height) / 2, Math.min(rect.bottom - Math.min(lineHeight, rect.height) / 2, clientY));
+  }
+
+  private paintReadingMarker(): void {
+    const point = this.readingPoint;
+    this.readingMarker.hidden = !point || !point.element.isConnected || Boolean(point.element.closest('[hidden]')) || !point.element.getClientRects().length;
+    if (!point || this.readingMarker.hidden) return;
+    const rect = point.element.getBoundingClientRect();
+    const y = this.readingLineCenter(point.element, rect.top + rect.height * point.fraction);
+    this.readingMarker.style.top = `${y - this.el.article.getBoundingClientRect().top}px`;
+    this.readingMarker.classList.toggle('is-pinned', this.pinned);
   }
 
   private clearTarget(): void {
@@ -894,15 +938,22 @@ class Reader {
     this.plan = null;
     for (const el of this.targetEls) el.classList.remove('mr-reading');
     this.targetEls = [];
+    this.readingPoint = null;
     this.syncTargetCue();
     this.el.commentTarget.textContent = 'a paragraph';
     this.el.commentQuote.hidden = true;
     this.updateSubmit();
   }
 
-  private setTarget(target: CommentTarget | null, elements: HTMLElement[]): void {
+  private setTarget(target: CommentTarget | null, elements: HTMLElement[], clientY?: number): void {
     if (!target) return;
     if (this.target?.doc === target.doc && this.target.side === target.side && this.target.startLine === target.startLine && this.target.endLine === target.endLine && this.target.quote === target.quote) {
+      if (elements.length !== this.targetEls.length || elements.some((el, i) => el !== this.targetEls[i])) {
+        for (const el of this.targetEls) el.classList.remove('mr-reading');
+        this.targetEls = elements;
+        for (const el of elements) el.classList.add('mr-reading');
+      }
+      this.setReadingPoint(elements, clientY);
       this.syncTargetCue();
       this.el.commentQuote.hidden = !this.pinned || !target.quote;
       if (this.plan) this.el.commentStatus.textContent = `${this.plan.label}. ${this.pinned ? 'Target pinned.' : 'Target follows your reading position.'}`;
@@ -911,6 +962,7 @@ class Reader {
     this.clearTarget();
     this.target = target;
     this.targetEls = elements;
+    this.setReadingPoint(elements, clientY);
     for (const el of elements) el.classList.add('mr-reading');
     this.syncTargetCue();
     this.el.commentTarget.textContent = `${target.side === 'base' ? target.doc.oldPath : target.doc.path} · ${target.side === 'base' ? 'old' : 'new'} ${target.doc.kind === 'code' ? 'source' : 'paragraph'} lines ${target.startLine}–${target.endLine}`;
@@ -998,6 +1050,7 @@ class Reader {
       else this.el.toc.replaceChildren();
     }
     this.guide();
+    this.paintReadingMarker();
 
     let activeHeading = -1;
     this.headings.forEach((hd, i) => {
@@ -1059,5 +1112,6 @@ class Reader {
       this.markTargets.push(s.point ? (nextVisible(s.target, s.target.closest('.mr-content')!) as HTMLElement) ?? s.target : s.target);
       gutter.append(mark);
     });
+    gutter.append(this.readingMarker);
   }
 }

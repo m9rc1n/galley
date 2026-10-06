@@ -1203,17 +1203,33 @@
 .mr-root [hidden] { display: none !important; }
 .mr-main { padding-bottom: calc(var(--composer-height, 180px) + 110px); }
 .mr-document + .mr-document { margin-top: 90px; }
-/* A quiet baseline follows reading; a pinned comment gets a slightly firmer underline. */
-.mr-root .mr-content .mr-reading {
+/* A diffuse spotlight lifts the current block; the gutter locates its reading line. */
+.mr-root .mr-content .mr-reading:not(.mr-tight),
+.mr-root .mr-content li:has(> .mr-reading.mr-tight) {
   --reading-wash: 0 0 0 0 transparent;
-  box-shadow: var(--reading-wash), 0 1px 0 color-mix(in srgb, var(--fg) 20%, transparent), 0 7px 12px -12px color-mix(in srgb, var(--fg) 24%, transparent);
+  box-shadow: var(--reading-wash), 0 4px 22px -5px color-mix(in srgb, var(--fg) 12%, transparent), 0 0 18px 4px color-mix(in srgb, var(--fg) 4%, transparent);
+  border-radius: 6px;
   transition: box-shadow 160ms ease;
 }
-.has-pinned-target .mr-content .mr-reading {
-  box-shadow: var(--reading-wash), 0 1px 0 color-mix(in srgb, var(--fg) 38%, transparent), 0 8px 14px -12px color-mix(in srgb, var(--fg) 30%, transparent);
+.has-pinned-target .mr-content .mr-reading:not(.mr-tight),
+.has-pinned-target .mr-content li:has(> .mr-reading.mr-tight) {
+  box-shadow: var(--reading-wash), 0 5px 24px -5px color-mix(in srgb, var(--fg) 18%, transparent), 0 0 20px 4px color-mix(in srgb, var(--fg) 6%, transparent);
 }
 .mode-changes .mr-content [data-mr-change="added"].mr-reading { --reading-wash: 0 0 0 0.35em var(--add-wash); }
 .mode-changes .mr-content .mr-ghost.mr-reading { --reading-wash: 0 0 0 0.35em var(--del-bg); }
+.mr-reading-marker {
+  position: absolute;
+  left: -10px;
+  width: 6px;
+  height: 10px;
+  transform: translateY(-50%);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  background: var(--muted);
+  opacity: 0.65;
+  pointer-events: none;
+}
+.mr-reading-marker.is-pinned { background: var(--fg); opacity: 0.85; }
+@media (max-width: 760px) { .mr-reading-marker { left: 4px; width: 4px; height: 8px; } }
 .mr-empty-changes { color: var(--muted); font-size: 15px; }
 .mr-comment-receipt { font-family: var(--sans); font-size: 12px; color: var(--accent); }
 .mr-comment-receipt a { color: inherit; }
@@ -1375,8 +1391,7 @@
 .mr-code-line[data-mr-change="added"] { background: var(--add-wash); }
 .mr-code-line[data-mr-change="removed"] { background: var(--del-bg); color: var(--del); }
 .mr-content .mr-code-line.mr-ghost { margin: 0; padding-top: 0; padding-bottom: 0; border: 0; text-decoration: none; }
-.mr-content .mr-code-line.mr-reading { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--fg) 25%, transparent); }
-.has-pinned-target .mr-content .mr-code-line.mr-reading { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--fg) 42%, transparent); }
+.mr-root .mr-content .mr-code-line.mr-reading { border-radius: 0; }
 .mr-code-lines .mr-context-gap { padding: 0 12px; }
 .mode-clean .mr-code-line[data-mr-change="added"] { background: transparent; }
 @media (max-width: 760px) { .mr-code-lines { width: 100%; } .mr-code-line { grid-template-columns: 32px 32px 18px minmax(0, 1fr); font-size: 12px; } }
