@@ -1,3 +1,4 @@
+import { mermaidSource, prepareDiagram, type Diagram } from './diagrams.ts';
 import { diffArrays } from 'diff';
 import DOMPurify from 'dompurify';
 import { diffUnits, similarity, type BlockChange } from '../core/blockdiff.ts';
@@ -23,6 +24,8 @@ export interface RenderedBlock {
 }
 
 export interface RenderedDoc {
+  diagrams: Diagram[];
+  isCode: boolean;
   /** Trusted source mapping; document HTML cannot forge comment targets. */
   blocks: RenderedBlock[];
   /** The article body, sanitised and annotated with change markers. */
@@ -329,6 +332,11 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
       // Compare against the old block element itself, not the fragment around it (which ends in a newline).
       const frag = fragmentFor(doc, change.base!, base);
       const before = frag.firstElementChild ?? frag;
+      if (mermaidSource(change.base) !== null || mermaidSource(change.head) !== null) {
+        mark(el, 'modified');
+        touch(el);
+        continue;
+      }
       if ((change.head!.kind === 'code' && diffCode(doc, el, plainText(before))) || (change.head!.kind === 'table' && diffTable(doc, el, before))) {
         mark(el, 'modified');
         touch(el);
@@ -384,11 +392,19 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   changes = changes.map((el) => replacements.get(el) ?? el);
   blocks.sort((a, b) => a.el.compareDocumentPosition(b.el) & 4 ? -1 : 1);
 
+  const diagrams: Diagram[] = [];
+  for (const block of blocks) {
+    const before = block.el;
+    const diagram = prepareDiagram(doc, block);
+    if (diagram) { diagrams.push(diagram); changes = changes.map((el) => el === before ? diagram.el : el); }
+  }
   const fm = new Map(head.frontmatter?.fields ?? []);
   const first = [...root.children].find((el) => !el.matches('details.mr-meta, .mr-ghost'));
   const lead = first?.tagName === 'H1' ? (first as HTMLElement) : null;
   return {
     content: root,
+    diagrams,
+    isCode: false,
     blocks,
     changes,
     stats,

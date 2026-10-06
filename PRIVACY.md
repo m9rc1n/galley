@@ -12,7 +12,7 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 ## What Galley handles, and why
 
-**Pull and merge request content.** On GitHub and GitLab pages, Galley reads the page address to recognise pull and merge requests. When you open the reader, it requests the list of changed files and the contents of the changed markdown files from that same GitHub or GitLab site (on GitHub.com, through GitHub's API at api.github.com), using your existing session there or your GitHub token (see below). The content is rendered on your device, kept in memory only while the page is open, and not sent anywhere else.
+**Pull and merge request content.** On GitHub and GitLab pages, Galley reads the page address to recognise pull and merge requests. When you open the reader, it requests the list of changed files and the contents of the changed markdown files from that same GitHub or GitLab site (on GitHub.com, through GitHub's API at api.github.com), using your existing session there or your GitHub token (see below). If you enable code files, it also requests supported source and configuration files from the same review. The content is rendered on your device, kept in memory only while the page is open, and not sent anywhere else.
 
 **GitHub access token (optional).** If you add a GitHub token so Galley can read private repositories or post review comments, the token is stored in your browser's extension storage on your device. It is sent only to the GitHub API of the site you saved it for, to authorise Galley's requests. You can remove it in the Galley popup at any time, and it is deleted when you uninstall Galley.
 
@@ -20,7 +20,9 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 **Viewed progress.** With a GitHub token, Galley reads your native file Viewed status and updates it only when you mark or unmark a file. Without a token, and on GitLab, Galley stores local Viewed flags using a fingerprint of the review URL, file path and contents. File content is not stored with these flags. This progress is saved in extension storage (local storage in the demo), stays on your device, and resets when that file changes.
 
-**Preferences.** Your theme, typeface, text size display mode and paragraph filter are stored in your browser's extension storage.
+**Diagrams.** Mermaid diagrams render locally using code included in the extension. The diagram engine loads from the extension package only when needed. Diagram source and images are not sent to a rendering service, and external image/icon assets in Mermaid are disabled.
+
+**Preferences.** Your theme, typeface, text size, display mode, paragraph filter and code-files option are stored in your browser's extension storage.
 
 **Sites you enable.** If you enable Galley on a self-hosted GitLab or GitHub Enterprise site, your browser records that permission for that one domain. You can disable it in the Galley popup or in your browser's extension settings.
 

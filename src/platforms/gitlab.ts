@@ -1,5 +1,5 @@
 import { commentContext, diffRange, requireBody, validateTarget } from './comments.ts';
-import { encodePath, isMarkdownPath } from '../core/paths.ts';
+import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitLabContext } from './detect.ts';
 import { getJson, getText, HttpError } from './http.ts';
 import { ReaderError, type DocRef, type DocStatus, type ReviewSource } from './types.ts';
@@ -72,15 +72,18 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
     });
   const webBase = `${ctx.origin}${ctx.prefix}/${ctx.projectPath}`;
 
-  const docs: DocRef[] = diffs
-    .filter((d) => isMarkdownPath(d.new_path) || isMarkdownPath(d.old_path))
-    .map((d) => ({ path: d.new_path, oldPath: d.old_path, status: status(d) }));
+  const all: DocRef[] = diffs
+    .filter((d) => isMarkdownPath(d.new_path) || isMarkdownPath(d.old_path) || isCodePath(d.new_path) || isCodePath(d.old_path))
+    .map((d) => ({ path: d.new_path, oldPath: d.old_path, status: status(d), ...(!(isMarkdownPath(d.new_path) || isMarkdownPath(d.old_path)) ? { kind: 'code' as const } : {}) }));
+  const docs = all.filter((doc) => doc.kind !== 'code');
+  const codeDocs = all.filter((doc) => doc.kind === 'code');
 
   return {
     title: mr.title,
     subtitle: `${ctx.projectPath} · !${ctx.iid}`,
     diffUrl: `${webBase}/-/merge_requests/${ctx.iid}/diffs`,
     docs,
+    codeDocs,
     async load(doc) {
       // base_sha is the merge base: exactly what GitLab's own diff compares against.
       const [base, head] = await Promise.all([
@@ -90,7 +93,7 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
       return { base, head };
     },
     async prepareComment(target) {
-      validateTarget(docs, target);
+      validateTarget(all, target);
       const diff = diffs.find((d) => d.new_path === target.doc.path && d.old_path === target.doc.oldPath);
       const range = diffRange(diff?.diff, target);
       let position: Record<string, unknown> | undefined;
@@ -109,7 +112,7 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
       }
       return {
         kind: position ? 'inline' : 'discussion',
-        label: position ? 'Post inline on GitLab' : 'Post GitLab discussion (paragraph quoted)',
+        label: position ? 'Post inline on GitLab' : 'Post GitLab discussion (selection quoted)',
         async post(body) {
           requireBody(body);
           const csrf = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;

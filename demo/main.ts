@@ -1,15 +1,22 @@
 // The demo runs the real reader against sample files, so it can be tried without the extension.
 // The page itself imitates a merge request: the raw diff reviewers read today, and the Read button.
-//   ?closed  start with the reader closed      ?doc=N  open the Nth document first
+//   ?closed  start closed   ?doc=N  start at file N   ?code-only / ?diagram-error  exercise fallbacks
 import { structuredPatch } from 'diff';
 import type { DocRef, ReviewSource } from '../src/platforms/types.ts';
 import { Launcher } from '../src/ui/launcher.ts';
 import { openReader } from '../src/ui/reader.ts';
 
+const params = new URLSearchParams(location.search);
+
 const docs: DocRef[] = [
   { path: 'docs/rfcs/0042-reading-first-reviews.md', oldPath: 'docs/rfcs/0042-reading-first-reviews.md', status: 'modified' },
   { path: 'README.md', oldPath: 'README.md', status: 'modified' },
   { path: 'docs/adr/0007-render-markdown-in-the-browser.md', oldPath: 'docs/adr/0007-render-markdown-in-the-browser.md', status: 'added' },
+];
+
+const codeDocs: DocRef[] = [
+  { path: 'src/review.ts', oldPath: 'src/review.ts', status: 'modified', kind: 'code' },
+  { path: 'src/options.json', oldPath: 'src/options.json', status: 'added', kind: 'code' },
 ];
 
 async function text(url: string): Promise<string> {
@@ -23,14 +30,15 @@ async function contents(doc: DocRef) {
     doc.status === 'added' ? '' : text(`samples/base/${doc.oldPath}`),
     doc.status === 'removed' ? '' : text(`samples/head/${doc.path}`),
   ]);
-  return { base, head };
+  return { base, head: params.has('diagram-error') && doc === docs[0] ? head.replace(/```mermaid[\s\S]*?```/, '```mermaid\nnot a valid diagram\n```') : head };
 }
 
 const source: ReviewSource = {
   title: 'Docs: reading-first reviews',
   subtitle: 'acme/handbook · !128',
   diffUrl: location.href,
-  docs,
+  docs: params.has('code-only') ? [] : docs,
+  codeDocs,
   load: contents,
   async prepareComment(target) {
     return {
@@ -99,8 +107,7 @@ async function drawDiff(): Promise<void> {
   }
 }
 
-const params = new URLSearchParams(location.search);
 const open = () => openReader(source, { start: Number(params.get('doc') ?? 0) });
-new Launcher().show('demo', docs.length, open);
+new Launcher().show('demo', source.docs.length || codeDocs.length, open);
 void drawDiff();
 if (!params.has('closed')) open();

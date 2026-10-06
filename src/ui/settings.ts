@@ -7,11 +7,12 @@ export interface Settings {
   size: number;
   mode: 'changes' | 'clean';
   scope: 'changed' | 'all';
+  codeFiles: boolean;
 }
 
 export const TEXT_SIZES = [17, 18, 20, 22, 24];
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed' };
+export const DEFAULT_SETTINGS: Settings = { theme: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false };
 
 const SETTINGS_KEY = 'galley:settings';
 const TOKENS_KEY = 'galley:tokens';

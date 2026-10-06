@@ -12,7 +12,7 @@ npm run dev        # dev build in dist/dev with live reload; load it once via ch
 npm run demo       # or: try the reader on a sample merge request, no extension needed
 ```
 
-Node 22.6 or newer is required (the tests run TypeScript directly). See "Develop in your own Chrome" in the [README](README.md#develop-in-your-own-chrome) for the dev loop.
+Node 22.12 or newer is required (the tests run TypeScript directly). See "Develop in your own Chrome" in the [README](README.md#develop-in-your-own-chrome) for the dev loop.
 
 ## Before you open a pull request
 
@@ -26,7 +26,7 @@ CI runs the same three. Reader changes should also pass `node scripts/check-read
 
 ## Guidelines
 
-- **Keep it small and dependency-light.** The extension ships as one script; new runtime dependencies need a good reason, and their licence must be MIT-compatible (the build lists them in `THIRD_PARTY_NOTICES.txt`).
+- **Keep it small and dependency-light.** The reader ships as one script with a separate lazy-loaded Mermaid engine; new runtime dependencies need a good reason, and their licence must be MIT-compatible (the build lists them in `THIRD_PARTY_NOTICES.txt`).
 - **Never trust document content.** Pull requests come from forks. Everything rendered goes through DOMPurify; don't add paths around it.
 - **Tests for logic, screenshots for looks.** Diffing, parsing and URL handling live in `src/core` and `src/platforms` and are unit-tested. UI changes are checked in the demo.
 - **No tracking, no remote code.** Both are promises in the privacy policy and the store listing.
@@ -34,7 +34,7 @@ CI runs the same three. Reader changes should also pass `node scripts/check-read
 
 ## Good first areas
 
-The README roadmap lists what is planned. Rendering gaps are the easiest place to start: math, Mermaid diagrams, `[[_TOC_]]`, and linking `#123` / `@user` references.
+The README roadmap lists what is planned. Rendering gaps are the easiest place to start: math, `[[_TOC_]]`, and linking `#123` / `@user` references.
 
 ## Reporting bugs
 

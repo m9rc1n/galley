@@ -30,6 +30,7 @@ const common = {
 const bundles = [
   { name: 'content', entryPoints: ['src/content/main.ts'], outfile: 'dist/.build/content.js', shipped: true },
   { name: 'popup', entryPoints: ['src/popup/popup.ts'], outfile: 'dist/.build/popup.js', shipped: true },
+  { name: 'mermaid', entryPoints: ['src/ui/mermaid-engine.ts'], outfile: 'dist/.build/mermaid.js', format: 'esm', shipped: true },
   { name: 'demo', entryPoints: ['demo/main.ts'], outfile: 'demo/build/demo.js', shipped: false },
 ];
 const metafiles = new Map();
@@ -46,7 +47,7 @@ async function thirdPartyNotices() {
   let text = 'Galley includes the following open-source software.\n\n';
   for (const dir of [...dirs].sort()) {
     const meta = JSON.parse(await readFile(`${root}${dir}/package.json`, 'utf8'));
-    const file = (await readdir(`${root}${dir}`)).find((f) => /^(licen[cs]e|copying)(\.(md|txt))?$/i.test(f));
+    const file = (await readdir(`${root}${dir}`)).find((f) => /^(licen[cs]e|copying)(?:[-_.][\w-]+)?(?:\.(md|txt))?$/i.test(f));
     const url = meta.homepage ?? meta.repository?.url ?? meta.repository ?? '';
     text += `${'-'.repeat(72)}\n${meta.name} ${meta.version} — ${meta.license ?? 'see below'}\n${url}\n\n`;
     text += file ? `${(await readFile(`${root}${dir}/${file}`, 'utf8')).trim()}\n\n` : 'License text not included in the package.\n\n';
@@ -55,6 +56,9 @@ async function thirdPartyNotices() {
 }
 
 async function assemble() {
+  if (!bundles.every((bundle) => metafiles.has(bundle.name))) return;
+  await mkdir(`${root}demo/build`, { recursive: true });
+  await cp(`${root}dist/.build/mermaid.js`, `${root}demo/build/mermaid.js`);
   const manifest = JSON.parse(await readFile(`${root}src/manifest.json`, 'utf8'));
   manifest.version = pkg.version;
   const notices = await thirdPartyNotices();
@@ -63,6 +67,7 @@ async function assemble() {
     await rm(out, { recursive: true, force: true });
     await mkdir(out, { recursive: true });
     await cp(`${root}dist/.build/content.js`, `${out}/content.js`);
+    await cp(`${root}dist/.build/mermaid.js`, `${out}/mermaid.js`);
     await cp(`${root}dist/.build/popup.js`, `${out}/popup.js`);
     await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
     await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
@@ -71,6 +76,7 @@ async function assemble() {
     const m = structuredClone(manifest);
     if (browser === 'firefox') {
       delete m.minimum_chrome_version;
+      for (const resource of m.web_accessible_resources ?? []) delete resource.use_dynamic_url;
       m.browser_specific_settings = {
         gecko: { id: 'galley@m9rc1n.github.io', strict_min_version: '128.0', data_collection_permissions: { required: ['none'] } },
       };

@@ -1316,3 +1316,32 @@
   .mr-viewed { font-size: 11px; padding: 0 7px; }
   .mr-settings-panel { width: min(380px, calc(100% - 16px)); padding: 20px; }
 }
+
+/* Render diagrams from trusted Mermaid fences, with old/new source available to reviewers. */
+.mr-content .mr-diagram { margin: 32px 0; }
+.mr-diagram-version + .mr-diagram-version { margin-top: 24px; }
+.mr-content .mr-diagram-caption { margin: 0 0 8px; color: var(--muted); font: 600 11px/1.4 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; }
+.mr-diagram-view { padding: 20px; border: 1px solid var(--rule); border-radius: 10px; background: var(--code-bg); color: var(--muted); font: 13px/1.5 var(--sans); }
+.mr-diagram-view img { display: block; width: 100%; max-width: 100%; height: auto; margin: 0; }
+.mr-content .mr-diagram-source { margin-top: 8px; border: 0; font: 12px/1.4 var(--sans); color: var(--muted); }
+.mr-diagram-source summary { cursor: pointer; padding: 6px 0; }
+.mr-content .mr-diagram-source pre { margin-top: 8px; }
+.mode-clean .mr-diagram[data-mr-change="modified"] > [data-mr-side="base"] { display: none; }
+.mr-diagram-view[data-state="error"] { border-style: dashed; }
+@media (max-width: 760px) { .mr-diagram-view { padding: 12px; } }
+
+/* Optional source files follow the document stream. Source is always plain text. */
+.mr-code-toggle { border: 1px solid var(--rule); font-size: 12px; }
+.mr-code-toggle[aria-pressed="true"] { color: var(--accent); background: var(--add-wash); border-color: var(--accent); }
+.mr-empty-reader { padding: 24px 0; }
+.mr-code-lines { box-sizing: border-box; width: max(100%, min(1120px, calc(100% + 50vw - var(--measure) / 2 - 24px))); overflow: auto; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 0; background: var(--code-bg); }
+.mr-code-line { display: grid; grid-template-columns: 42px 42px 20px minmax(0, 1fr); width: max-content; min-width: 100%; box-sizing: border-box; min-height: 24px; padding-right: 16px; font: 13px/24px var(--mono); white-space: pre; }
+.mr-code-number { color: var(--muted); text-align: right; padding-right: 10px; user-select: none; }
+.mr-code-sign { color: var(--muted); text-align: center; user-select: none; }
+.mr-code-line[data-mr-change="added"] { background: var(--add-wash); }
+.mr-code-line[data-mr-change="removed"] { background: var(--del-bg); color: var(--del); }
+.mr-content .mr-code-line.mr-ghost { margin: 0; padding-top: 0; padding-bottom: 0; border: 0; text-decoration: none; }
+.mr-content .mr-code-line.mr-reading { outline-offset: -2px; border-radius: 0; }
+.mr-code-lines .mr-context-gap { padding: 0 12px; }
+.mode-clean .mr-code-line[data-mr-change="added"] { background: transparent; }
+@media (max-width: 760px) { .mr-code-lines { width: 100%; } .mr-code-line { grid-template-columns: 32px 32px 18px minmax(0, 1fr); font-size: 12px; } }

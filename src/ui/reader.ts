@@ -1,4 +1,6 @@
 import { ReaderError, type DocContents, type DocRef, type DocStatus, type ReviewSource, type CommentTarget, type CommentPlan } from '../platforms/types.ts';
+import { renderCodeFile } from './code-files.ts';
+import { renderDiagrams } from './diagrams.ts';
 import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
@@ -37,6 +39,7 @@ const TEMPLATE = `
     <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
       <header class="mr-settings-heading"><h2 id="mr-settings-title">Reading settings</h2><button class="mr-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
       <section class="mr-settings-section"><h3>Review</h3>
+        <div class="mr-set-row"><span>Files</span><button class="mr-btn mr-code-toggle" data-act="code-files" aria-pressed="false">Include code files after documents</button></div>
         <div class="mr-set-row"><span>Content</span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed paragraphs</button><button data-scope="all" aria-pressed="false">Entire files</button></div></div>
         <p class="mr-settings-note">Reveal hidden paragraphs beside each change for more context.</p>
         <div class="mr-set-row"><span>Highlighting</span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Changes</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
@@ -60,6 +63,7 @@ const TEMPLATE = `
   <main class="mr-main">
     <article class="mr-article">
       <div class="mr-gutter" aria-hidden="true"></div>
+      <div class="mr-empty-reader" hidden><h1>No document changes</h1><p>Turn on “Include code files” in reading settings to review the changed source files.</p><button class="mr-btn mr-outline" data-act="settings">Reading settings</button></div>
       <div class="mr-doc"></div>
     </article>
   </main>
@@ -147,12 +151,13 @@ class Reader {
   private readonly shadow = this.host.attachShadow({ mode: 'open' });
   private readonly root: HTMLElement;
   private readonly el: Record<
-    'progress' | 'topbar' | 'prTitle' | 'fileBtn' | 'filePath' | 'fileStatus' | 'viewed' | 'viewedFeedback' | 'fileCount' | 'files' | 'settings' | 'toc' | 'article' | 'gutter' | 'doc' | 'pill' | 'pillLabel' | 'composer' | 'commentTarget' | 'commentQuote' | 'commentStatus',
+    'progress' | 'topbar' | 'prTitle' | 'fileBtn' | 'filePath' | 'fileStatus' | 'viewed' | 'viewedFeedback' | 'fileCount' | 'files' | 'settings' | 'toc' | 'article' | 'gutter' | 'doc' | 'pill' | 'pillLabel' | 'composer' | 'commentTarget' | 'commentQuote' | 'commentStatus' | 'empty',
     HTMLElement
   >;
   private settings: Settings = { ...DEFAULT_SETTINGS };
   private source: ReviewSource | null = null;
   private index = 0;
+  private readonly loading = new Set<DocRef>();
   private readonly cache = new Map<DocRef, Promise<DocContents>>();
   private rendered: RenderedDoc | null = null;
   private headings: Array<{ el: HTMLElement; link: HTMLElement }> = [];
@@ -205,6 +210,7 @@ class Reader {
       commentTarget: q('.mr-comment-target'),
       commentQuote: q('.mr-comment-quote'),
       commentStatus: q('.mr-comment-status'),
+      empty: q('.mr-empty-reader'),
     };
     q('.mr-tb-right').prepend(this.el.pill);
     this.textarea = q('#mr-comment') as HTMLTextAreaElement;
@@ -242,24 +248,27 @@ class Reader {
   setSource(source: ReviewSource, start: number): void {
     if (this.closed) return;
     this.source = source;
+    this.shadow.querySelector<HTMLElement>('[data-act="code-files"]')!.title = `${source.codeDocs?.length ?? 0} supported code files`;
     this.el.prTitle.textContent = source.title;
-    if (!source.docs.length) {
-      this.showMessage('No markdown changes here', 'This change set does not touch any markdown files.');
+    const all = [...source.docs, ...(source.codeDocs ?? [])];
+    if (!all.length) {
+      this.showMessage('No readable changes here', 'This change set does not touch any supported document or text source files.');
       return;
     }
-    this.index = Math.min(Math.max(start, 0), source.docs.length - 1);
-    this.views = source.docs.map((doc, i) => {
+    this.index = Math.min(Math.max(start, 0), all.length - 1);
+    this.views = all.map((doc, i) => {
       const section = h('section', `mr-document${doc.status === 'removed' ? ' doc-removed' : ''}`);
       section.setAttribute('aria-label', doc.path);
       section.dataset.document = String(i);
+      section.hidden = doc.kind === 'code' && !this.settings.codeFiles;
       section.append(this.skeleton());
       return { doc, section, rendered: null };
     });
-    for (const doc of source.docs) this.viewed.set(doc, { value: false, ready: false, busy: false });
+    for (const doc of all) this.viewed.set(doc, { value: false, ready: false, busy: false });
     if (source.viewed) void this.initNativeViewed();
     this.el.doc.replaceChildren(...this.views.map((view) => view.section));
     this.updateFileButton();
-    this.el.composer.hidden = false;
+    this.el.composer.hidden = !this.views.some((view) => !view.section.hidden);
     this.el.commentStatus.textContent = 'Click a paragraph or select text. Comments post to the platform and are visible to your teammates.';
     void this.loadAll(this.index);
   }
@@ -315,7 +324,7 @@ class Reader {
     const worker = async () => {
       while (cursor < this.views.length && !this.closed) {
         const index = cursor++;
-        await this.loadView(index);
+        if (!this.views[index].section.hidden && !this.views[index].rendered) await this.loadView(index);
       }
     };
     await Promise.all(Array.from({ length: Math.min(3, this.views.length) }, worker));
@@ -324,13 +333,16 @@ class Reader {
 
   private async loadView(index: number): Promise<void> {
     const view = this.views[index];
+    if (this.loading.has(view.doc)) return;
+    this.loading.add(view.doc);
     try {
       const contents = await this.load(view.doc);
       if (this.closed) return;
-      const r = renderDocument(document, { path: view.doc.status === 'removed' ? view.doc.oldPath : view.doc.path, status: view.doc.status, ...contents, links: this.source!.links(view.doc) });
+      const r = view.doc.kind === 'code' ? renderCodeFile(document, view.doc, contents) : renderDocument(document, { path: view.doc.status === 'removed' ? view.doc.oldPath : view.doc.path, status: view.doc.status, ...contents, links: this.source!.links(view.doc) });
       view.rendered = r;
       view.section.replaceChildren(this.buildArticle(view.doc, r));
       filterDocument(r, this.settings.scope === 'changed');
+      renderDiagrams(r.diagrams, this.root.classList.contains('is-dark'), () => this.schedule(true));
       if (index === this.index) { this.rendered = r; this.buildToc(r); }
       this.schedule(true);
       if (!this.source!.viewed) await this.initLocalViewed(view.doc, contents);
@@ -339,17 +351,20 @@ class Reader {
       if (this.closed) return;
       const box = h('div', 'mr-message');
       box.append(h('h2', '', view.doc.path), h('p', '', err instanceof Error ? err.message : String(err)));
+      const platform = h('a', 'mr-outline', 'Open platform diff');
+      platform.href = this.source!.diffUrl; platform.target = '_blank'; platform.rel = 'noopener noreferrer';
+      box.append(platform);
       const retry = actionButton('Try again', 'retry-doc', 'mr-outline');
       retry.dataset.doc = String(index);
       box.append(retry);
       view.section.replaceChildren(box);
       this.schedule(true);
-    }
+    } finally { this.loading.delete(view.doc); }
   }
 
   private show(index: number): void {
     const view = this.views[index];
-    if (!view) return;
+    if (!view || view.section.hidden) return;
     this.index = index;
     this.rendered = view.rendered;
     this.closeMenus();
@@ -376,13 +391,13 @@ class Reader {
       frag.append(h('h1', 'mr-title', r.title ?? prettyName(doc.path)), ...intro);
     }
     frag.append(r.content);
-    if (!r.blocks.some((block) => block.kind !== 'same')) frag.append(h('p', 'mr-empty-changes', 'No changed paragraphs. Choose Entire files to read this document.'));
+    if (!r.blocks.some((block) => block.kind !== 'same')) frag.append(h('p', 'mr-empty-changes', 'No visible changes. Choose Entire files to read this file.'));
     return frag;
   }
 
   private byline(doc: DocRef, r: RenderedDoc): HTMLElement {
     const line = h('div', 'mr-byline');
-    line.append(h('span', '', `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE))} min read`));
+    line.append(h('span', '', doc.kind === 'code' ? 'Source file' : `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE))} min read`));
     if (doc.status !== 'added' && doc.status !== 'removed') {
       const { added, modified, removed } = r.stats;
       if (!added && !modified && !removed) line.append(h('span', '', doc.status === 'renamed' ? 'Moved, text unchanged' : 'No visible text changes'));
@@ -424,22 +439,34 @@ class Reader {
   // ---------------------------------------------------------------- chrome
 
   private updateFileButton(): void {
-    const docs = this.source!.docs;
+    const visible = this.views.filter((view) => !view.section.hidden);
+    const docs = visible.map((view) => view.doc);
+    this.el.empty.hidden = visible.length > 0;
+    if (!visible.length) {
+      this.el.fileBtn.hidden = this.el.viewed.hidden = this.el.composer.hidden = true;
+      this.el.viewedFeedback.hidden = true;
+      return;
+    }
+    if (this.views[this.index].section.hidden) this.index = this.views.indexOf(visible[0]);
+    this.rendered = this.views[this.index].rendered;
+    this.el.composer.hidden = false;
     this.el.fileBtn.hidden = false;
-    const doc = docs[this.index];
-    this.el.fileCount.textContent = `${this.index + 1}/${docs.length}`;
+    const doc = this.views[this.index].doc;
+    const position = docs.indexOf(doc);
+    this.el.fileCount.textContent = `${position + 1}/${docs.length}`;
     this.el.fileBtn.title = `${doc.status === 'renamed' ? `${doc.oldPath} → ` : ''}${doc.path} · Browse documents`;
-    this.el.fileBtn.setAttribute('aria-label', `Browse documents: ${doc.path}, file ${this.index + 1} of ${docs.length}`);
+    this.el.fileBtn.setAttribute('aria-label', `Browse documents: ${doc.path}, file ${position + 1} of ${docs.length}`);
     this.el.fileStatus.textContent = STATUS_LABEL[doc.status];
     this.el.fileStatus.className = `mr-status is-${doc.status}`;
     const slash = doc.path.lastIndexOf('/');
     this.el.filePath.replaceChildren(h('span', 'mr-path-dir', doc.path.slice(0, slash + 1)), h('span', 'mr-path-name', doc.path.slice(slash + 1)));
     const menu = this.el.files;
     menu.replaceChildren();
-    const progress = h('p', 'mr-files-progress', `${[...this.viewed.values()].filter((state) => state.value).length} of ${docs.length} viewed`);
+    const progress = h('p', 'mr-files-progress', `${docs.filter((doc) => this.viewed.get(doc)?.value).length} of ${docs.length} viewed`);
     progress.setAttribute('role', 'presentation');
     menu.append(progress);
-    docs.forEach((d, i) => {
+    docs.forEach((d) => {
+      const i = this.views.findIndex((view) => view.doc === d);
       const item = h('button', 'mr-menu-item');
       item.setAttribute('role', 'menuitem');
       item.dataset.act = 'doc';
@@ -585,6 +612,16 @@ class Reader {
     const r = this.root;
     for (const view of this.views) if (view.rendered) filterDocument(view.rendered, s.scope === 'changed');
     if (this.rendered) this.buildToc(this.rendered);
+    const codeToggle = this.shadow.querySelector<HTMLElement>('[data-act="code-files"]')!;
+    codeToggle.setAttribute('aria-pressed', String(s.codeFiles));
+    codeToggle.title = `${this.source?.codeDocs?.length ?? 0} supported code files`;
+    let loadCode = false;
+    for (const view of this.views) if (view.doc.kind === 'code') {
+      view.section.hidden = !s.codeFiles;
+      loadCode ||= s.codeFiles && !view.rendered;
+    }
+    if (this.source) { this.updateFileButton(); if (this.rendered) this.buildToc(this.rendered); else this.el.toc.replaceChildren(); }
+    if (loadCode) void this.loadAll(0);
     for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-scope]')) b.setAttribute('aria-pressed', String(b.dataset.scope === s.scope));
     r.classList.toggle('mode-changes', s.mode === 'changes');
     r.classList.toggle('mode-clean', s.mode === 'clean');
@@ -597,6 +634,7 @@ class Reader {
       const value = s[group.dataset.setting as 'theme' | 'font'];
       for (const b of group.querySelectorAll<HTMLElement>('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === value));
     }
+    for (const view of this.views) if (view.rendered) renderDiagrams(view.rendered.diagrams, r.classList.contains('is-dark'), () => this.schedule(true));
     this.schedule(true);
   }
 
@@ -640,9 +678,9 @@ class Reader {
   }
 
   private stepDoc(direction: 1 | -1): void {
-    const docs = this.source?.docs ?? [];
-    const next = this.index + direction;
-    if (next >= 0 && next < docs.length) void this.show(next);
+    const indices = this.views.flatMap((view, i) => view.section.hidden ? [] : [i]);
+    const next = indices[indices.indexOf(this.index) + direction];
+    if (next !== undefined) this.show(next);
   }
 
   // ---------------------------------------------------------------- events
@@ -746,10 +784,13 @@ class Reader {
       case 'close':
         return this.close();
       case 'files':
-        if ((this.source?.docs.length ?? 0) > 0) this.toggleMenu(this.el.files, action);
+        if (this.views.some((view) => !view.section.hidden)) this.toggleMenu(this.el.files, action);
         return;
       case 'settings':
         return this.toggleMenu(this.el.settings, action);
+      case 'code-files':
+        if (!this.settings.codeFiles && !this.source?.codeDocs?.length) return;
+        return this.update({ codeFiles: !this.settings.codeFiles });
       case 'close-settings':
         this.closeMenus();
         return;
@@ -835,7 +876,7 @@ class Reader {
       const view = this.views.find((view) => view.section.contains(node));
       const block = view?.rendered?.blocks.find((block) => block.el === node || block.el.contains(node));
       if (view && block && !(node as Element).closest('a, button, summary, input')) {
-        const side = (node as Element).closest('del.mr-del, .mr-ghost-row') ? 'base' : block.head ? 'head' : 'base';
+        const side = (node as Element).closest('del.mr-del, .mr-ghost-row, [data-mr-side="base"]') ? 'base' : block.head ? 'head' : 'base';
         this.pinned = true;
         this.setTarget(paragraphTarget(view.doc, block, side), [block.el]);
       }
@@ -864,7 +905,7 @@ class Reader {
     this.target = target;
     this.targetEls = elements;
     for (const el of elements) el.classList.add('mr-reading');
-    this.el.commentTarget.textContent = `${target.side === 'base' ? target.doc.oldPath : target.doc.path} · ${target.side === 'base' ? 'old' : 'new'} paragraph lines ${target.startLine}–${target.endLine}`;
+    this.el.commentTarget.textContent = `${target.side === 'base' ? target.doc.oldPath : target.doc.path} · ${target.side === 'base' ? 'old' : 'new'} ${target.doc.kind === 'code' ? 'source' : 'paragraph'} lines ${target.startLine}–${target.endLine}`;
     this.el.commentQuote.textContent = target.quote;
     this.el.commentQuote.hidden = !this.pinned || !target.quote;
     const token = ++this.planToken;
@@ -939,7 +980,7 @@ class Reader {
     const max = root.scrollHeight - root.clientHeight;
     this.el.progress.style.transform = `scaleX(${max > 0 ? Math.min(1, top / max) : 0})`;
     let currentDoc = this.index;
-    this.views.forEach((view, i) => { if (view.section.getBoundingClientRect().top <= 150) currentDoc = i; });
+    this.views.forEach((view, i) => { if (!view.section.hidden && view.section.getBoundingClientRect().top <= 150) currentDoc = i; });
     if (currentDoc !== this.index) {
       this.index = currentDoc;
       this.rendered = this.views[currentDoc].rendered;

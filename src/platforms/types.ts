@@ -7,6 +7,7 @@ export interface DocRef {
   path: string;
   oldPath: string;
   status: DocStatus;
+  kind?: 'code';
 }
 
 export interface DocContents {
@@ -37,6 +38,8 @@ export interface ReviewSource {
   /** Link back to the platform's own diff view. */
   diffUrl: string;
   docs: DocRef[];
+  /** Optional text source files, appended after documents when enabled. */
+  codeDocs?: DocRef[];
   load(doc: DocRef): Promise<DocContents>;
   links(doc: DocRef): RepoLinks;
   /** Native platform review progress, if the current authentication supports it. */

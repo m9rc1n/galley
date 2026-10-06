@@ -42,7 +42,7 @@ npm run build
 
 ## Using it
 
-Open a pull or merge request that changes `.md` files and press **Read** in the bottom-right corner. The number on the button is how many markdown documents changed.
+Open a pull or merge request and press **Read** in the bottom-right corner. The number counts changed Markdown documents, or supported source files when there are no documents. Documents appear first; **Reading settings → Include code files after documents** appends changed source and configuration files to the same stream. The option is off by default and remembered for future reviews. Code contents are fetched only when enabled, with old/new line numbers, additions and deletions, and controls to reveal unchanged lines. Binary files and unknown file types are excluded; source files over 500,000 characters show a link back to the platform diff.
 
 | Key | Action |
 | --- | --- |
@@ -53,7 +53,7 @@ Open a pull or merge request that changes `.md` files and press **Read** in the 
 | <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Post the comment in the focused composer |
 | <kbd>Esc</kbd> | Close the reader |
 
-The **Reading settings** button opens a drawer with the paragraph filter, Changes/Clean highlighting, theme (auto, light, sepia, dark), serif or sans text, and text size. Esc closes the drawer first, then the reader. The sticky top bar shows the current file path and Viewed action, updating as you scroll between files. The **×** button closes the reader (its tooltip shows **Esc**). File-menu entries and document shortcuts scroll to the selected file without replacing the others. **Changes/Clean** controls the change markup independently of the paragraph filter. Long documents get a contents rail on wide screens, with a dot next to every section that changed.
+The **Reading settings** button opens a drawer with the code-files option, paragraph filter, Changes/Clean highlighting, theme (auto, light, sepia, dark), serif or sans text, and text size. Esc closes the drawer first, then the reader. The sticky top bar shows the current file path and Viewed action, updating as you scroll between files. The **×** button closes the reader (its tooltip shows **Esc**). File-menu entries and document shortcuts scroll to the selected file without replacing the others. **Changes/Clean** controls the change markup independently of the paragraph filter. Long documents get a contents rail on wide screens, with a dot next to every section that changed.
 
 ### GitLab (gitlab.com and self-managed)
 
@@ -65,9 +65,13 @@ Public repositories work without setup. GitHub allows 60 API requests per hour w
 
 Private repositories need a token, because GitHub's API does not accept the browser session. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with read-only **Contents** and **Pull requests** access to the repositories you review, then paste it into the Galley popup. To comment, give the token **Pull requests: read and write** access; **Contents** can remain read-only. Public reading still works without a token. The token stays in the browser's extension storage and is only sent to the GitHub API. For GitHub Enterprise Server, enable the site in the popup and save a token for it there.
 
+### Diagrams
+
+Fenced `mermaid` blocks render as diagrams using an engine bundled with the extension and loaded only when needed. Edited diagrams show **Before** and **After** versions; Clean mode shows the new version. **View source** reveals the original Mermaid code. Clicking either version targets the matching source fence for comments. Invalid or unsupported diagrams keep their readable source. Rendering happens locally, with no CDN or external diagram images/icon packs. Diagrams are limited to 20,000 source characters and 300 edges.
+
 ### Commenting
 
-The composer shows the file, old/new version and source lines of the paragraph behind your selection. Selected text is quoted exactly; the anchor covers its containing Markdown paragraph(s), so rendering and line wrapping do not guess at sentence-level source positions. Click deleted words or a removed paragraph to target the old version. Selections crossing files or mixing old and new text are rejected. Once you click a paragraph or start a draft, the target stays pinned while scrolling; **Follow reading** chooses the paragraph at your current reading position.
+The composer shows the file, old/new version and source lines of the paragraph behind your selection. Selected text is quoted exactly; the anchor covers its containing Markdown paragraph(s), so rendering and line wrapping do not guess at sentence-level source positions. Click deleted words or a removed paragraph to target the old version. Source-file comments target the selected line or line range, preserving the quoted code. Selections crossing files or mixing old and new text are rejected. Once you click a paragraph or start a draft, the target stays pinned while scrolling; **Follow reading** chooses the paragraph at your current reading position.
 
 Comments use the platform's own review APIs: [GitHub review comments](https://docs.github.com/en/rest/pulls/comments#create-a-review-comment-for-a-pull-request) and [GitLab discussions](https://docs.gitlab.com/api/discussions/#create-a-new-thread-in-the-merge-request-diff). Other reviewers see ordinary platform comments without Galley. A successful post leaves a thread link beside the paragraph. Existing threads are not loaded yet.
 
@@ -79,8 +83,8 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 
 ## How it works
 
-1. A content script recognises pull/merge request pages, including in-app navigation, and lists the changed markdown files through the platform's REST API.
-2. It loads both versions of each document.
+1. A content script recognises pull/merge request pages, including in-app navigation, and lists changed documents and supported source files through the platform's REST API.
+2. It loads both versions of each document, and each source file when code files are enabled.
    - GitLab: the raw files at the merge base and at the head commit.
    - GitHub: the head file through the same-origin raw URL. The base version is rebuilt by reversing the pull request's patch, and fetched at the merge base only when GitHub omits the patch.
 3. Both versions are parsed with markdown-it: GFM tables, task lists, footnotes, alerts (`> [!NOTE]`) and front matter. Every leaf block (paragraph, list item, heading, table, code block) remembers its source lines.
@@ -100,7 +104,7 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 ## Privacy and security
 
 - No server, no analytics. Galley itself only contacts the GitHub or GitLab instance you are on. On GitHub.com that includes `api.github.com`, and the `raw.githubusercontent.com` downloads that raw files redirect to.
-- Everything rendered is sanitised: no scripts, iframes, forms or inline styles. Pull requests can come from forks.
+- Markdown HTML is sanitised: no scripts, iframes, forms or inline styles. Source files are displayed as plain text. Mermaid SVGs are separately sanitised and displayed as inert images; rendering directives and external image/icon assets are disabled. Pull requests can come from forks.
 - Raw HTML in a document cannot use Galley's own classes or attributes, so it cannot fake change markers, banners or block IDs.
 - Images inside documents load from wherever they are hosted. GitHub's own preview proxies external images; Galley does not.
 - Permissions: github.com and gitlab.com. Other domains only after you enable them in the popup. Calls to GitHub's API are ordinary cross-origin requests from the page and need no extra permission.
@@ -108,7 +112,7 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 ## Limitations
 
 - Comments anchor to containing source blocks; existing threads, replies and resolution are not shown in the reader yet.
-- Platform-specific syntax renders approximately: GitLab's `[[_TOC_]]`, math and Mermaid/PlantUML diagrams appear as text or code, and `#123` / `@user` references are not linked.
+- Platform-specific syntax renders approximately: GitLab's `[[_TOC_]]`, math and PlantUML diagrams appear as text or code, and `#123` / `@user` references are not linked.
 - The whole pull/merge request is used; picking a commit range in the platform UI is not reflected.
 - Paragraphs rewritten by more than 60% are shown as the old version removed and the new one added, not as word edits.
 - Very large requests are listed up to 1,000 files on GitHub and 2,000 on GitLab.
@@ -119,8 +123,8 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 Toward changing how we review merge requests together:
 
 1. **Threads in the margin.** Show existing review threads next to the paragraphs they discuss, and resolve them from the reader.
-2. **Review flow.** Mark documents as viewed (synced with the platform), then approve or request changes from the reader.
-3. **Richer rendering.** Mermaid diagrams, math, issue and user references.
+2. **Review flow.** Approve or request changes from the reader.
+3. **Richer rendering.** Math, issue and user references.
 4. **Distribution.** Chrome Web Store and Firefox Add-ons listings.
 
 ## Publishing
@@ -162,7 +166,7 @@ npm run release    # tests, type check, store-ready zips, privacy page
 npm run store-assets  # store screenshots and promo tiles (needs Chrome)
 ```
 
-Requires Node 22.6 or newer (the tests run TypeScript directly).
+Requires Node 22.12 or newer (the tests run TypeScript directly).
 
 ## Contributing
 

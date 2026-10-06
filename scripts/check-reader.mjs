@@ -20,7 +20,7 @@ try {
   const inspect = (fn, ...args) => page.evaluate(fn, ...args);
   const initial = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    return { files: s.querySelectorAll('.mr-document').length, nextButtons: s.querySelectorAll('.mr-next').length, filter: s.querySelector('[data-scope="changed"]').getAttribute('aria-pressed'), close: s.querySelector('[data-act="close"]').getAttribute('title'), hidden: s.querySelectorAll('.mr-content [hidden]').length, guide: s.querySelectorAll('.mr-reading').length };
+    return { files: [...s.querySelectorAll('.mr-document')].filter((el) => !el.hidden).length, nextButtons: s.querySelectorAll('.mr-next').length, filter: s.querySelector('[data-scope="changed"]').getAttribute('aria-pressed'), close: s.querySelector('[data-act="close"]').getAttribute('title'), hidden: s.querySelectorAll('.mr-content [hidden]').length, guide: s.querySelectorAll('.mr-reading').length };
   });
   assert.equal(initial.files, 3); assert.equal(initial.nextButtons, 0); assert.equal(initial.filter, 'true'); assert.ok(initial.hidden > 0); assert.ok(initial.guide > 0); assert.match(initial.close, /Esc/);
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').click());
@@ -181,6 +181,47 @@ try {
   });
   await new Promise((resolve) => setTimeout(resolve, 150));
   await page.screenshot({ path: join(screenshots, 'galley-reader-context.png') });
+  // Mermaid renders locally and preserves both whole diagram versions for source comments.
+  await page.waitForFunction(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-diagram-view')].every((el) => el.dataset.state === 'ready'));
+  const diagrams = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    const versions = s.querySelector('.mr-diagram').querySelectorAll('[data-mr-side]');
+    const targets = [...versions].map((version) => {
+      version.querySelector('img').dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      return s.querySelector('.mr-comment-target').textContent;
+    });
+    return { count: s.querySelectorAll('.mr-diagram-view img').length, targets };
+  });
+  assert.equal(diagrams.count, 3); assert.match(diagrams.targets[0], /old paragraph lines 30–34/); assert.match(diagrams.targets[1], /new paragraph lines 31–37/);
+  // Opting into code appends it after the documents without replacing their rendered DOM.
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="code-files"]').click());
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-code-file').length === 2);
+  assert.deepEqual(await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-document')].filter((el) => !el.hidden).map((el) => el.getAttribute('aria-label'))), ['docs/rfcs/0042-reading-first-reviews.md', 'README.md', 'docs/adr/0007-render-markdown-in-the-browser.md', 'src/review.ts', 'src/options.json']);
+  const codeTarget = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    const row = [...s.querySelectorAll('.mr-code-text')].find((el) => el.textContent === 'export const changedOnly = true;');
+    row.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    return s.querySelector('.mr-comment-target').textContent;
+  });
+  assert.equal(codeTarget, 'src/review.ts · new source lines 6–6');
+  await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot, input = s.querySelector('textarea');
+    input.value = 'Explain this default'; input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-submit').disabled);
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer').requestSubmit());
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-comment-status').textContent.includes('Comment posted'));
+  const codePosted = await inspect(() => JSON.parse(sessionStorage.getItem('galley:demo-comments')).at(-1));
+  assert.equal(codePosted.doc.path, 'src/review.ts'); assert.equal(codePosted.startLine, 6); assert.equal(codePosted.quote, 'export const changedOnly = true;');
+  await page.setViewport({ width: 390, height: 844 });
+  const sourceLayout = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot, source = s.querySelector('.mr-code-lines');
+    return { left: source.getBoundingClientRect().left, right: source.getBoundingClientRect().right, client: source.clientWidth, scroll: source.scrollWidth, page: s.querySelector('.mr-root').scrollWidth };
+  });
+  assert.ok(sourceLayout.left >= 0 && sourceLayout.right <= 390 && sourceLayout.page <= 390 && sourceLayout.scroll > sourceLayout.client, JSON.stringify(sourceLayout));
+  await page.setViewport({ width: 1440, height: 1000 });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="code-files"]').click());
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-document:not([hidden])').length), 3);
   // The single sticky bar follows the file in view and its Viewed button targets that file.
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot, root = s.querySelector('.mr-root'), section = s.querySelectorAll('.mr-document')[1];
@@ -202,5 +243,5 @@ try {
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'false');
   assert.deepEqual(errors, []);
-  console.log('Reader browser checks passed: continuous files, filtering, real selection, pinned draft, posting, mobile, dark theme, current file in the sticky top bar, settings drawer focus, persisted Viewed progress, Escape.');
+  console.log('Reader browser checks passed: continuous files, filtering, real selection, pinned draft, posting, mobile, dark theme, current file in the sticky top bar, settings drawer focus, persisted Viewed progress, Mermaid versions, optional source files and line comments, Escape.');
 } finally { await browser.close(); }

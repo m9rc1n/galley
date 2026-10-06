@@ -2,7 +2,7 @@ import { githubViewed } from './github-viewed.ts';
 import { getToken } from '../ui/settings.ts';
 import { commentContext, diffRange, requireBody, validateTarget } from './comments.ts';
 import { reconstructBase } from '../core/patch.ts';
-import { encodePath, isMarkdownPath } from '../core/paths.ts';
+import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitHubContext } from './detect.ts';
 import { getJson, getText, HttpError } from './http.ts';
 import { ReaderError, type DocRef, type DocStatus, type ReviewSource } from './types.ts';
@@ -90,16 +90,19 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
       return cmp.merge_base_commit.sha;
     })());
 
-  const docs: GitHubDoc[] = files
-    .filter((f) => isMarkdownPath(f.filename) && f.status !== 'unchanged')
-    .map((f) => ({ path: f.filename, oldPath: f.previous_filename ?? f.filename, status: mapStatus(f.status), file: f }));
+  const all: GitHubDoc[] = files
+    .filter((f) => (isMarkdownPath(f.filename) || isMarkdownPath(f.previous_filename ?? '') || isCodePath(f.filename) || isCodePath(f.previous_filename ?? '')) && f.status !== 'unchanged')
+    .map((f) => ({ path: f.filename, oldPath: f.previous_filename ?? f.filename, status: mapStatus(f.status), file: f, ...(!(isMarkdownPath(f.filename) || isMarkdownPath(f.previous_filename ?? '')) ? { kind: 'code' as const } : {}) }));
+  const docs = all.filter((doc) => doc.kind !== 'code');
+  const codeDocs = all.filter((doc) => doc.kind === 'code');
 
   return {
     title: ctx.title,
     subtitle: `${ctx.owner}/${ctx.repo} · #${ctx.number}`,
     diffUrl: `${repoUrl}/pull/${ctx.number}/files`,
     docs,
-    viewed: token ? githubViewed(ctx, docs, headSha, pr.base.sha) : undefined,
+    codeDocs,
+    viewed: token ? githubViewed(ctx, all, headSha, pr.base.sha) : undefined,
     async load(ref) {
       const { file } = ref as GitHubDoc;
       const head = ref.status === 'removed' ? '' : await getText(raw(headSha, ref.path));
@@ -115,13 +118,13 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
       return { base, head };
     },
     async prepareComment(target) {
-      validateTarget(docs, target);
+      validateTarget(all, target);
       const file = (target.doc as GitHubDoc).file;
       const range = diffRange(file.patch, target);
       const kind = range ? 'inline' : 'file';
       return {
         kind,
-        label: range ? 'Post inline on GitHub' : 'Post file comment on GitHub (paragraph quoted)',
+        label: range ? 'Post inline on GitHub' : 'Post file comment on GitHub (selection quoted)',
         async post(body) {
           requireBody(body);
           const currentToken = await getToken(ctx.origin);

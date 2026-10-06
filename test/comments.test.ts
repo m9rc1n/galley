@@ -128,3 +128,54 @@ test('GitLab uses the native session, CSRF, shifted context and diff refs for in
   await assert.rejects(inline.post('Stale'), /changed while you were reading/);
   assert.equal(writes.length, 3);
 });
+
+test('GitHub offers source files after docs without fetching them until requested, and posts native code comments', async (t) => {
+  storage(t);
+  await setToken('https://github.com', 'write-token');
+  const codePatch = '@@ -1 +1 @@\n-const value = 1;\n+const value = 2;';
+  let rawReads = 0;
+  const writes: Array<Record<string, unknown>> = [];
+  t.mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') { writes.push(JSON.parse(init.body as string)); return response({ html_url: 'https://github.com/a/b/pull/1#discussion-1' }, 201); }
+    if (String(url).includes('/raw/')) { rawReads++; return new Response('const value = 2;\n'); }
+    if (String(url).includes('/files?')) return response([
+      { filename: 'src/main.ts', status: 'modified', changes: 2, patch: codePatch, raw_url: '' },
+      { filename: 'image.png', status: 'added', changes: 0, raw_url: '' },
+      { filename: 'README.md', status: 'modified', changes: 2, patch, raw_url: '' },
+      { filename: 'src/renamed.unknown', previous_filename: 'src/old.py', status: 'renamed', changes: 0, raw_url: '' },
+    ]);
+    return response({ head: { sha: 'h' }, base: { sha: 'b' } });
+  });
+  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, null);
+  assert.deepEqual(source.docs.map((doc) => doc.path), ['README.md']);
+  assert.deepEqual(source.codeDocs!.map((doc) => doc.path), ['src/main.ts', 'src/renamed.unknown']);
+  assert.equal(rawReads, 0);
+  assert.deepEqual(await source.load(source.codeDocs![0]), { base: 'const value = 1;\n', head: 'const value = 2;\n' });
+  assert.equal(rawReads, 1);
+  const plan = await source.prepareComment!({ doc: source.codeDocs![0], side: 'head', startLine: 1, endLine: 1, quote: 'const value = 2;' });
+  assert.equal(plan.kind, 'inline'); await plan.post('Explain this value');
+  assert.equal(writes[0].path, 'src/main.ts'); assert.equal(writes[0].line, 1); assert.equal(writes[0].side, 'RIGHT');
+});
+
+test('GitLab offers source-only reviews and sends old-side source comments with native diff positions', async (t) => {
+  storage(t);
+  globalValue(t, 'document', { querySelector: () => ({ content: 'session-csrf' }) });
+  const codePatch = '@@ -1 +1 @@\n-old value\n+new value';
+  let rawReads = 0;
+  const writes: Array<Record<string, any>> = [];
+  t.mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') { writes.push(JSON.parse(init.body as string)); return response({ notes: [{ id: 17 }] }, 201); }
+    if (String(url).includes('/raw?')) { rawReads++; return new Response(String(url).endsWith('ref=b') ? 'old value\n' : 'new value\n'); }
+    if (String(url).includes('/diffs?')) return response([
+      { new_path: 'src/main.py', old_path: 'src/main.py', diff: codePatch },
+      { new_path: 'photo.jpg', old_path: 'photo.jpg' },
+    ]);
+    return response({ title: 'Code only', diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
+  });
+  const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '', projectPath: 'a/b', projectId: null, iid: 7 });
+  assert.equal(source.docs.length, 0); assert.equal(source.codeDocs!.length, 1); assert.equal(rawReads, 0);
+  assert.deepEqual(await source.load(source.codeDocs![0]), { base: 'old value\n', head: 'new value\n' }); assert.equal(rawReads, 2);
+  const plan = await source.prepareComment!({ doc: source.codeDocs![0], side: 'base', startLine: 1, endLine: 1, quote: 'old value' });
+  assert.equal(plan.kind, 'inline'); await plan.post('Why remove this?');
+  assert.equal(writes[0].position.old_path, 'src/main.py'); assert.equal(writes[0].position.old_line, 1); assert.equal(writes[0].position.new_line, undefined);
+});

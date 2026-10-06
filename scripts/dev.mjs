@@ -100,6 +100,7 @@ const notify = (kind) => ({
 });
 
 for (const [entry, file, kind] of [
+  ['src/ui/mermaid-engine.ts', 'mermaid.js', 'content'],
   ['src/content/main.ts', 'content.js', 'content'],
   ['src/popup/popup.ts', 'popup.js', 'popup'],
   ['src/dev/reload.ts', 'dev-reload.js', 'worker'],
@@ -109,7 +110,7 @@ for (const [entry, file, kind] of [
     entryPoints: [entry],
     outfile: `${out}/${file}`,
     bundle: true,
-    format: 'iife',
+    format: file === 'mermaid.js' ? 'esm' : 'iife',
     target: ['chrome111'],
     loader: { '.css': 'text' },
     charset: 'utf8',

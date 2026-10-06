@@ -42,7 +42,7 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
     const button = r.content.ownerDocument.createElement('button');
     button.type = 'button';
     button.className = 'mr-context-toggle';
-    button.textContent = `${isExpanded ? 'Hide' : 'Show'} ${gap.blocks.length} unchanged ${gap.blocks.length === 1 ? 'block' : 'blocks'}`;
+    button.textContent = `${isExpanded ? 'Hide' : 'Show'} ${gap.blocks.length} unchanged ${r.isCode ? gap.blocks.length === 1 ? 'line' : 'lines' : gap.blocks.length === 1 ? 'block' : 'blocks'}`;
     button.setAttribute('aria-expanded', String(isExpanded));
     button.title = 'Reveal or collapse nearby context';
     button.addEventListener('click', () => {
@@ -69,15 +69,15 @@ function owner(node: Node, blocks: RenderedBlock[]): RenderedBlock | undefined {
 }
 function oldText(node: Node, block: RenderedBlock): boolean {
   const el = node.nodeType === 1 ? node as Element : node.parentElement;
-  return !block.head || Boolean(el?.closest('del.mr-del, .mr-ghost-row'));
+  return !block.head || Boolean(el?.closest('del.mr-del, .mr-ghost-row, [data-mr-side="base"]'));
 }
 
 export function paragraphTarget(doc: DocRef, block: RenderedBlock, side: 'base' | 'head' = block.head ? 'head' : 'base', quote?: string): CommentTarget | null {
   const unit = side === 'base' ? block.base : block.head;
   if (!unit) return null;
   const clone = block.el.cloneNode(true) as HTMLElement;
-  for (const el of clone.querySelectorAll(side === 'head' ? 'del.mr-del, .mr-ghost-row' : 'ins.mr-ins')) el.remove();
-  return { doc, side, startLine: unit.lines[0] + 1, endLine: unit.lines[1], quote: quote ?? (unit.kind === 'code' ? unit.source.trim() : clone.textContent?.replace(/\s+/g, ' ').trim() ?? '') };
+  for (const el of clone.querySelectorAll(side === 'head' ? 'del.mr-del, .mr-ghost-row, [data-mr-side="base"]' : 'ins.mr-ins, [data-mr-side="head"]')) el.remove();
+  return { doc, side, startLine: unit.lines[0] + 1, endLine: unit.lines[1], quote: quote ?? (unit.kind === 'code' ? unit.source.replace(/\n$/, '') : clone.textContent?.replace(/\s+/g, ' ').trim() ?? '') };
 }
 
 /** A selection quotes its exact text and targets the source ranges of its containing blocks. */
@@ -86,11 +86,27 @@ export function selectionTarget(doc: DocRef, blocks: RenderedBlock[], range: Ran
   if (!first || !last) return null;
   const side = oldText(range.startContainer, first) ? 'base' : 'head';
   if ((oldText(range.endContainer, last) ? 'base' : 'head') !== side) return null;
-  const covered = blocks.filter((block) => range.intersectsNode(block.el));
+  const covered = blocks.filter((block) => range.intersectsNode(block.el) && !block.el.closest('[hidden]') && !(block.el.classList.contains('mr-ghost') && block.el.closest('.mode-clean')));
   if (covered.some((block) => !(side === 'base' ? block.base : block.head))) return null;
+  if (doc.kind === 'code') {
+    // DOM ranges include gutters and concatenate rows. Quote only source text, with its newlines.
+    const rows = covered.flatMap((block) => {
+      const text = block.el.querySelector('.mr-code-text')?.firstChild;
+      if (!text || !range.intersectsNode(text)) return [];
+      const selected = block.el.ownerDocument.createRange();
+      selected.selectNodeContents(text);
+      if (range.compareBoundaryPoints(0, selected) > 0) selected.setStart(range.startContainer, range.startOffset);
+      if (range.compareBoundaryPoints(2, selected) < 0) selected.setEnd(range.endContainer, range.endOffset);
+      return selected.collapsed ? [] : [{ block, text: selected.toString().replace(/\u200b/g, '') }];
+    });
+    if (!rows.length) return null;
+    const start = paragraphTarget(doc, rows[0].block, side), end = paragraphTarget(doc, rows[rows.length - 1].block, side);
+    if (!start || !end) return null;
+    return { ...start, endLine: end.endLine, quote: rows.map((row) => row.text).join('\n') };
+  }
   // Inline removed/inserted text across both versions cannot have a single source range.
   const fragment = range.cloneContents();
-  if ((side === 'head' && fragment.querySelector('del.mr-del, .mr-ghost-row')) || (side === 'base' && fragment.querySelector('ins.mr-ins'))) return null;
+  if ((side === 'head' && fragment.querySelector('del.mr-del, .mr-ghost-row, [data-mr-side="base"]')) || (side === 'base' && fragment.querySelector('ins.mr-ins, [data-mr-side="head"]'))) return null;
   const start = paragraphTarget(doc, first, side), end = paragraphTarget(doc, last, side);
   if (!start || !end) return null;
   return { ...start, endLine: end.endLine, quote: range.toString().trim() };
