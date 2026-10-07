@@ -49,6 +49,12 @@ jobs:
         run: test "v$(node -p "require('./package.json').version")" = "$TAG"
       - run: npm run check
       - run: npm run build -- --zip
+      # addons.mozilla.org asks for the source of any bundled or minified extension. This is the
+      # tagged tree, without dependencies; store/FIREFOX.md has the build steps reviewers follow.
+      - name: Source package for Firefox review
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          git archive --format=zip --prefix="galley-${version}/" -o "dist/galley-source-${version}.zip" HEAD
       - name: Checksums
         run: cd dist && sha256sum galley-*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -57,6 +63,7 @@ jobs:
           path: |
             dist/galley-chrome-*.zip
             dist/galley-firefox-*.zip
+            dist/galley-source-*.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 7
@@ -89,9 +96,9 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release upload "$TAG" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/SHA256SUMS.txt \
+            gh release upload "$TAG" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/galley-source-*.zip dist/SHA256SUMS.txt \
               --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/SHA256SUMS.txt \
+            gh release create "$TAG" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/galley-source-*.zip dist/SHA256SUMS.txt \
               --repo "$GITHUB_REPOSITORY" --title "Galley $TAG" --generate-notes
           fi
