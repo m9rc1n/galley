@@ -1,6 +1,6 @@
 {
   "name": "galley",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "description": "Make room for better reviews. A free, open-source browser extension that turns Markdown changes in GitHub pull requests and GitLab merge requests into clear, typeset articles you can discuss in place.",
   "license": "MIT",
