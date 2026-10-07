@@ -60,6 +60,10 @@ The version is automatic (see "Commits and releases" in [CONTRIBUTING.md](CONTRI
 
 `npm run release` still builds the zip on your machine, which is useful for trying a package before the first submission.
 
+## Firefox Add-ons
+
+Every release also attaches `galley-firefox-X.Y.Z.zip` and `galley-source-X.Y.Z.zip` (Mozilla asks for the source of a bundled add-on). [`store/FIREFOX.md`](store/FIREFOX.md) has the listing fields, the notes for Mozilla's reviewers and the steps for the first submission and for each update.
+
 ## Rolling out inside a company
 
 Google Workspace admins can install the extension for everyone, or allow it, from the Admin console under Chrome browser settings. This works for unlisted and private items as well.

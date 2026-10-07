@@ -155,7 +155,7 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 - The whole pull/merge request is used; picking a commit range in the platform UI is not reflected.
 - Paragraphs rewritten by more than 60% are shown as the old version removed and the new one added, not as word edits.
 - Very large requests are listed up to 1,000 files on GitHub and 2,000 on GitLab.
-- Tested in Chrome. The Firefox build has not been tried in Firefox yet; Safari is not packaged.
+- Tested in Chrome and Firefox (live runs in Firefox 152 during the second security review); Safari is not packaged. The Firefox Add-ons listing is not published yet.
 
 ## Roadmap
 
