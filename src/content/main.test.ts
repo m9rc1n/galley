@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { PageContext } from '../platforms/detect.ts';
+import { TOKENS_CHANGED } from '../platforms/token-signal.ts';
 import type { ReviewSource } from '../platforms/types.ts';
 import { deferred } from '../testing/reader.ts';
 
@@ -72,9 +73,12 @@ it('shows errors, retries on click, and invalidates a cached source only when cr
   expect(mocks.openReader).toHaveBeenCalledWith(expect.any(Promise));
   expect(mocks.loadSource).toHaveBeenCalledTimes(2);
   storageChange({ unrelated: {} }); expect(mocks.loadSource).toHaveBeenCalledTimes(2);
-  storageChange({ 'galley:tokens': {} }); await Promise.resolve();
+  // Only the non-secret signal counts, and only for this site.
+  storageChange({ 'galley:tokens': {} }); storageChange({ [TOKENS_CHANGED]: { newValue: { origin: 'https://other.example', at: 1 } } });
+  expect(mocks.loadSource).toHaveBeenCalledTimes(2);
+  storageChange({ [TOKENS_CHANGED]: { newValue: { origin: location.origin, at: 2 } } }); await Promise.resolve();
   expect(mocks.loadSource).toHaveBeenCalledTimes(3);
-  context = null; navigate(); storageChange({ 'galley:tokens': {} });
+  context = null; navigate(); storageChange({ [TOKENS_CHANGED]: { newValue: { origin: location.origin, at: 3 } } });
   expect(mocks.loadSource).toHaveBeenCalledTimes(3);
 });
 

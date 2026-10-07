@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { diffLines, diffRange, githubThreads, gitlabThreads } from './comments.ts';
+import { commentContext, diffLines, diffRange, githubThreads, gitlabThreads } from './comments.ts';
+import MarkdownIt from 'markdown-it';
 import type { CommentTarget } from './types.ts';
 
 const patch = '@@ -1,4 +1,5 @@\n # Guide\n-old wording\n+new wording\n+another line\n context\n end';
@@ -44,4 +45,32 @@ it('GitLab diff discussions become threads; system notes and general discussions
     ['head', 7, true, 'https://gitlab.example/g/p/-/merge_requests/1#note_10', ['dana', 'lee']],
     ['base', 3, false, 'https://gitlab.example/g/p/-/merge_requests/1#note_20', ['sam']],
   ]);
+});
+
+it('pull request text in a posted comment stays code: no mentions, references, links or images', () => {
+  const md = new MarkdownIt({ linkify: true });
+  const hostile = {
+    doc: { path: 'docs/`@team` ![x](https://t.example/p.gif).md', oldPath: 'old\n@dana.md', status: 'renamed' as const },
+    side: 'head' as const, startLine: 4, endLine: 9,
+    quote: 'Thanks @org/security-team, see #1\n````\n![pixel](https://tracker.example/p.gif) [ok](https://evil.example)\n```',
+  };
+  const body = commentContext(hostile, '  Looks good @reviewer  ');
+  expect(body.startsWith('Looks good @reviewer\n\n---\n')).toBe(true);
+  const html = md.render(body);
+  // The reviewer's own text is untouched; everything after the rule is inside <code>.
+  const [, context] = html.split('<hr>');
+  expect(context).not.toMatch(/<img|<a /);
+  const outside = context.replace(/<code>[\s\S]*?<\/code>/g, '');
+  expect(outside).not.toMatch(/@|#1|https?:/);
+  expect(context).toContain('<code>docs/`@team` ![x](https://t.example/p.gif).md</code>');
+  expect(context).toContain('Thanks @org/security-team, see #1\n````\n![pixel]');
+  expect(commentContext({ ...hostile, side: 'base' }, 'x')).toContain('` old @dana.md ` · old lines 4–9');
+});
+
+it('long quotes are cut, and empty quotes add only the location', () => {
+  const long = commentContext({ ...target, quote: 'word '.repeat(400) }, 'Body');
+  expect(long).toMatch(/\n(`{3})\n(word ){200}…\n\1$/);
+  expect(long.length).toBeLessThan(1_100);
+  expect(commentContext({ ...target, quote: '' }, 'Body')).toBe('Body\n\n---\n` new.md ` · new lines 2–3');
+  expect(commentContext({ ...target, quote: 'a\r\nb\n\n' }, 'Body')).toMatch(/\n```\na\nb\n```$/);
 });

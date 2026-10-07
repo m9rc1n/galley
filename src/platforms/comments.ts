@@ -31,11 +31,26 @@ export function validateTarget(docs: DocRef[], target: CommentTarget): void {
   }
 }
 
+const MAX_QUOTE_CHARS = 1_000;
+
+/** A run of backticks longer than any inside the text, so the text cannot close its own code span or fence. */
+function fenceFor(text: string, minimum: number): string {
+  const longest = Math.max(0, ...[...text.matchAll(/`+/g)].map((match) => match[0].length));
+  return '`'.repeat(Math.max(minimum, longest + 1));
+}
+
+/**
+ * The path and the quoted text come from the pull request, not the reviewer, so they are posted as
+ * code: GitHub and GitLab leave @mentions, issue references, links and images inside code alone.
+ */
 export function commentContext(target: CommentTarget, body: string): string {
-  const path = target.side === 'base' ? target.doc.oldPath : target.doc.path;
-  const context = `${path} · ${target.side === 'base' ? 'old' : 'new'} lines ${target.startLine}–${target.endLine}`;
-  const quote = target.quote ? `\n\n${target.quote.split('\n').map((line) => `> ${line}`).join('\n')}` : '';
-  return `${body.trim()}\n\n---\n${context}${quote}`;
+  const path = (target.side === 'base' ? target.doc.oldPath : target.doc.path).replace(/[\r\n]+/g, ' ');
+  const tick = fenceFor(path, 1);
+  const context = `${tick} ${path} ${tick} · ${target.side === 'base' ? 'old' : 'new'} lines ${target.startLine}–${target.endLine}`;
+  let quote = target.quote.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+  if (quote.length > MAX_QUOTE_CHARS) quote = `${quote.slice(0, MAX_QUOTE_CHARS)}…`;
+  const fence = fenceFor(quote, 3);
+  return `${body.trim()}\n\n---\n${context}${quote ? `\n\n${fence}\n${quote}\n${fence}` : ''}`;
 }
 
 export function requireBody(body: string): void {

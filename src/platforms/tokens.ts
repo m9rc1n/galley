@@ -6,6 +6,8 @@
  * renderer, and their IndexedDB is the page's. Requests that need a token are therefore made by
  * the background worker (see background/worker.ts), and the token never enters the page.
  */
+import { TOKENS_CHANGED, type TokensChanged } from './token-signal.ts';
+
 const DB_NAME = 'galley';
 const STORE = 'tokens';
 /** Where versions up to 0.2 kept tokens: chrome.storage.local, which content scripts can read. */
@@ -49,6 +51,12 @@ export async function getToken(origin: string): Promise<string | null> {
 export async function setToken(origin: string, token: string | null): Promise<void> {
   assertTrustedContext();
   await run('readwrite', (store) => (token ? store.put(token, origin) : store.delete(origin)));
+  const signal: TokensChanged = { origin, at: Date.now() };
+  try {
+    await globalThis.chrome?.storage?.local?.set?.({ [TOKENS_CHANGED]: signal });
+  } catch {
+    // Best effort: the token is saved either way; at worst an open review needs a page reload.
+  }
 }
 
 /** Move tokens saved by older versions out of chrome.storage.local, then delete them there. */

@@ -1,6 +1,7 @@
 // Code is shown one line per block, so long lines wrap under their own indentation instead of
 // disappearing past the column edge. Syntax colours are added afterwards by a highlighter that
-// loads on demand, without changing any line's text.
+// loads on demand in a sandboxed frame, without changing any line's text.
+import { hostFor, sandbox } from './sandbox.ts';
 
 const LANGUAGES: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', mts: 'typescript', cts: 'typescript', typescript: 'typescript',
@@ -77,18 +78,12 @@ export function lineify(doc: Document, pre: HTMLElement): void {
   registerCode(pre, { language: languageOf(pre.dataset.lang ?? ''), head: text });
 }
 
-type Engine = { highlight(code: string, language: string): string | null };
-let engine: Promise<Engine> | null = null;
-
-function loadEngine(): Promise<Engine> {
-  const runtime = (globalThis as { chrome?: { runtime?: { getURL?: (path: string) => string } } }).chrome?.runtime;
-  const url = runtime?.getURL?.('highlighter.js') ?? new URL('build/highlighter.js', location.href).href;
-  engine ??= import(url) as Promise<Engine>;
-  return engine;
-}
+/** highlight.js runs in its sandboxed frame (highlight-frame.ts), where a slow grammar cannot freeze the page. */
+const highlighter = sandbox('highlight-frame.html', 8_000);
 
 const TOKEN_CLASS = /^(?:hljs-[\w-]+|[a-z]+_)$/;
 const MAX_HIGHLIGHT = 300_000;
+const MAX_HIGHLIGHTED_HTML = 10_000_000;
 
 /**
  * Split highlighted HTML into one fragment per line, re-opening spans that cross line breaks.
@@ -138,29 +133,30 @@ export function splitHighlighted(doc: Document, html: string): DocumentFragment[
 /** Colour every registered code block under `root`; lines whose text would change are left alone. */
 export async function highlightCode(root: ParentNode): Promise<void> {
   const containers = [...root.querySelectorAll<HTMLElement>('[data-mr-code=""]')];
-  const pending = containers.filter((el) => sources.get(el)?.language);
-  if (!pending.length) return;
-  let highlighter: Engine;
-  try {
-    highlighter = await loadEngine();
-  } catch {
-    return;
-  }
-  for (const container of pending) {
-    const source = sources.get(container)!;
+  for (const container of containers) {
+    const source = sources.get(container);
+    // Checked on every pass: closing the reader detaches its blocks, and a detached block would put
+    // the frame in the page instead of the reader. Blocks skipped here keep their marker for later.
+    if (!source?.language || !container.isConnected) continue;
     container.dataset.mrCode = 'done';
     const doc = container.ownerDocument;
+    const host = hostFor(container);
     const versions: Record<string, DocumentFragment[] | null> = {};
-    for (const [key, text] of [['b', source.base], ['h', source.head]] as const) {
-      const html = text !== undefined && text.length <= MAX_HIGHLIGHT ? highlighter.highlight(text, source.language!) : null;
-      versions[key] = html === null ? null : splitHighlighted(doc, html);
+    try {
+      for (const [key, text] of [['b', source.base], ['h', source.head]] as const) {
+        const reply = text !== undefined && text.length <= MAX_HIGHLIGHT ? await highlighter.request(host, { code: text, language: source.language }) : null;
+        const html = reply?.html;
+        versions[key] = typeof html === 'string' && html.length <= MAX_HIGHLIGHTED_HTML ? splitHighlighted(doc, html) : null;
+      }
+    } catch {
+      // The highlighter stopped answering or was closed with the reader: the rest stays plain and readable.
+      return;
     }
+    // Only replies whose text matches the line exactly are used, so a reply cannot change what is shown.
     for (const el of container.querySelectorAll<HTMLElement>('[data-line]')) {
       const [side, index] = el.dataset.line!.split(':');
       const line = versions[side]?.[Number(index)];
       if (line && line.textContent === el.textContent) el.replaceChildren(line);
     }
-    // Yield between blocks so a long document stays responsive.
-    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 }
