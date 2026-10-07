@@ -20,7 +20,7 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 **Viewed progress.** With a GitHub token, Galley reads your native file Viewed status and updates it only when you mark or unmark a file. Without a token, and on GitLab, Galley stores local Viewed flags using a fingerprint of the review URL, file path and contents. File content is not stored with these flags. This progress is saved in extension storage (local storage in the demo), stays on your device, and resets when that file changes.
 
-**Diagrams.** Mermaid diagrams render locally using code included in the extension. The diagram engine loads from the extension package only when needed. Diagram source and images are not sent to a rendering service, and external image/icon assets in Mermaid are disabled.
+**Diagrams and code colours.** Mermaid diagrams and syntax colours are produced locally using code included in the extension, loaded from the extension package only when needed. Both run in sandboxed frames that have no network access and cannot read the page, your session or Galley's storage. Diagram source, code and images are not sent to any service, and external image/icon assets in Mermaid are disabled.
 
 **Preferences.** Your theme, typeface, text size, display mode, paragraph filter, code-files option and external-images choice are stored in your browser's extension storage.
 

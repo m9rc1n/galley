@@ -251,10 +251,10 @@ it('selects a precise paragraph target and posts only once while a request is pe
   expect(ui.q('.mr-composer').hidden).toBe(false);
   expect(post).toHaveBeenCalledExactlyOnceWith('Please explain the new limit.');
   expect(ui.q<HTMLTextAreaElement>('#mr-comment').disabled).toBe(true);
-  pending.resolve({ url: 'https://gitlab.com/thread/7' });
+  pending.resolve({ url: `${location.origin}/thread/7` });
   await vi.waitFor(() => expect(ui.q('.mr-composer').hidden).toBe(true)); ui.flushFrame();
   expect(ui.q('.mr-thread.is-own').textContent).toContain('Please explain the new limit.');
-  expect(ui.q('.mr-toast a').getAttribute('href')).toBe('https://gitlab.com/thread/7');
+  expect(ui.q('.mr-toast a').getAttribute('href')).toBe(`${location.origin}/thread/7`);
   expect(ui.q('.mr-targeted')).toBeNull();
 });
 
@@ -305,10 +305,11 @@ it('surfaces unavailable commenting and preparation failures without enabling su
 it('anchors and sanitises existing threads, preserving context and folding long conversations', async () => {
   const comments = Array.from({ length: 5 }, (_, i) => ({ author: `Reviewer ${i}`, body: i === 0 ? '<script>bad()</script>\n\n![pixel](https://tracker.example/p.gif)' : `Reply ${i}`, createdAt: new Date(Date.now() - 86400_000 * i).toISOString(), url: '#thread' }));
   const thread: Thread = { doc: guide, side: 'head', line: 3, resolved: true, outdated: true, url: 'javascript:alert(1)', comments };
-  await ui.open(review({ loadThreads: async () => [thread, { ...thread, line: null, url: 'https://gitlab.com/thread' }] }));
+  await ui.open(review({ loadThreads: async () => [thread, { ...thread, line: null, url: `${location.origin}/thread` }, { ...thread, line: 2, url: 'https://elsewhere.example/thread' }] }));
   ui.flushFrame();
   expect(ui.q('.mr-content p').hidden).toBe(false);
-  expect(ui.shadow().querySelectorAll('.mr-thread')).toHaveLength(2);
+  expect(ui.shadow().querySelectorAll('.mr-thread')).toHaveLength(3);
+  expect([...ui.shadow().querySelectorAll('.mr-thread-link')].map((a) => a.getAttribute('href'))).toEqual([`${location.origin}/thread`]);
   expect(ui.q('.mr-thread script')).toBeNull();
   expect(ui.q('.mr-thread img').getAttribute('src')).toBeNull();
   expect(ui.q('.mr-thread.is-resolved').textContent).toContain('Outdated');
@@ -406,7 +407,7 @@ it('updates the current file and progress indicator on scrolling, and follows do
   const head = '# Guide\n\n[Jump](#review-context)\n\n## Review context\n\nKept.\n';
   await ui.open(review({ docs: [guide, { ...guide, path: 'other.md' }], load: async () => ({ base: head.replace('Jump', 'Go'), head }) }));
   ui.click('[data-scope="all"]');
-  expect(ui.q('.mr-content h2').id).toBe('review-context');
+  expect(ui.q('.mr-content h2').id).toBe('user-content-review-context');
   ui.click('.mr-content a[href="#review-context"]');
   expect(ui.scroll).toHaveBeenCalledWith({ top: 204, behavior: 'smooth' });
   const root = ui.q('.mr-root');

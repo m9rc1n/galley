@@ -62,6 +62,7 @@ it('GitLab uses the native session, CSRF, shifted context and diff refs for inli
   expect(outside.kind).toBe('discussion');
   await outside.post('Outside diff');
   expect(writes[2].position).toBe(undefined);
+  expect(writes[2].body).toBe('Outside diff\n\n---\n` new.md ` · new lines 10–10\n\n```\nnew wording\nanother line\n```');
   refs.head_sha = 'changed';
   // Snapshot must stay immutable even when a fixture object changes.
   await expect(inline.post('Stale')).rejects.toThrow(/changed while you were reading/);

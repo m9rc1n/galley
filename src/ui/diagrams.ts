@@ -1,6 +1,7 @@
 import DOMPurify from 'dompurify';
 import type { Unit } from '../core/markdown.ts';
 import type { RenderedBlock } from './render.ts';
+import { hostFor, sandbox } from './sandbox.ts';
 
 export interface DiagramVersion {
   side: 'base' | 'head';
@@ -89,12 +90,20 @@ export function diagramImage(doc: Document, svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(local)}`;
 }
 
-let engine: Promise<typeof import('mermaid')['default']> | null = null;
+/** Mermaid runs in its sandboxed frame (diagram-frame.ts); the first request also loads the engine. */
+const engine = sandbox('diagram-frame.html', 20_000);
+const MAX_SVG_CHARS = 2_000_000;
 let queue: Promise<void> = Promise.resolve();
-let serial = 0;
 const rendered = new WeakMap<Diagram, { dark: boolean; token: number }>();
 
-/** Sequential jobs avoid Mermaid's global configuration leaking between versions or themes. */
+/** The reply is untrusted: it must be a bounded string, and diagramImage sanitises it. */
+async function requestSvg(el: Element, code: string, dark: boolean): Promise<string> {
+  const { svg } = await engine.request(hostFor(el), { code, dark });
+  if (typeof svg !== 'string' || svg.length > MAX_SVG_CHARS) throw new Error('Mermaid could not render this diagram.');
+  return svg;
+}
+
+/** Sequential jobs, so a result for an old theme or a closed document is never shown. */
 export function renderDiagrams(diagrams: Diagram[], dark: boolean, changed: () => void): void {
   for (const diagram of diagrams) {
     const previous = rendered.get(diagram);
@@ -105,28 +114,12 @@ export function renderDiagrams(diagrams: Diagram[], dark: boolean, changed: () =
       queue = queue.then(async () => {
         if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
         const doc = diagram.el.ownerDocument;
-        const stage = doc.createElement('div');
-        stage.setAttribute('aria-hidden', 'true'); stage.inert = true;
-        stage.style.cssText = 'position:fixed;left:-100000px;top:0;width:1120px;visibility:hidden;pointer-events:none';
         try {
-          const code = diagramCode(version.source);
-          const runtime = (globalThis as { chrome?: { runtime?: { getURL?: (path: string) => string } } }).chrome?.runtime;
-          const url = runtime?.getURL?.('mermaid.js') ?? new URL('build/mermaid.js', location.href).href;
-          engine ??= import(url).then((module) => module.default as typeof import('mermaid')['default']);
-          const mermaid = await engine;
-          const config = {
-            startOnLoad: false, securityLevel: 'strict' as const, htmlLabels: false,
-            theme: dark ? 'dark' as const : 'default' as const,
-            fontFamily: 'system-ui, sans-serif', suppressErrorRendering: true,
-            maxTextSize: 20_000, maxEdges: 300, flowchart: { htmlLabels: false },
-          };
-          mermaid.initialize({ ...config, secure: ['secure', ...Object.keys(config), 'themeCSS', 'themeVariables', 'fontURL', 'layout', 'look', 'dompurifyConfig'] });
-          doc.body.append(stage);
-          const result = await mermaid.render(`galley-diagram-${++serial}`, code, stage);
+          const svg = await requestSvg(diagram.el, diagramCode(version.source), dark);
           if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
           const image = doc.createElement('img');
           image.alt = `${version.side === 'base' ? 'Old' : 'New'} version of Mermaid diagram. View source below.`;
-          image.src = diagramImage(doc, result.svg);
+          image.src = diagramImage(doc, svg);
           version.view.replaceChildren(image);
           version.view.dataset.state = 'ready';
           image.addEventListener('load', changed, { once: true });
@@ -135,7 +128,7 @@ export function renderDiagrams(diagrams: Diagram[], dark: boolean, changed: () =
           version.view.dataset.state = 'error';
           version.view.textContent = `${err instanceof Error && /not supported|too large/.test(err.message) ? err.message : 'Could not render this Mermaid diagram.'} The source is available below.`;
           version.sourceDetails.open = true;
-        } finally { stage.remove(); changed(); }
+        } finally { changed(); }
       }).catch(() => { /* Keep later diagrams usable if a document is closed during rendering. */ });
     }
   }

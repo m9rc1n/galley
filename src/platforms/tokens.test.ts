@@ -17,6 +17,19 @@ it('saves one token per site and removes it again', async () => {
   expect(await getToken(ENTERPRISE)).toBe('github_pat_two');
 });
 
+it('tells open reviews on the site that its token changed, without revealing the token', async () => {
+  const set = vi.fn(async (_items: Record<string, unknown>) => {});
+  vi.stubGlobal('chrome', { storage: { local: { set } } });
+  await setToken(GITHUB, 'github_pat_secret');
+  await setToken(GITHUB, null);
+  expect(set).toHaveBeenCalledTimes(2);
+  expect(set.mock.calls[0][0]).toStrictEqual({ 'galley:tokens-changed': { origin: GITHUB, at: expect.any(Number) } });
+  expect(JSON.stringify(set.mock.calls)).not.toContain('github_pat_secret');
+  set.mockRejectedValueOnce(new Error('quota'));
+  await expect(setToken(GITHUB, 'github_pat_again')).resolves.toBeUndefined();
+  expect(await getToken(GITHUB)).toBe('github_pat_again');
+});
+
 it('refuses to run inside a web page, whose storage is not private', async () => {
   vi.stubGlobal('location', { protocol: 'https:' });
   await expect(getToken(GITHUB)).rejects.toThrow(/only available to Galley itself/);
@@ -30,6 +43,7 @@ function legacyStorage(initial: Record<string, unknown>) {
   const area = {
     get: vi.fn(async (key: string) => (key in data ? { [key]: data[key] } : {})),
     remove: vi.fn(async (key: string) => void delete data[key]),
+    set: vi.fn(async (items: Record<string, unknown>) => void Object.assign(data, items)),
   };
   vi.stubGlobal('chrome', { storage: { local: area } });
   return area;

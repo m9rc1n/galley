@@ -6,21 +6,23 @@ on:
   push:
     tags: ['v*']
 
-permissions:
-  contents: write
-  # Build provenance: the attestation proves the zips were built by this workflow from this tag.
-  id-token: write
-  attestations: write
+permissions: {}
 
 jobs:
-  release:
+  # Runs the dependencies' code (tests and the build) with a read-only token, no cache and no way
+  # to sign: a compromised package cannot push, publish or attest from here.
+  build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
-          cache: npm
       - run: npm ci --ignore-scripts
       - name: Tag must match package.json
         run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
@@ -28,6 +30,33 @@ jobs:
       - run: npm run build -- --zip
       - name: Checksums
         run: cd dist && sha256sum galley-*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release
+          path: |
+            dist/galley-chrome-*.zip
+            dist/galley-firefox-*.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  # Holds the write and signing permissions, and runs no code from the repository or npm.
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      # Build provenance: the attestation proves the zips were built by this workflow from this tag.
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: dist
+      - name: Checksums still match
+        run: cd dist && sha256sum --check SHA256SUMS.txt
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/galley-*.zip
@@ -36,4 +65,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/SHA256SUMS.txt \
-            --title "Galley ${GITHUB_REF_NAME}" --generate-notes
+            --repo "${GITHUB_REPOSITORY}" --title "Galley ${GITHUB_REF_NAME}" --generate-notes

@@ -253,6 +253,14 @@ try {
     return { count: s.querySelectorAll('.mr-diagram-view img').length, targets };
   });
   assert.equal(diagrams.count, 3); assert.match(diagrams.targets[0], /old text, lines 30–34/); assert.match(diagrams.targets[1], /new text, lines 31–37/);
+  // Mermaid and highlight.js run in script-only sandboxed frames inside the reader, never in the page.
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-content [class^="hljs-"]'));
+  const frames = await inspect(() => ({
+    page: document.querySelectorAll('iframe').length,
+    reader: [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('iframe')].map((frame) => `${frame.getAttribute('sandbox')} ${new URL(frame.src).pathname}`).sort(),
+  }));
+  assert.equal(frames.page, 0);
+  assert.deepEqual(frames.reader, ['allow-scripts /build/diagram-frame.html', 'allow-scripts /build/highlight-frame.html']);
   // Opting into code appends it after the documents without replacing their rendered DOM.
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="code-files"]').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-code-file').length === 2);
@@ -301,7 +309,7 @@ try {
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'false');
   assert.deepEqual(errors, []);
-  console.log('Reader browser checks passed: continuous files, filtering, margin threads, selection chip, margin comment button, draft retargeting, posting, mobile composer, dark theme, current file in the sticky top bar, settings sheet focus, persisted Viewed progress, Mermaid versions, optional source files and line comments, Escape layers.');
+  console.log('Reader browser checks passed: continuous files, filtering, margin threads, selection chip, margin comment button, draft retargeting, posting, mobile composer, dark theme, current file in the sticky top bar, settings sheet focus, persisted Viewed progress, Mermaid versions, sandboxed renderers, optional source files and line comments, Escape layers.');
 } finally {
   await browser.close();
   server?.close();
