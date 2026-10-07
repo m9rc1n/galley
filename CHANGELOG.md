@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/m9rc1n/galley/compare/v0.4.0...v0.4.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* pass the addons.mozilla.org validator ([6006569](https://github.com/m9rc1n/galley/commit/6006569f32874385ae817d33e320697a6bbc284f))
+* pass the addons.mozilla.org validator ([cbcf9dc](https://github.com/m9rc1n/galley/commit/cbcf9dccf230c0788609ad877e2533f35f827904))
+
 ## [0.4.0](https://github.com/m9rc1n/galley/compare/v0.3.1...v0.4.0) (2026-10-07)
 
 
