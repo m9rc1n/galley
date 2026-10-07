@@ -102,7 +102,13 @@ async function drawDiff(): Promise<void> {
     name.textContent = docs[i].path.split('/').pop()!;
     const stat = document.createElement('span');
     stat.className = 'stat';
-    stat.innerHTML = `<span class="a">+${added}</span> <span class="d">−${removed}</span>`;
+    const plus = document.createElement('span');
+    plus.className = 'a';
+    plus.textContent = `+${added}`;
+    const minus = document.createElement('span');
+    minus.className = 'd';
+    minus.textContent = `−${removed}`;
+    stat.append(plus, ' ', minus);
     li.append(name, stat);
     files.append(li);
   });

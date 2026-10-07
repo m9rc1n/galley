@@ -8,6 +8,11 @@ updates:
     groups:
       development:
         dependency-type: development
+    ignore:
+      # Node type definitions follow the oldest Node this extension's tooling supports ("engines"),
+      # so a new major would describe APIs that are missing on the Node it must build on.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -24,8 +24,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Tag must match package.json
         run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
-      - run: npm run typecheck
-      - run: npm test
+      - run: npm run check
       - run: npm run build -- --zip
       - name: Checksums
         run: cd dist && sha256sum galley-*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt

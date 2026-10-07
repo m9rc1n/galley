@@ -52,6 +52,7 @@ export class Launcher {
     host.id = __GALLEY_DEV__ ? 'galley-launcher-dev' : 'galley-launcher';
     const shadow = host.attachShadow({ mode: 'open' });
     const dev = __GALLEY_DEV__ ? '<span class="dev-tag">DEV</span>' : '';
+    // biome-ignore lint/plugin: the bundled stylesheet, bundled icons and fixed markup; no page content.
     shadow.innerHTML = `<style>${CSS}</style><div class="wrap${__GALLEY_DEV__ ? ' dev' : ''}"><button class="launch">${icons.book}<span>Read</span>${dev}<span class="count"></span></button><button class="dismiss" aria-label="Hide for this page" title="Hide for this page">×</button></div>`;
     const launch = shadow.querySelector<HTMLButtonElement>('.launch')!;
     shadow.querySelector('.count')!.textContent = error ? '!' : String(count);

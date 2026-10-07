@@ -1,5 +1,9 @@
 # Galley
 
+[![CI](https://github.com/m9rc1n/galley/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/m9rc1n/galley/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/m9rc1n/galley/branch/main/graph/badge.svg)](https://codecov.io/gh/m9rc1n/galley)
+[![License: MIT](https://img.shields.io/github/license/m9rc1n/galley)](LICENSE)
+
 Read markdown changes in GitHub pull requests and GitLab merge requests like an article, not like a diff.
 
 ![A changed RFC in the Galley reader](store/assets/screenshot-1-changes.jpg)
@@ -109,7 +113,10 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 | `src/popup/` | Toolbar popup: enable self-hosted sites, GitHub token |
 | `src/background/` | Background worker: holds the GitHub token and makes the token-bearing API calls |
 | `demo/` | Sample merge request for trying the reader without the extension |
-| `test/` | Unit tests (`node --test`) |
+| `src/testing/` | Helpers shared by the unit tests (never shipped) |
+| `src/**/*.test.ts` | Unit tests, next to the code they cover |
+| `e2e/` | Browser checks of the reader, run in Chrome against the demo |
+| `lint/` | Custom lint rules for [Biome](https://biomejs.dev) |
 
 ## Privacy and security
 
@@ -172,15 +179,19 @@ Then, once: open `chrome://extensions`, turn on **Developer mode**, click **Load
 npm run dev        # dev build in dist/dev with live reload (see above)
 npm run dev:zip    # one-off dev build that works without the dev server (dist/dev-standalone + zip)
 npm run demo       # build and serve the demo on http://localhost:4173
-npm test           # unit tests
+npm test           # unit tests (Vitest), one project per folder
+npm run test:watch # unit tests, re-running as you edit
+npm run test:coverage # unit tests with coverage and the per-folder thresholds
+npm run test:e2e   # builds the demo and runs the browser checks (Chrome; CHROME_PATH supported)
+npm run lint       # Biome; npm run lint:fix applies the safe fixes
 npm run typecheck  # TypeScript, no emit
-node scripts/check-reader.mjs # browser checks against the running demo (Chrome; CHROME_PATH supported)
+npm run check      # typecheck, lint and unit tests: what a pull request needs to pass
 npm run icons      # redraw the toolbar icons
 npm run release    # tests, type check, store-ready zips, privacy page
 npm run store-assets  # store screenshots and promo tiles (needs Chrome)
 ```
 
-Requires Node 22.12 or newer (the tests run TypeScript directly).
+Requires Node 22.12 or newer (22.12+, 24 or 26+). Tests, coverage and lint rules are described in [CONTRIBUTING.md](CONTRIBUTING.md#tests-and-lint).
 
 ## Contributing
 

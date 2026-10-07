@@ -5,3 +5,6 @@ demo/build/
 .DS_Store
 store/privacy-policy.html
 store/submit-helper.html
+coverage/
+.idea/
+reports/

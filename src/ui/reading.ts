@@ -9,7 +9,10 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
   for (const el of r.content.querySelectorAll<HTMLElement>('[hidden]')) el.hidden = false;
   if (!changedOnly) return;
   let expanded = revealed.get(r);
-  if (!expanded) revealed.set(r, expanded = new Set());
+  if (!expanded) {
+    expanded = new Set();
+    revealed.set(r, expanded);
+  }
   const context = new Set<HTMLElement>();
   const headings: RenderedBlock[] = [];
   for (const block of r.blocks) {

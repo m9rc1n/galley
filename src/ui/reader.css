@@ -189,8 +189,8 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
 }
 
-.mr-serif-sample {
-  font-family: var(--serif) !important;
+.mr-seg button.mr-serif-sample {
+  font-family: var(--serif);
 }
 
 .mr-keys {
@@ -263,6 +263,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 20px;
+  /* biome-ignore lint/complexity/noImportantStyles: beats the prose margin rules, which apply to every direct child of the article */
   margin: 32px 0 48px !important;
   padding: 14px 0;
   border-top: 1px solid var(--rule);
@@ -834,6 +835,7 @@
 .mr-mark.is-point {
   left: -2px;
   width: 8px;
+  /* biome-ignore lint/complexity/noImportantStyles: the bar's height is set inline from its measured position */
   height: 8px !important;
   border-radius: 50%;
 }
@@ -1018,13 +1020,17 @@
 @media (prefers-reduced-motion: reduce) {
   .mr-root *,
   .mr-root {
+    /* biome-ignore lint/complexity/noImportantStyles: a reader's motion preference must win over every animation rule */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: see above */
     transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: see above */
     scroll-behavior: auto !important;
   }
 }
 
 /* Continuous review and the persistent comment composer. */
+/* biome-ignore lint/complexity/noImportantStyles: `hidden` must hide whatever display rule an element otherwise has */
 .mr-root [hidden] { display: none !important; }
 .mr-main { padding-bottom: calc(var(--composer-height, 180px) + 110px); }
 .mr-document + .mr-document { margin-top: 90px; }

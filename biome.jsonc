@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/coverage",
+      "!**/reports",
+      "!demo/build",
+      "!demo/samples",
+      "!store/assets",
+      "!package-lock.json"
+    ]
+  },
+  // Linting only. Formatting is left alone on purpose, so this setup does not rewrite the codebase.
+  "formatter": { "enabled": false },
+  "assist": { "enabled": false },
+  // A custom rule for the one risk an extension that renders pull request content cannot take.
+  "plugins": ["./lint/no-unsanitized-html.grit"],
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "nursery": {
+        // Many code paths here are async (storage, network, rendering); an unhandled one fails silently.
+        // Intentional fire-and-forget calls say so with `void`.
+        "noFloatingPromises": "error"
+      },
+      "style": {
+        // Strict null checks are on. DOM code often looks up an element it has just rendered, and tests
+        // assert on what they have just built, so `!` is clearer than a guard that cannot fail.
+        "noNonNullAssertion": "off",
+        // The reader's stylesheet is one deliberate cascade of layered overrides.
+        "noDescendingSpecificity": "off"
+      }
+    }
+  }
+}
