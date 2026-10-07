@@ -1,0 +1,50 @@
+name: Release PR
+
+# Versions come from commit messages (Conventional Commits, see CONTRIBUTING.md). On every push to
+# main, release-please keeps one "chore(main): release X.Y.Z" pull request open that raises the
+# version in package.json and package-lock.json and writes CHANGELOG.md. Merging it tags vX.Y.Z and
+# creates the GitHub release; the packages are then built and attached by release.yml.
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release PR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Needs the repository setting "Allow GitHub Actions to create and approve pull requests".
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Events created with GITHUB_TOKEN (the tag, the release) do not start other workflows, so the
+  # build is called from here instead of waiting for a tag push. It still gets no more access
+  # than release.yml asks for.
+  release:
+    name: Build and publish
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}

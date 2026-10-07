@@ -1,10 +1,23 @@
 name: Release
 
-# Push a tag such as v0.3.1 (it must match "version" in package.json) to build the Chrome and
-# Firefox packages and attach them to a GitHub release.
+# Builds the Chrome and Firefox packages for a release tag such as v0.3.1 (it must match "version"
+# in package.json) and attaches them to its GitHub release.
+#
+# release-please.yml calls this when the release pull request is merged. To redo a failed build or
+# upload, run it by hand from the Actions tab with the existing tag.
 on:
-  push:
-    tags: ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag, for example v0.3.1
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag, for example v0.3.1
+        required: true
+        type: string
 
 permissions: {}
 
@@ -17,15 +30,23 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The tag is an input, so it goes in through the environment and is checked before use.
+      - name: Tag looks like a release
+        env:
+          TAG: ${{ inputs.tag }}
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: refs/tags/${{ inputs.tag }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm ci --ignore-scripts
       - name: Tag must match package.json
-        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
+        env:
+          TAG: ${{ inputs.tag }}
+        run: test "v$(node -p "require('./package.json').version")" = "$TAG"
       - run: npm run check
       - run: npm run build -- --zip
       - name: Checksums
@@ -60,9 +81,17 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/galley-*.zip
-      - name: Publish release
+      # release-please has already created the release, with the changelog as its notes; only the
+      # files are added. If someone tagged by hand there is no release yet, so it is created.
+      - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/SHA256SUMS.txt \
-            --repo "${GITHUB_REPOSITORY}" --title "Galley ${GITHUB_REF_NAME}" --generate-notes
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" --title "Galley $TAG" --generate-notes
+          fi

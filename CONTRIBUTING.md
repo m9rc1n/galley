@@ -24,6 +24,30 @@ npm run test:e2e   # browser checks; needed for anything that changes how the re
 
 CI runs all of these, on Node 22 and 24, and fails if test coverage drops. `test:e2e` needs Chrome; set `CHROME_PATH` if it is installed somewhere unusual. If you change what the reader looks like, include a screenshot; `npm run store-assets` redraws the store graphics from the real reader.
 
+## Commits and releases
+
+Galley follows [Semantic Versioning](https://semver.org), and the version is never edited by hand. It is worked out from [Conventional Commits](https://www.conventionalcommits.org) by [release-please](https://github.com/googleapis/release-please).
+
+Pull requests are squash-merged, so **the pull request title is the commit message** and has to look like `type(scope): summary`. A check on every pull request enforces it.
+
+| Title | Effect on the version | Appears in the changelog |
+| --- | --- | --- |
+| `fix: …` | patch (0.3.1 → 0.3.2) | Bug Fixes |
+| `perf: …`, `revert: …` | patch | Performance, Reverts |
+| `feat: …` | minor (0.3.1 → 0.4.0) | Features |
+| `feat!: …` or a `BREAKING CHANGE:` footer | minor while below 1.0, major after | Features, marked breaking |
+| `docs:`, `refactor:`, `test:`, `build:`, `ci:`, `chore:`, `style:` | none: they never open a release on their own | hidden |
+
+Choose the type by what a user of the extension would notice: new capability is `feat`, a correction is `fix`, and changes nobody using the extension would see (docs, tests, tooling, internal cleanup) use a hidden type so they do not trigger a Web Store upload. Asking for a new browser permission is at least a `feat`, because Chrome disables the extension until the user accepts it.
+
+How a release happens:
+
+1. After each merge to `main`, release-please opens or updates one pull request, `chore(main): release X.Y.Z`. It raises the version in `package.json` and `package-lock.json` and adds the new entries to `CHANGELOG.md`. The build copies the version into the extension manifest, so there is nothing else to edit.
+2. Merging that pull request is the release. It creates the `vX.Y.Z` tag and GitHub release, and [`release.yml`](.github/workflows/release.yml) builds the Chrome and Firefox zips and attaches them with checksums and a build provenance attestation.
+3. Upload the Chrome zip to the Web Store ([PUBLISHING.md](PUBLISHING.md#updates)).
+
+To force a particular version, put `Release-As: 0.5.0` as a footer in a commit message. Nothing is released until the release pull request is merged, so you can leave it open to batch several changes.
+
 ## Tests and lint
 
 **Unit tests** use [Vitest](https://vitest.dev) and sit next to the code they cover: `src/core/markdown.ts` is tested by `src/core/markdown.test.ts`. Each folder is its own Vitest project (`core`, `platforms`, `background`, `ui`, `content`, `popup`, `dev`), so a layer can be run alone and the report is grouped by folder:
