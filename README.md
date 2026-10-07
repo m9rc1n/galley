@@ -40,9 +40,13 @@ Light, sepia and dark themes, serif or sans text, adjustable type size and a cle
 
 ## Try it
 
+**The website:** `npm ci --ignore-scripts && npm run site`, then open http://localhost:4185 for the landing page and live reader demo. See [website hosting instructions](site/README.md) for GitHub Pages.
+
 **Without installing anything:** `npm install && npm run demo`, then open http://localhost:4173. The demo runs the real reader on a sample merge request.
 
-**From the Chrome Web Store:** coming soon; until then, install from a [release](https://github.com/m9rc1n/galley/releases) (download `galley-chrome-<version>.zip`, unzip it, then **Load unpacked** on `chrome://extensions`) or build it yourself (below).
+**From the Chrome Web Store:** [Add Galley to Chrome](https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic), then open a GitHub pull request or GitLab merge request and press **Read**.
+
+**From a release:** download `galley-chrome-<version>.zip` from [GitHub releases](https://github.com/m9rc1n/galley/releases), unzip it, then **Load unpacked** on `chrome://extensions`. You can also build it yourself (below).
 
 **In your own Chrome, as a developer:** see [Develop in your own Chrome](#develop-in-your-own-chrome) below.
 
@@ -159,7 +163,7 @@ We are building toward a complete, considerate review flow:
 1. **Conversation in the margin.** Reply to and resolve the threads that the reader already shows beside their paragraphs.
 2. **Review flow.** Approve or request changes from the reader.
 3. **Richer rendering.** Math, issue and user references.
-4. **Distribution.** Chrome Web Store and Firefox Add-ons listings.
+4. **Distribution.** Chrome Web Store updates and a Firefox Add-ons listing.
 
 ## Publishing
 

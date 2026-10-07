@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f4ed">
+    <title>Galley — Make room for better reviews</title>
+    <meta name="description" content="A calmer way to review Markdown in GitHub and GitLab. Read changes like an article, keep the conversation in context. Free, open source, and private by default.">
+    <link rel="canonical" href="https://m9rc1n.github.io/galley/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Galley — Make room for better reviews">
+    <meta property="og:description" content="Good ideas deserve a better review. A free, open-source Markdown reader for GitHub and GitLab.">
+    <meta property="og:url" content="https://m9rc1n.github.io/galley/">
+    <meta property="og:image" content="https://m9rc1n.github.io/galley/assets/social.png">
+    <meta property="og:image:width" content="1600">
+    <meta property="og:image:height" content="640">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" href="assets/icon.png" type="image/png">
+    <link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="header wrap">
+      <a class="brand" href="./" aria-label="Galley home"><img src="assets/icon.png" width="34" height="34" alt="">galley<span class="brand-dot">.</span></a>
+      <nav aria-label="Main navigation">
+        <a href="#experience">Features</a>
+        <a href="#principles">Why Galley</a>
+        <a class="nav-github" href="https://github.com/m9rc1n/galley">Source <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="header-actions">
+        <a class="header-demo" href="demo/"><svg class="play-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 9 6-9 6Z"/></svg><span class="demo-label-desktop">Live demo</span><span class="demo-label-mobile">Demo</span></a>
+        <a class="button button-small button-primary" href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic">Get Galley <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="status-dot"></span> Markdown reviews for GitHub &amp; GitLab</p>
+          <h1 id="hero-title"><span>Make room for</span><em>better reviews.</em></h1>
+          <p class="hero-description">A free browser extension for clearer Markdown reviews in GitHub and GitLab. Read the document, see the changes, and discuss the idea.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic">Get Galley <span aria-hidden="true">↗</span></a>
+            <a class="button button-demo" href="demo/"><svg class="play-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 9 6-9 6Z"/></svg>Try live demo</a>
+          </div>
+          <p class="hero-note">Free &amp; open source <span aria-hidden="true">·</span> Chrome on desktop</p>
+          <a class="hero-install-help" href="#install">Installation guide <span aria-hidden="true">↗</span></a>
+        </div>
+
+        <div class="hero-art">
+          <div class="orbit" aria-hidden="true"></div>
+          <div class="reader-card" id="illustrated-reader">
+            <div class="reader-toolbar">
+              <span class="reader-file"><span class="file-icon" aria-hidden="true">≡</span> review-culture.md</span>
+              <fieldset class="segmented" aria-label="Illustrated review mode">
+                <button type="button" data-mode="changes" aria-pressed="true">Changes</button>
+                <button type="button" data-mode="clean" aria-pressed="false">Clean</button>
+              </fieldset>
+            </div>
+            <div class="reader-paper">
+              <p class="document-kicker">RFC 0042 <span>·</span> A more thoughtful workflow</p>
+              <h2>A little room<br>to think.</h2>
+              <div class="document-meta"><span>2 min read</span><span class="change-count"><i></i> 3 thoughtful changes</span></div>
+              <p class="sample-paragraph">A good review starts with <del>an approval</del> <ins>understanding</ins>. Give the idea a little space before deciding where it should go.</p>
+              <p class="sample-paragraph sample-context">Keep the context close, so the conversation can move the idea forward.</p>
+              <div class="sample-thread">
+                <div class="thread-author"><span class="avatar">D</span> Dana <span>on this paragraph</span><span class="thread-dot" aria-hidden="true">···</span></div>
+                <p>Could we add an example of who this helps?</p>
+                <div class="thread-reply"><span class="avatar avatar-lee">L</span><p><strong>Lee</strong> Yes — I’ll add one to the next revision.</p></div>
+              </div>
+              <div class="document-footer"><span><span class="check" aria-hidden="true">✓</span> The idea, in context.</span><span>01 / 03</span></div>
+            </div>
+          </div>
+          <div class="art-caption"><p class="illustration-label">An illustrated review.</p><a href="demo/">Open the real reader <span aria-hidden="true">↗</span></a></div>
+        </div>
+      </section>
+
+      <section class="platform-strip wrap" aria-label="Compatibility and features">
+        <p>Works where your<br><strong>team already reviews.</strong></p>
+        <div class="platform"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.1c-3.14.68-3.8-1.34-3.8-1.34-.51-1.3-1.25-1.65-1.25-1.65-1.03-.7.08-.7.08-.7 1.14.08 1.74 1.17 1.74 1.17 1.01 1.73 2.65 1.23 3.3.94.1-.74.4-1.23.72-1.52-2.5-.29-5.14-1.25-5.14-5.56 0-1.23.44-2.23 1.16-3.02-.12-.28-.5-1.43.11-2.97 0 0 .95-.3 3.1 1.16a10.8 10.8 0 0 1 5.64 0c2.15-1.46 3.1-1.16 3.1-1.16.61 1.54.23 2.69.11 2.97.72.79 1.16 1.79 1.16 3.02 0 4.32-2.64 5.27-5.15 5.55.4.35.76 1.04.76 2.1v3.11c0 .3.2.65.77.54A11.25 11.25 0 0 0 12 .75Z"/></svg>GitHub</div>
+        <div class="platform"><svg viewBox="0 0 32 30" aria-hidden="true"><path fill="currentColor" d="m16 29 6-18H10zm0 0L1 11h9zm0 0 15-18h-9zM1 11l3-10 6 10zm30 0L28 1l-6 10z"/></svg>GitLab</div>
+        <div class="strip-note"><span aria-hidden="true">⌘</span> Same repositories.<br> A fresh perspective.</div>
+      </section>
+
+      <section class="experience section wrap" id="experience" aria-labelledby="experience-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">A clearer review</p><h2 id="experience-title">Read the document.<br><em>See what changed.</em></h2></div>
+          <p>See edits in the text, read the surrounding context, and discuss the idea — all in the same review.</p>
+        </div>
+        <fieldset class="preview-tabs" aria-label="Reader previews">
+          <button type="button" data-preview="changes" aria-pressed="true"><span>01</span> Changes in context</button>
+          <button type="button" data-preview="tables" aria-pressed="false"><span>02</span> The details, clearer</button>
+          <button type="button" data-preview="dark" aria-pressed="false"><span>03</span> Your kind of quiet</button>
+        </fieldset>
+        <figure class="product-preview">
+          <div class="preview-chrome" aria-hidden="true"><div><i></i><i></i><i></i></div><span>galley / the real reader</span><span>↗</span></div>
+          <img id="preview-image" src="assets/reader-changes.jpg" width="1280" height="800" alt="The Galley reader showing a rendered RFC with inline word changes and a review conversation." loading="lazy">
+          <figcaption><span id="preview-caption" aria-live="polite">The whole thought, with the edits right where they belong. Actual Galley reader, sample review.</span><a class="preview-demo" href="demo/">Launch live demo <span aria-hidden="true">↗</span></a></figcaption>
+        </figure>
+        <div class="feature-grid">
+          <article><span class="feature-symbol" aria-hidden="true">¶</span><h3>Read with context.</h3><p>Read a rendered document instead of piecing together Markdown. Reveal unchanged paragraphs whenever you need more context.</p></article>
+          <article><span class="feature-symbol change-symbol" aria-hidden="true">− <span>+</span></span><h3>See meaningful changes.</h3><p>See word edits, table changes, and before-and-after diagrams. Rewrapped text doesn’t distract from the substance.</p></article>
+          <article><span class="feature-symbol" aria-hidden="true">↳</span><h3>Review together.</h3><p>Read comments beside the text. Select a passage to comment. Everything stays in GitHub or GitLab, visible to your team.</p></article>
+        </div>
+      </section>
+
+      <section class="principles" id="principles" aria-labelledby="principles-title">
+        <div class="wrap principles-inner">
+          <div class="principles-copy"><p class="eyebrow">Our mission</p><h2 id="principles-title">Better reviews start<br><em>with understanding.</em></h2><p>Documents carry someone’s thinking. Our mission is to make reviewing clearer, calmer, and easier on the people who do it.</p><a class="text-link" href="https://github.com/m9rc1n/galley">Built in the open. Read our mission <span aria-hidden="true">↗</span></a></div>
+          <div class="principle-list">
+            <article><span aria-hidden="true">↗</span><div><h3>Open source.</h3><p>Free and MIT-licensed. The code, permissions, and known limitations are open for you to inspect.</p></div></article>
+            <article><span aria-hidden="true">⌂</span><div><h3>Private by default.</h3><p>Rendering happens in your browser. No Galley server, no analytics, no telemetry. External images wait for your permission.</p></div></article>
+            <article><span aria-hidden="true">↳</span><div><h3>Your existing workflow.</h3><p>Files come from your code host. Comments go back to the same review. Teammates don’t need Galley to join in.</p></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="install section wrap" id="install" aria-labelledby="install-title">
+        <div class="install-intro"><p class="eyebrow">Get the extension</p><h2 id="install-title">Bring clarity to<br><em>your next review.</em></h2><p>Add Galley to desktop Chrome, open a GitHub pull request or GitLab merge request, and press Read.</p><a class="button button-primary" href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic">Add to Chrome <span aria-hidden="true">↗</span></a><p class="install-note">On mobile? Try the live demo below. No install needed.</p><a class="text-link install-demo" href="demo/">Open the live demo <span aria-hidden="true">↗</span></a></div>
+        <div class="install-details">
+          <div class="release-card"><div><span class="status-dot"></span> Available in the Chrome Web Store</div><h3>A minute to get started.</h3><ol class="install-steps"><li><span>01</span><p>Open <a href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic">Galley in the Chrome Web Store</a>.</p></li><li><span>02</span><p>Choose <strong>Add to Chrome</strong>, then confirm <strong>Add extension</strong>.</p></li><li><span>03</span><p>Open a GitHub pull request or GitLab merge request and press <strong>Read</strong>.</p></li></ol><p class="store-note">Free, open source, and no Galley account to create.</p></div>
+          <div class="faq">
+            <details><summary>How do I install it?</summary><div><p>Open <a href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic">Galley in the Chrome Web Store</a>, choose <strong>Add to Chrome</strong>, and confirm <strong>Add extension</strong>.</p><p>Open a GitHub pull request or GitLab merge request, then press <strong>Read</strong> in the bottom-right corner.</p><p>Unpacked Chrome and Firefox builds are also available from <a href="https://github.com/m9rc1n/galley/releases">GitHub releases</a>.</p></div></details>
+            <details><summary>Which browsers does it support?</summary><div><p>Galley is tested in Chrome. The Chrome build can also be loaded in Chromium browsers such as Edge, Brave, and Arc. A Firefox build is available, but hasn’t been tested in Firefox yet. Safari isn’t packaged.</p></div></details>
+            <details><summary>Does it work with private repositories?</summary><div><p>Yes. GitLab uses your signed-in session. Private GitHub repositories need a personal access token, saved in the extension. Reading needs read-only Contents and Pull requests access; commenting also needs Pull requests write access.</p><p>Self-hosted GitLab and GitHub Enterprise Server can be enabled per site from the extension popup. <a href="https://github.com/m9rc1n/galley#using-it">Read the setup guide ↗</a></p></div></details>
+            <details><summary>What happens to my documents and comments?</summary><div><p>Galley fetches documents from your code host and renders them locally. Comments are sent to GitHub or GitLab when you post. The demo keeps comments in your browser session and never posts to either platform.</p><p><a href="privacy.html">Read the full privacy policy →</a></p></div></details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer wrap"><a class="brand" href="./"><img src="assets/icon.png" width="28" height="28" alt="">galley<span class="brand-dot">.</span></a><p>Made for the people behind the review.</p><nav aria-label="Footer navigation"><a href="demo/">Live demo ↗</a><a href="https://github.com/m9rc1n/galley">Source ↗</a><a href="privacy.html">Privacy</a></nav></footer>
+  </body>
+</html>
