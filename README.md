@@ -1,6 +1,7 @@
 # Galley
 
 [![CI](https://github.com/m9rc1n/galley/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/m9rc1n/galley/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/m9rc1n/galley/branch/main/graph/badge.svg)](https://codecov.io/gh/m9rc1n/galley)
 [![License: MIT](https://img.shields.io/github/license/m9rc1n/galley)](LICENSE)
 
 Read markdown changes in GitHub pull requests and GitLab merge requests like an article, not like a diff.

@@ -57,6 +57,15 @@ jobs:
       - name: Coverage per folder
         if: ${{ !cancelled() && matrix.node == 22 }}
         run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+      # Once per run (the Node 22 leg), so the numbers on Codecov are not counted twice. Pull requests
+      # from forks cannot read the secret, so their upload cannot authenticate; it never fails the run.
+      - name: Send coverage to Codecov
+        if: ${{ !cancelled() && matrix.node == 22 }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          fail_ci_if_error: false
       - name: Keep the reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

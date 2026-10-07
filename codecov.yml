@@ -1,0 +1,37 @@
+# Codecov: coverage per source folder, and a check that new code arrives with tests.
+# The unit tests' own thresholds (vitest.config.ts) are the hard gate; this is the view over time.
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        # src/ui/reader.ts is driven by the browser checks (e2e/), not by unit tests, so changes to it
+        # would otherwise always read as untested.
+        informational: true
+
+ignore:
+  - src/testing
+  - "**/*.test.ts"
+
+component_management:
+  individual_components:
+    - component_id: core
+      name: core
+      paths: [src/core/**]
+    - component_id: platforms
+      name: platforms
+      paths: [src/platforms/**]
+    - component_id: background
+      name: background
+      paths: [src/background/**]
+    - component_id: ui
+      name: ui
+      paths: [src/ui/**]
+
+comment:
+  layout: "condensed_header, condensed_files, components"
+  require_changes: true
