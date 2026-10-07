@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag such as v0.2.0 (it must match "version" in package.json) to build the Chrome and
+# Push a tag such as v0.3.1 (it must match "version" in package.json) to build the Chrome and
 # Firefox packages and attach them to a GitHub release.
 on:
   push:
@@ -8,25 +8,33 @@ on:
 
 permissions:
   contents: write
+  # Build provenance: the attestation proves the zips were built by this workflow from this tag.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - name: Tag must match package.json
         run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
       - run: npm run typecheck
       - run: npm test
       - run: npm run build -- --zip
+      - name: Checksums
+        run: cd dist && sha256sum galley-*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/galley-*.zip
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" dist/galley-chrome-*.zip dist/galley-firefox-*.zip \
+          gh release create "${GITHUB_REF_NAME}" dist/galley-chrome-*.zip dist/galley-firefox-*.zip dist/SHA256SUMS.txt \
             --title "Galley ${GITHUB_REF_NAME}" --generate-notes

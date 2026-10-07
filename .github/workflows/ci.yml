@@ -12,14 +12,17 @@ jobs:
   check:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # Dependencies never run install scripts; esbuild ships its binary as a platform package.
+      - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
       - name: Check that the release build contains no dev-only code
         run: '! grep -q "galley-launcher-dev" dist/chrome/content.js'
+      - name: Check that dependencies have no known vulnerabilities
+        run: npm audit --audit-level=low
