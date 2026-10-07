@@ -2,7 +2,7 @@
   "name": "galley",
   "version": "0.3.1",
   "private": true,
-  "description": "Read markdown changes in GitHub pull requests and GitLab merge requests like an article.",
+  "description": "Make room for better reviews. A free, open-source browser extension that turns Markdown changes in GitHub pull requests and GitLab merge requests into clear, typeset articles you can discuss in place.",
   "license": "MIT",
   "author": "Marcin Urbanski",
   "homepage": "https://github.com/m9rc1n/galley#readme",

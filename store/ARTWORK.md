@@ -15,6 +15,8 @@ The illustrated review is labelled as an illustration. Product screenshots come 
 | `templates/promo-small.html` | `assets/promo-small-440x280.jpg` — 440 × 280 |
 | `templates/promo-marquee.html` | `assets/promo-marquee-1400x560.jpg` — 1400 × 560 |
 | `templates/promo-marquee.html` | `assets/readme-hero-1600x640.png` — 1600 × 640 |
+| `templates/social-preview.html` | `assets/social-preview-1280x640.png` — 1280 × 640, the GitHub social preview (upload it under Settings → General → Social preview) |
+| `templates/avatar.html` | `assets/galley-avatar-1024.png` — 1024 × 1024, the avatar for a GitHub organization or profile |
 | The real demo reader | Five product screenshots — 1280 × 800 |
 
 `npm run artwork` opens a local preview server at http://localhost:4180, including the rendered README. It serves only the artwork, generated screenshots and named project documentation. The local README preview omits remote badge images.

@@ -8,6 +8,8 @@ export const ARTWORK = [
   { template: 'promo-small.html', name: 'promo-small-440x280.jpg', width: 440, height: 280, type: 'jpeg' },
   { template: 'promo-marquee.html', name: 'promo-marquee-1400x560.jpg', width: 1400, height: 560, type: 'jpeg' },
   { template: 'promo-marquee.html', name: 'readme-hero-1600x640.png', width: 1600, height: 640, type: 'png' },
+  { template: 'social-preview.html', name: 'social-preview-1280x640.png', width: 1280, height: 640, type: 'png' },
+  { template: 'avatar.html', name: 'galley-avatar-1024.png', width: 1024, height: 1024, type: 'png' },
 ];
 
 const fonts = Promise.all([
