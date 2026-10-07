@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 import { githubViewed } from '../src/platforms/github-viewed.ts';
 import { viewedKey, loadViewed, saveViewed } from '../src/ui/viewed.ts';
-import { setToken } from '../src/ui/settings.ts';
+import { getToken, setToken } from '../src/platforms/tokens.ts';
+import { directApi } from '../src/platforms/github-api.ts';
 
 const ctx = { platform: 'github' as const, key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'acme', repo: 'docs', number: 12, title: 'Docs' };
 const doc = { path: 'docs/guide.md', oldPath: 'docs/guide.md', status: 'modified' as const };
@@ -49,7 +50,7 @@ test('GitHub loads paginated native progress and marks/unmarks with current auth
       pageInfo: { hasNextPage: !body.variables.after, endCursor: 'next-page' },
     } } } } });
   });
-  const store = githubViewed(ctx, [doc], 'head', 'base');
+  const store = githubViewed(ctx, directApi(ctx.origin, getToken), [doc], 'head', 'base');
   assert.deepEqual(await store.load(), [doc.path]);
   assert.equal(calls[1].variables.after, 'next-page');
   await store.set(doc, true); await store.set(doc, false);
@@ -70,7 +71,7 @@ test('GitHub stale revisions and failed mutations do not record Viewed progress 
     if (body.query.startsWith('mutation')) { mutations++; return response({ errors: [{ message: 'Permission denied' }] }); }
     return response({ data: { repository: { pullRequest: { id: 'PR_ID', headRefOid: head, baseRefOid: 'base' } } } });
   });
-  const store = githubViewed(ctx, [doc], 'head', 'base');
+  const store = githubViewed(ctx, directApi(ctx.origin, getToken), [doc], 'head', 'base');
   await assert.rejects(store.set(doc, true), /could not sync/);
   assert.equal(mutations, 1);
   head = 'changed';
@@ -84,6 +85,6 @@ test('GitHub Enterprise Viewed calls use the installation GraphQL endpoint', asy
     assert.equal(url, 'https://git.example.com/api/graphql');
     return response({ data: { repository: { pullRequest: { id: 'PR_ID', headRefOid: 'h', baseRefOid: 'b', files: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } } } } });
   });
-  const store = githubViewed({ ...ctx, origin: 'https://git.example.com', apiBase: 'https://git.example.com/api/v3' }, [doc], 'h', 'b');
+  const store = githubViewed({ ...ctx, origin: 'https://git.example.com', apiBase: 'https://git.example.com/api/v3' }, directApi('https://git.example.com', getToken), [doc], 'h', 'b');
   assert.deepEqual(await store.load(), []);
 });

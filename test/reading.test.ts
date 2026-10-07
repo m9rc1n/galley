@@ -8,7 +8,7 @@ import type { DocRef } from '../src/platforms/types.ts';
 
 const { document } = new JSDOM('<!doctype html><html><body></body></html>').window;
 const doc: DocRef = { path: 'new.md', oldPath: 'old.md', status: 'renamed' };
-const render = (base: string, head: string, status = doc.status) => renderDocument(document, { path: doc.path, base, head, status, links: { blob: (p) => p, raw: (p) => p } });
+const render = (base: string, head: string, status = doc.status) => renderDocument(document, { path: doc.path, base, head, status, links: { blob: (p) => p, raw: (p) => p }, origin: 'https://gitlab.example' });
 
 test('changed paragraphs are the default, preserving only relevant headings and list structure', () => {
   assert.equal(DEFAULT_SETTINGS.scope, 'changed');

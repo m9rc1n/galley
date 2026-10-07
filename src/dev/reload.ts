@@ -5,6 +5,9 @@
 // then refresh the active tab. No extension reload is needed (runtime.reload() is not reliable for
 // unpacked extensions in current Chrome). Messages appear in this worker's console:
 // chrome://extensions → Galley (dev) → service worker.
+// The dev build has a single background worker: this one. It also serves token-bearing GitHub requests.
+import '../background/worker.ts';
+
 const DEV_SERVER = 'ws://localhost:35729';
 const MAIN_SCRIPT = 'galley-dev-main';
 

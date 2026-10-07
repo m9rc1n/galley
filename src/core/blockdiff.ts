@@ -1,4 +1,4 @@
-import { diffArrays } from 'diff';
+import { boundedDiff } from './limits.ts';
 import type { Unit } from './markdown.ts';
 
 export type ChangeKind = 'same' | 'added' | 'removed' | 'modified';
@@ -58,7 +58,7 @@ function pairRun(removed: Unit[], added: Unit[], out: BlockChange[]): void {
  * run of deletions/insertions is paired up by similarity so small edits show up as edits.
  */
 export function diffUnits(base: Unit[], head: Unit[]): BlockChange[] {
-  const parts = diffArrays(base.map((u) => u.key), head.map((u) => u.key));
+  const parts = boundedDiff(base.map((u) => u.key), head.map((u) => u.key));
   const out: BlockChange[] = [];
   let bi = 0;
   let hi = 0;
@@ -72,10 +72,10 @@ export function diffUnits(base: Unit[], head: Unit[]): BlockChange[] {
   for (const part of parts) {
     const count = part.count ?? part.value.length;
     if (part.removed) {
-      removed.push(...base.slice(bi, bi + count));
+      for (let k = 0; k < count; k++) removed.push(base[bi + k]);
       bi += count;
     } else if (part.added) {
-      added.push(...head.slice(hi, hi + count));
+      for (let k = 0; k < count; k++) added.push(head[hi + k]);
       hi += count;
     } else {
       flush();

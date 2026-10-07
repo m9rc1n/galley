@@ -1,4 +1,4 @@
-import { commentContext, diffRange, requireBody, validateTarget } from './comments.ts';
+import { commentContext, diffRange, gitlabThreads, requireBody, validateTarget, type GitLabDiscussion } from './comments.ts';
 import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitLabContext } from './detect.ts';
 import { getJson, getText, HttpError } from './http.ts';
@@ -91,6 +91,15 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
         doc.status === 'removed' ? '' : raw(doc.path, refs.head_sha),
       ]);
       return { base, head };
+    },
+    async loadThreads() {
+      const discussions: GitLabDiscussion[] = [];
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const { data } = await json<GitLabDiscussion[]>(`${api}/merge_requests/${ctx.iid}/discussions?per_page=100&page=${page}`);
+        discussions.push(...data);
+        if (data.length < 100) break;
+      }
+      return gitlabThreads(all, discussions, (id) => `${webBase}/-/merge_requests/${ctx.iid}#note_${id}`);
     },
     async prepareComment(target) {
       validateTarget(all, target);

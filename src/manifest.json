@@ -48,7 +48,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "mermaid.js"
+        "mermaid.js",
+        "highlighter.js"
       ],
       "matches": [
         "https://*/*",

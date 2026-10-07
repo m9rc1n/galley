@@ -24,6 +24,26 @@ export interface CommentTarget {
   quote: string;
 }
 
+export interface ThreadComment {
+  author: string;
+  /** Markdown, written by any participant; rendered through the same sanitiser as documents. */
+  body: string;
+  createdAt: string;
+  url: string;
+}
+
+/** An existing review thread, anchored to a line of one version of a document. */
+export interface Thread {
+  doc: DocRef;
+  side: 'base' | 'head';
+  /** One-based line in that version; null for file comments and threads whose line is gone. */
+  line: number | null;
+  outdated?: boolean;
+  resolved?: boolean;
+  url: string;
+  comments: ThreadComment[];
+}
+
 export interface CommentPlan {
   kind: 'inline' | 'file' | 'discussion';
   label: string;
@@ -49,6 +69,8 @@ export interface ReviewSource {
     set(doc: DocRef, viewed: boolean): Promise<void>;
   };
   prepareComment?(target: CommentTarget): Promise<CommentPlan>;
+  /** Review threads already on the pull or merge request. */
+  loadThreads?(): Promise<Thread[]>;
 }
 
 /** An error with a human explanation of what to do about it. */

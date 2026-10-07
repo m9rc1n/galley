@@ -29,23 +29,25 @@ On any GitHub pull request or GitLab merge request that changes markdown files, 
 
 WHAT YOU GET
 • Typography made for long-form reading: a comfortable serif column, real headings, tables, images, task lists, footnotes and alerts.
-• Changes where they happened: inserted words highlighted, removed words struck through, new and deleted paragraphs marked in place.
-• Tables compared cell by cell, code blocks line by line.
+• Changes where they happened: inserted words marked, removed words struck through, new and deleted paragraphs marked in place.
+• A link or image that keeps its text but points somewhere new is named in the text.
+• Tables compared cell by cell; code blocks and source files line by line, with syntax colours and wrapped long lines.
+• Existing review threads beside the paragraphs they discuss. Select text, or use the button beside a paragraph, to post a normal review comment.
 • Re-wrapped paragraphs are not reported as changes.
 • Clean mode: hide the markup and read the new version as it will be published, with quiet markers in the margin.
-• Keyboard navigation: J and K for the next and previous change, [ and ] for the next and previous document, C to switch modes, Esc to go back.
+• Keyboard navigation: J and K for the next and previous change, [ and ] for the next and previous document, R to comment, V to mark a file viewed, C to switch modes, Esc to go back.
 • Light, sepia and dark themes, serif or sans text, adjustable text size.
 
 WORKS WHERE YOU REVIEW
 • GitLab.com and self-managed GitLab: uses your signed-in session, nothing to set up. Self-managed instances are enabled from the toolbar popup, one domain at a time.
-• GitHub.com and GitHub Enterprise Server: public repositories work right away. For private repositories, add a read-only fine-grained token in the popup.
+• GitHub.com and GitHub Enterprise Server: public repositories work right away. For private repositories, add a fine-grained token in the popup. Galley keeps it in its own storage, away from web pages.
 
 PRIVATE BY DESIGN
 • No servers, no accounts, no analytics. Documents are rendered in your browser.
-• Galley itself only contacts the GitHub or GitLab site you are using. Images embedded in documents load from where they are hosted.
+• Galley itself only contacts the GitHub or GitLab site you are using. Images hosted on other websites load only when you choose.
 • Rendered documents are sanitised, so content from forks cannot run scripts or imitate Galley's change markers.
 
-Read all changed documents in a continuous stream, with changed paragraphs shown first. Reveal nearby unchanged context at any gap. Click a paragraph or select text, then post a normal platform comment from the reader. GitLab uses your signed-in session; GitHub commenting needs a token with Pull requests: read and write.
+Read all changed documents in a continuous stream, with changed paragraphs shown first. Reveal nearby unchanged context at any gap. GitLab commenting uses your signed-in session; GitHub commenting needs a token with Pull requests: read and write.
 
 GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. Galley is not affiliated with or endorsed by either company.
 ```
@@ -84,7 +86,7 @@ Galley shows the markdown documents changed in a GitHub pull request or GitLab m
 `storage`
 
 ```
-Saves the user's reading preferences (theme, typeface, text size, Changes or Clean mode) and, only if the user enters one, a GitHub access token for reading private repositories. Everything is kept in chrome.storage.local on the user's device.
+Saves the user's reading preferences (theme, typeface, text size, Changes or Clean mode, external images) and local Viewed progress in chrome.storage.local on the user's device. An optional GitHub access token is kept separately in the extension's own IndexedDB, which content scripts and web pages cannot read; only the extension's background worker uses it.
 ```
 
 `scripting`
@@ -110,8 +112,8 @@ Optional https://*/* and http://*/*: never granted at install. Requested at runt
 
 **Data usage.** Check these two boxes and leave the others unchecked:
 
-- [x] **Authentication information**: the optional GitHub token, stored locally and sent only to the GitHub API.
-- [x] **Website content**: the pull and merge request pages and markdown files that Galley reads and renders on the device.
+- [x] **Authentication information**: the optional GitHub token, stored locally and sent only to the GitHub API of the site it was saved for.
+- [x] **Website content**: the pull and merge request pages, changed files and review comments that Galley reads and renders on the device, and review comments the user chooses to post.
 
 Leave unchecked: personally identifiable information, health information, financial and payment information, personal communications, location, web history, user activity.
 

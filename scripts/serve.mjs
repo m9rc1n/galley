@@ -31,7 +31,8 @@ export function startDemoServer(port = Number(process.env.PORT ?? 4173)) {
       res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
     }
   });
-  return new Promise((resolve) => server.listen(port, () => resolve(server)));
+  // Local only: the demo is for this machine, not the network.
+  return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

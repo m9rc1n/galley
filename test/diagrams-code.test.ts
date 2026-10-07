@@ -10,7 +10,7 @@ import { isCodePath } from '../src/core/paths.ts';
 const { document } = new JSDOM('<!doctype html><html><body></body></html>').window;
 const ref = { path: 'src/main.ts', oldPath: 'src/old.ts', status: 'modified' as const, kind: 'code' as const };
 const fence = (code: string) => '```mermaid\n' + code + '\n```';
-const render = (base: string, head: string, status: 'modified' | 'added' | 'removed' = 'modified') => renderDocument(document, { path: 'a.md', status, base, head, links: { raw: (p) => p, blob: (p) => p } });
+const render = (base: string, head: string, status: 'modified' | 'added' | 'removed' = 'modified') => renderDocument(document, { path: 'a.md', status, base, head, links: { raw: (p) => p, blob: (p) => p }, origin: 'https://gitlab.example' });
 
 test('Mermaid fences retain whole old/new diagrams and trusted source coordinates', () => {
   const before = fence('flowchart LR\n A --> B'), after = fence('flowchart LR\n A --> C');
@@ -123,4 +123,28 @@ test('Clean source selections skip hidden old rows and quote only the visible ne
   r.blocks[0].el.hidden = true;
   range.setStart(r.blocks.find((block) => block.kind === 'added')!.el.querySelector('.mr-code-text')!.firstChild!, 0);
   assert.equal(selectionTarget(ref, r.blocks, range)!.quote, 'new value\n  last');
+});
+
+test('code wraps per line, keeps each line text, and colours tokens that span lines', async () => {
+  const { languageOf, splitHighlighted } = await import('../src/ui/code.ts');
+  assert.equal(languageOf('ts title="x.ts"'), 'typescript');
+  assert.equal(languageOf('src/app/Dockerfile'), 'dockerfile');
+  assert.equal(languageOf('config/ci.yml'), 'yaml');
+  assert.equal(languageOf('notes.unknown'), null);
+  // A comment that spans two lines is re-opened on the second line; foreign markup is dropped.
+  const lines = splitHighlighted(document, '<span class="hljs-keyword">const</span> a = 1; <span class="hljs-comment">/* one\ntwo */</span><img src=x onerror=alert(1)><b class="evil">b</b>');
+  assert.equal(lines.length, 2);
+  assert.equal(lines[0].textContent, 'const a = 1; /* one');
+  assert.equal(lines[1].textContent, 'two */b');
+  assert.equal(lines[1].firstChild!.nodeName, 'SPAN');
+  assert.equal((lines[1].firstChild as Element).className, 'hljs-comment');
+  const box = document.createElement('div');
+  box.append(...lines);
+  assert.equal(box.querySelectorAll('img, b, [onerror], .evil').length, 0);
+  // Rendered code blocks are one element per line, each tagged with its line for colouring.
+  const r = render('', '```yaml\nsteps:\n    - run: npm ci --ignore-scripts\n\n```\n', 'added');
+  const rows = [...r.content.querySelectorAll<HTMLElement>('pre .mr-cl')];
+  assert.deepEqual(rows.map((el) => el.textContent), ['steps:', '    - run: npm ci --ignore-scripts', '']);
+  assert.deepEqual(rows.map((el) => el.dataset.line), ['h:0', 'h:1', 'h:2']);
+  assert.equal(rows[1].style.getPropertyValue('--indent'), '4ch');
 });

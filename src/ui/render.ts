@@ -1,12 +1,14 @@
+import { languageOf, lineEl, lineify, registerCode } from './code.ts';
 import { mermaidSource, prepareDiagram, type Diagram } from './diagrams.ts';
-import { diffArrays } from 'diff';
+import { boundedDiff } from '../core/limits.ts';
 import DOMPurify from 'dompurify';
 import { diffUnits, similarity, type BlockChange } from '../core/blockdiff.ts';
 import { applyOps, plainText } from '../core/highlight.ts';
 import { normalize, parseDocument, renderUnit, type ParsedDoc, type Unit } from '../core/markdown.ts';
 import { resolveHref, type RepoLinks } from '../core/paths.ts';
 import { changeRatio, hasVisibleChange, wordDiff } from '../core/worddiff.ts';
-import type { DocStatus } from '../platforms/types.ts';
+import { MAX_DOCUMENT_CHARS } from '../core/limits.ts';
+import { ReaderError, type DocStatus } from '../platforms/types.ts';
 
 export interface RenderInput {
   path: string;
@@ -14,6 +16,10 @@ export interface RenderInput {
   base: string;
   head: string;
   links: RepoLinks;
+  /** Origin of the GitHub or GitLab site; images hosted there load normally. */
+  origin: string;
+  /** External images wait for a click unless the reader chose to always load them. */
+  images?: 'ask' | 'load';
 }
 
 export interface RenderedBlock {
@@ -38,6 +44,10 @@ export interface RenderedDoc {
   title: string | null;
   description: string | null;
   words: number;
+  /** External images that wait for the reader to load them. */
+  heldImages: number;
+  /** Changed, non-blank source lines that no rendered block shows (comments, link definitions…). */
+  hiddenLines: number;
 }
 
 /** Above this share of changed text, an edit is shown as "old block removed, new block added". */
@@ -70,28 +80,102 @@ const RENDERER_CLASSES = new Set([
   'footnote-backref',
 ]);
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const ABSOLUTE_URL = /^\s*(?:[a-z][a-z\d+.-]*:|\/\/)/i;
+
 let purifier: ReturnType<typeof DOMPurify> | null = null;
 
-function sanitize(doc: Document, html: string): DocumentFragment {
+/**
+ * Sanitise document HTML. Besides removing scripts, this keeps documents from loading anything by
+ * themselves: the only element that may fetch is <img>, and its absolute URL is parked in
+ * data-mr-src until decorate() decides whether it may load (see F5 in the security review).
+ */
+export function sanitize(doc: Document, html: string): DocumentFragment {
   if (!purifier) {
     purifier = DOMPurify(doc.defaultView ?? window);
-    purifier.addHook('uponSanitizeAttribute', (_node, data) => {
-      if (data.attrName !== 'class') return;
-      data.attrValue = data.attrValue
-        .split(/\s+/)
-        .filter((name) => RENDERER_CLASSES.has(name))
-        .join(' ');
-      if (!data.attrValue) data.keepAttr = false;
+    purifier.addHook('uponSanitizeAttribute', (node, data) => {
+      const name = data.attrName;
+      if (name === 'class') {
+        data.attrValue = data.attrValue
+          .split(/\s+/)
+          .filter((value) => RENDERER_CLASSES.has(value))
+          .join(' ');
+        if (!data.attrValue) data.keepAttr = false;
+      } else if (name === 'src' && node.nodeName !== 'IMG') {
+        // e.g. <input type="image" src>, MathML <mglyph src>.
+        data.keepAttr = false;
+      } else if ((name === 'href' || name === 'xlink:href') && node.namespaceURI === SVG_NS && node.nodeName.toLowerCase() !== 'a' && !data.attrValue.startsWith('#')) {
+        // SVG <use>, <image> and filter references to other documents.
+        data.keepAttr = false;
+      }
+    });
+    purifier.addHook('afterSanitizeAttributes', (node) => {
+      if (node.nodeName !== 'IMG') return;
+      const el = node as Element;
+      const src = el.getAttribute('src');
+      if (src && ABSOLUTE_URL.test(src) && !/^\s*data:/i.test(src)) {
+        el.setAttribute('data-mr-src', src.trim());
+        el.removeAttribute('src');
+      }
     });
   }
   return purifier.sanitize(html, {
     RETURN_DOM_FRAGMENT: true,
-    FORBID_TAGS: ['style', 'form', 'iframe', 'frame', 'frameset', 'object', 'embed', 'base', 'link', 'meta', 'button', 'textarea', 'select'],
-    FORBID_ATTR: ['style'],
+    FORBID_TAGS: ['style', 'form', 'iframe', 'frame', 'frameset', 'object', 'embed', 'base', 'link', 'meta', 'button', 'textarea', 'select', 'video', 'audio', 'source', 'track'],
+    FORBID_ATTR: ['style', 'srcset', 'poster', 'background', 'ping', 'lowsrc', 'dynsrc'],
     // No data-* attributes from documents, except the two Galley renders itself.
     ALLOW_DATA_ATTR: false,
     ADD_ATTR: ['data-mr-u', 'data-lang'],
   }) as unknown as DocumentFragment;
+}
+
+/** Images on the review platform itself (and GitHub's user-content hosts) reveal nothing new. */
+export function isPlatformUrl(url: string, origin: string): boolean {
+  let target: URL;
+  let site: URL;
+  try {
+    site = new URL(origin);
+    target = new URL(url, origin);
+  } catch {
+    return false;
+  }
+  if (target.protocol !== 'https:' && target.protocol !== site.protocol) return false;
+  const host = site.hostname;
+  return target.hostname === host || target.hostname.endsWith(`.${host}`) || (host === 'github.com' && target.hostname.endsWith('.githubusercontent.com'));
+}
+
+/** Show a held image. */
+export function loadImage(img: HTMLImageElement): void {
+  const src = img.dataset.mrSrc;
+  if (!src) return;
+  img.src = src;
+  img.hidden = false;
+  delete img.dataset.mrSrc;
+  const hold = img.previousElementSibling;
+  if (hold?.classList.contains('mr-img-hold')) hold.remove();
+}
+
+function holdImage(doc: Document, img: HTMLImageElement, src: string): void {
+  let host = src;
+  try {
+    host = new URL(src, 'https://invalid.invalid').hostname;
+  } catch {
+    // Keep the raw value; it is only shown as text.
+  }
+  const hold = doc.createElement('span');
+  hold.className = 'mr-img-hold';
+  const text = doc.createElement('span');
+  const alt = img.getAttribute('alt')?.trim();
+  text.textContent = `${alt ? `${alt} · ` : ''}image from ${host}`;
+  text.title = src;
+  const button = doc.createElement('button');
+  button.type = 'button';
+  button.className = 'mr-img-load';
+  button.dataset.act = 'load-image';
+  button.textContent = 'Load';
+  hold.append(text, button);
+  img.hidden = true;
+  img.before(hold);
 }
 
 /**
@@ -115,6 +199,56 @@ function fragmentFor(doc: Document, unit: Unit, parsed: ParsedDoc): DocumentFrag
   for (const el of frag.querySelectorAll('[id]')) el.removeAttribute('id');
   for (const el of frag.querySelectorAll('[data-mr-u]')) el.removeAttribute('data-mr-u');
   return frag;
+}
+
+interface LinkTarget {
+  el: Element;
+  label: string;
+  url: string;
+}
+
+function linkTargets(root: ParentNode): LinkTarget[] {
+  return [...root.querySelectorAll('a[href], img')].map((el) => ({
+    el,
+    label: el.tagName === 'IMG' ? `img:${el.getAttribute('alt') ?? ''}` : `a:${normalize(el.textContent ?? '')}`,
+    url: el.getAttribute('href') ?? el.getAttribute('src') ?? el.getAttribute('data-mr-src') ?? '',
+  }));
+}
+
+/**
+ * Links and images that kept their text but point somewhere new (see F3 in the security review).
+ * Pairs are made by link text (or image alt) before inline marks change that text.
+ */
+function changedLinks(before: ParentNode, after: ParentNode): Array<{ el: Element; from: string; to: string }> {
+  const old = linkTargets(before);
+  const used = new Set<number>();
+  const out: Array<{ el: Element; from: string; to: string }> = [];
+  for (const link of linkTargets(after)) {
+    const i = old.findIndex((o, k) => !used.has(k) && o.label === link.label);
+    if (i === -1) continue;
+    used.add(i);
+    if (old[i].url !== link.url) out.push({ el: link.el, from: old[i].url, to: link.url });
+  }
+  return out;
+}
+
+function noteLinkChanges(doc: Document, changes: Array<{ el: Element; from: string; to: string }>): void {
+  for (const { el, from, to } of changes) {
+    const note = doc.createElement('span');
+    note.className = 'mr-link-note';
+    note.setAttribute('role', 'note');
+    const label = doc.createElement('span');
+    label.className = 'mr-link-note-label';
+    label.textContent = el.tagName === 'IMG' ? 'Image changed' : 'Link changed';
+    const was = doc.createElement('del');
+    was.className = 'mr-del';
+    was.textContent = from || '(none)';
+    const now = doc.createElement('ins');
+    now.className = 'mr-ins';
+    now.textContent = to || '(none)';
+    note.append(label, was, doc.createTextNode(' → '), now);
+    el.after(note);
+  }
 }
 
 function mark(el: HTMLElement, kind: 'added' | 'modified' | 'removed', extra?: string): void {
@@ -157,27 +291,26 @@ function insertGhost(doc: Document, root: HTMLElement, unit: Unit, parsed: Parse
 /** Code is compared line by line, like a code diff: removed lines above the lines that replaced them. */
 function diffCode(doc: Document, pre: HTMLElement, before: string): boolean {
   const code = pre.querySelector('code') ?? pre;
-  const lines = (text: string) => text.replace(/\n$/, '').split('\n');
-  const parts = diffArrays(lines(before), lines(code.textContent ?? ''));
+  const base = before.replace(/\n$/, '');
+  const head = (code.textContent ?? '').replace(/\n$/, '');
+  const parts = boundedDiff(base.split('\n'), head.split('\n'));
   if (!parts.some((p) => p.added || p.removed)) return false;
+  // Every line is its own block, tagged with its line in the old or new text for highlighting.
   const frag = doc.createDocumentFragment();
-  const total = parts.reduce((n, p) => n + p.value.length, 0);
-  let seen = 0;
+  let b = 0;
+  let h = 0;
   for (const part of parts) {
     for (const line of part.value) {
-      seen++;
-      if (!part.added && !part.removed) {
-        // Changed lines are blocks and end their own line; plain lines need an explicit break.
-        frag.append(doc.createTextNode(seen < total ? `${line}\n` : line));
-        continue;
+      if (part.removed) frag.append(lineEl(doc, 'del', 'mr-del mr-line', line, `b:${b++}`));
+      else if (part.added) frag.append(lineEl(doc, 'ins', 'mr-ins mr-line', line, `h:${h++}`));
+      else {
+        frag.append(lineEl(doc, 'span', 'mr-cl', line, `h:${h++}`));
+        b++;
       }
-      const el = doc.createElement(part.added ? 'ins' : 'del');
-      el.className = `${part.added ? 'mr-ins' : 'mr-del'} mr-line`;
-      el.textContent = line || ' ';
-      frag.append(el);
     }
   }
   code.replaceChildren(frag);
+  registerCode(pre, { language: languageOf(pre.dataset.lang ?? ''), base, head });
   return true;
 }
 
@@ -191,7 +324,7 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
   const baseRows = [...before.querySelectorAll('tr')];
   if (!headRows.length || !baseRows.length) return false;
   const key = (row: Element) => cells(row).map((c) => normalize(c.textContent ?? '')).join('\u0001');
-  const parts = diffArrays(baseRows.map(key), headRows.map(key));
+  const parts = boundedDiff(baseRows.map(key), headRows.map(key));
 
   const ghostRow = (row: Element, anchor: Element | undefined) => {
     const ghost = doc.importNode(row, true) as HTMLElement;
@@ -252,17 +385,27 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
   return true;
 }
 
-function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLinks): Map<HTMLElement, HTMLElement> {
+function decorate(doc: Document, root: HTMLElement, input: RenderInput): { replacements: Map<HTMLElement, HTMLElement>; held: number } {
+  const { path, links } = input;
   const replacements = new Map<HTMLElement, HTMLElement>();
+  let held = 0;
   for (const img of root.querySelectorAll('img')) {
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
     const src = img.getAttribute('src');
     if (src) {
       const r = resolveHref(path, src);
       if (r.type === 'repo') img.setAttribute('src', links.raw(r.path) + r.suffix);
     }
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    img.referrerPolicy = 'no-referrer';
+    const remote = img.dataset.mrSrc;
+    if (!remote) continue;
+    if (input.images === 'load' || isPlatformUrl(remote, input.origin)) {
+      loadImage(img);
+    } else {
+      holdImage(doc, img, remote);
+      held++;
+    }
   }
   for (const a of root.querySelectorAll('a[href]')) {
     const r = resolveHref(path, a.getAttribute('href') ?? '');
@@ -287,7 +430,61 @@ function decorate(doc: Document, root: HTMLElement, path: string, links: RepoLin
     p.replaceWith(figure);
     replacements.set(p, figure);
   }
-  return replacements;
+  return { replacements, held };
+}
+
+/**
+ * Render a review comment's markdown. Comments are written by anyone who can comment, so they go
+ * through the same sanitiser as documents, and their images follow the same loading rules.
+ */
+export function renderSnippet(doc: Document, markdown: string, origin: string, images: 'ask' | 'load' = 'ask'): DocumentFragment {
+  const frag = sanitize(doc, parseDocument(markdown).html);
+  for (const el of frag.querySelectorAll('[data-mr-u]')) el.removeAttribute('data-mr-u');
+  for (const el of frag.querySelectorAll('[id]')) el.removeAttribute('id');
+  for (const a of frag.querySelectorAll('a[href]')) {
+    if (a.getAttribute('href')!.startsWith('#')) {
+      a.removeAttribute('href');
+      continue;
+    }
+    a.setAttribute('target', '_blank');
+    a.setAttribute('rel', 'noopener noreferrer');
+  }
+  for (const img of frag.querySelectorAll('img')) {
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    const remote = img.dataset.mrSrc;
+    if (!remote) continue;
+    if (images === 'load' || isPlatformUrl(remote, origin)) loadImage(img);
+    else holdImage(doc, img, remote);
+  }
+  return frag;
+}
+
+/** Count changed source lines that sit outside every rendered block, in either version. */
+function hiddenLines(baseSrc: string, headSrc: string, base: ParsedDoc, head: ParsedDoc): number {
+  const split = (text: string) => text.replace(/\r\n?/g, '\n').split('\n');
+  const a = split(baseSrc);
+  const b = split(headSrc);
+  const covered = (parsed: ParsedDoc, length: number) => {
+    const lines = new Uint8Array(length);
+    for (const unit of parsed.units) lines.fill(1, unit.lines[0], Math.min(length, unit.lines[1]));
+    return lines;
+  };
+  const inA = covered(base, a.length);
+  const inB = covered(head, b.length);
+  let ai = 0;
+  let bi = 0;
+  let hidden = 0;
+  for (const part of boundedDiff(a, b)) {
+    const count = part.count ?? part.value.length;
+    if (part.removed) for (let k = 0; k < count; k++, ai++) hidden += !inA[ai] && a[ai].trim() ? 1 : 0;
+    else if (part.added) for (let k = 0; k < count; k++, bi++) hidden += !inB[bi] && b[bi].trim() ? 1 : 0;
+    else {
+      ai += count;
+      bi += count;
+    }
+  }
+  return hidden;
 }
 
 function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], base: ParsedDoc, nonce: string, blocks: RenderedBlock[]): HTMLElement[] {
@@ -337,20 +534,27 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
         touch(el);
         continue;
       }
+      // Collected before inline marks are added, because they change the link text. Markdown blocks
+      // list their destinations, so blocks without links skip the DOM queries; raw HTML always checks.
+      const hasLinks = change.base!.links.length || change.head!.links.length || change.head!.kind === 'html';
+      const links = hasLinks ? changedLinks(before, el) : [];
       if ((change.head!.kind === 'code' && diffCode(doc, el, plainText(before))) || (change.head!.kind === 'table' && diffTable(doc, el, before))) {
+        noteLinkChanges(doc, links);
         mark(el, 'modified');
         touch(el);
         continue;
       }
       const ops = wordDiff(plainText(before), plainText(el));
       if (!hasVisibleChange(ops)) {
-        // Only formatting or a link target changed: flag the block without inline marks.
-        mark(el, 'modified', 'mr-subtle');
+        // Only formatting or a destination changed. Name changed destinations; otherwise flag quietly.
+        noteLinkChanges(doc, links);
+        mark(el, 'modified', links.length ? undefined : 'mr-subtle');
         touch(el);
       } else if (changeRatio(ops) > REWRITE_RATIO || !applyOps(el, ops)) {
         touch(ghost(el));
         mark(el, 'added', 'mr-rewritten');
       } else {
+        noteLinkChanges(doc, links);
         mark(el, 'modified');
         touch(el);
       }
@@ -360,6 +564,9 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
 }
 
 export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
+  if (Math.max(input.base.length, input.head.length) > MAX_DOCUMENT_CHARS) {
+    throw new ReaderError('This document is too large for the reader.', 'Open it in the platform diff instead.');
+  }
   const removedDoc = input.status === 'removed';
   const head = parseDocument(removedDoc ? input.base : input.head);
   const root = doc.createElement('div');
@@ -370,11 +577,13 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   let changes: HTMLElement[] = [];
   const blocks: RenderedBlock[] = [];
   const stats = { added: 0, removed: 0, modified: 0 };
+  let hidden = 0;
   if (input.status !== 'added' && !removedDoc) {
     const base = parseDocument(input.base);
     const blockChanges = diffUnits(base.units, head.units);
     changes = applyChanges(doc, root, blockChanges, base, head.nonce, blocks);
     for (const c of blockChanges) if (c.kind !== 'same') stats[c.kind]++;
+    hidden = hiddenLines(input.base, input.head, base, head);
   } else {
     const byId = blocksById(root, head.nonce);
     for (const unit of head.units) {
@@ -387,10 +596,15 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
     changes = blocks.length ? [blocks[0].el] : [];
     stats[removedDoc ? 'removed' : 'added'] = blocks.length;
   }
-  const replacements = decorate(doc, root, input.path, input.links);
+  const { replacements, held } = decorate(doc, root, input);
+  for (const pre of root.querySelectorAll<HTMLElement>('pre')) lineify(doc, pre);
   for (const block of blocks) block.el = replacements.get(block.el) ?? block.el;
   changes = changes.map((el) => replacements.get(el) ?? el);
-  blocks.sort((a, b) => a.el.compareDocumentPosition(b.el) & 4 ? -1 : 1);
+  // One pass for document order: compareDocumentPosition walks siblings, so sorting with it is quadratic.
+  const order = new Map<Element, number>();
+  let position = 0;
+  for (const el of root.querySelectorAll('*')) order.set(el, position++);
+  blocks.sort((a, b) => (order.get(a.el) ?? 0) - (order.get(b.el) ?? 0));
 
   const diagrams: Diagram[] = [];
   for (const block of blocks) {
@@ -412,5 +626,7 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
     title: fm.get('title') ?? lead?.textContent?.trim() ?? null,
     description: fm.get('description') ?? fm.get('summary') ?? null,
     words,
+    heldImages: held,
+    hiddenLines: hidden,
   };
 }

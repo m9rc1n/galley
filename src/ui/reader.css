@@ -16,16 +16,21 @@
   --add-bg: rgba(26, 137, 23, 0.14);
   --add-wash: rgba(26, 137, 23, 0.06);
   --mod: #c58a0c;
-  --gutter-added: #a1b5a2;
-  --gutter-modified: #b9ac8d;
-  --gutter-removed: #c0a09e;
   --del: #c4413a;
   --del-bg: rgba(196, 65, 58, 0.09);
+  /* Change colours, tuned per theme: margin bars, the band under inserted words, code lines. */
+  --ins-band: rgba(26, 137, 23, 0.3);
+  --gutter-added: #3c9d39;
+  --gutter-modified: #d39a19;
+  --gutter-removed: #d0544b;
+  --code-add: rgba(26, 137, 23, 0.07);
+  --code-del: rgba(196, 65, 58, 0.07);
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
 
   --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
   --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --rail-width: 220px;
   --body-font: var(--serif);
   --body-size: 20px;
   --size-scale: 1;
@@ -60,10 +65,20 @@
   --soft: #efe4cf;
   --rule: #e3d5ba;
   --code-bg: #f2e8d4;
-  --gutter-added: #a0ac95;
-  --gutter-modified: #b5a17c;
-  --gutter-removed: #bc9d91;
-  --add-wash: rgba(26, 137, 23, 0.07);
+  /* Warm olive, ochre and brick sit on the paper tone instead of fighting it. */
+  --accent: #5a7d2a;
+  --add: #557a2c;
+  --add-bg: rgba(85, 122, 44, 0.16);
+  --add-wash: rgba(85, 122, 44, 0.08);
+  --mod: #a8740c;
+  --del: #a8432e;
+  --del-bg: rgba(168, 67, 46, 0.1);
+  --ins-band: rgba(85, 122, 44, 0.3);
+  --gutter-added: #6e9045;
+  --gutter-modified: #bf8a22;
+  --gutter-removed: #b9604a;
+  --code-add: rgba(85, 122, 44, 0.08);
+  --code-del: rgba(168, 67, 46, 0.07);
 }
 
 .mr-root.is-dark {
@@ -78,11 +93,15 @@
   --add-bg: rgba(63, 185, 80, 0.24);
   --add-wash: rgba(63, 185, 80, 0.08);
   --mod: #e3b341;
-  --gutter-added: #607766;
-  --gutter-modified: #857956;
-  --gutter-removed: #876564;
   --del: #ff7b72;
   --del-bg: rgba(255, 123, 114, 0.13);
+  /* On a dark page colour needs more strength to read at the same weight. */
+  --ins-band: rgba(63, 185, 80, 0.46);
+  --gutter-added: #3fb950;
+  --gutter-modified: #e3b341;
+  --gutter-removed: #ff7b72;
+  --code-add: rgba(63, 185, 80, 0.11);
+  --code-del: rgba(255, 123, 114, 0.1);
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
@@ -110,72 +129,6 @@
   transform-origin: 0 50%;
 }
 
-.mr-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, var(--measure)) minmax(0, 1fr);
-  align-items: center;
-  gap: 16px;
-  height: 56px;
-  padding: 0 16px 0 10px;
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
-  backdrop-filter: saturate(180%) blur(14px);
-  border-bottom: 1px solid var(--rule);
-  transition: transform 0.28s ease;
-}
-
-.mr-topbar.is-hidden {
-  transform: translateY(-100%);
-}
-
-.mr-tb-left,
-.mr-tb-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.mr-tb-right {
-  justify-content: flex-end;
-}
-
-.mr-brand {
-  flex: none;
-  line-height: 1;
-  transform: translateY(-2px);
-  font-family: var(--serif);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.mr-dev {
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: #f08a24;
-  color: #fff;
-  font-family: var(--sans);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  vertical-align: 4px;
-}
-
-.mr-pr-title {
-  font-size: 13px;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .mr-btn {
   appearance: none;
   display: inline-flex;
@@ -198,8 +151,8 @@
 }
 
 .mr-root :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 1px;
 }
 
 .mr-icon {
@@ -234,115 +187,6 @@
   background: var(--bg);
   color: var(--fg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
-}
-
-.mr-file-btn {
-  min-width: 0;
-  font-size: 13px;
-  max-width: min(48vw, 560px);
-}
-
-
-.mr-path {
-  font-family: var(--mono);
-  font-size: 12.5px;
-}
-
-.mr-count {
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.mr-status {
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--soft);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.mr-status.is-added {
-  background: var(--add-bg);
-  color: var(--add);
-}
-
-.mr-status.is-modified,
-.mr-status.is-renamed {
-  background: color-mix(in srgb, var(--mod) 16%, transparent);
-  color: var(--mod);
-}
-
-.mr-status.is-removed {
-  background: var(--del-bg);
-  color: var(--del);
-}
-
-.mr-menu {
-  position: fixed;
-  top: 62px;
-  z-index: 20;
-  min-width: 300px;
-  max-width: min(92vw, 600px);
-  max-height: 62vh;
-  overflow: auto;
-  padding: 6px;
-  border: 1px solid var(--rule);
-  border-radius: 14px;
-  background: var(--bg);
-  box-shadow: var(--shadow);
-}
-
-.mr-menu[hidden] {
-  display: none;
-}
-
-.mr-files {
-  right: 20px;
-}
-
-
-.mr-menu-item {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 10px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.mr-menu-item:hover,
-.mr-menu-item[aria-current="true"] {
-  background: var(--soft);
-}
-
-.mr-menu-item .mr-path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mr-set-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.mr-set-row > span {
-  color: var(--muted);
 }
 
 .mr-serif-sample {
@@ -660,21 +504,10 @@
   tab-size: 4;
 }
 
-/* Code can use the space beside the prose column, up to the viewport edge.
-   Keeping its left edge aligned preserves the contents rail and change gutter. */
+/* Code stays in the reading column and scrolls sideways; the margins belong to changes and comments. */
 .mr-content pre {
   box-sizing: border-box;
-  width: max(100%, min(1120px, calc(100% + 50vw - var(--measure) / 2 - 24px)));
-}
-
-.mr-content table pre {
   width: 100%;
-}
-
-@media (max-width: 760px) {
-  .mr-content pre {
-    width: 100%;
-  }
 }
 
 .mr-content pre code {
@@ -825,42 +658,63 @@
   text-decoration: none;
 }
 
+/* Inserted words carry a soft band through the lower half of the letters. It stays inside its own
+   line box, so long insertions never merge into slabs or touch the line above. */
 .mode-changes .mr-content ins.mr-ins {
-  padding: 0.02em 0.08em;
-  border-radius: 3px;
-  background: var(--add-bg);
+  background-image: linear-gradient(transparent 46%, var(--ins-band) 46%, var(--ins-band) 94%, transparent 94%);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
 
+/* Deleted words are struck through and quieter, without a fill. */
 .mode-changes .mr-content del.mr-del {
-  padding: 0.02em 0.08em;
-  border-radius: 3px;
-  background: var(--del-bg);
   color: var(--del);
   text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--del) 55%, transparent);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--del);
+}
+
+/* Code wraps instead of scrolling sideways: every line is a block, and wrapped parts continue under
+   the line's own indentation plus two characters (--indent is set per line). */
+.mr-content pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* --hang is declared on each line, where that line's own --indent is visible. */
+.mr-content pre :is(.mr-cl, .mr-line) {
+  --hang: calc(var(--indent, 0ch) + 2ch);
+}
+
+.mr-content pre .mr-cl {
+  display: block;
+  padding-left: var(--hang);
+  text-indent: calc(-1 * var(--hang));
 }
 
 .mr-root .mr-content pre .mr-line {
   display: block;
   margin: 0 -26px;
-  padding: 0 26px;
+  padding: 0 26px 0 calc(26px + var(--hang));
   border-radius: 0;
   text-decoration: none;
+  text-indent: calc(-1 * var(--hang));
+}
+
+.mr-content pre :is(.mr-cl, .mr-line):empty::before,
+.mr-code-text:empty::before {
+  content: "\200b";
 }
 
 .mode-changes .mr-content pre ins.mr-line {
-  background: var(--add-bg);
+  background: var(--code-add);
+  box-shadow: inset 3px 0 0 var(--gutter-added);
 }
 
 .mode-changes .mr-content pre del.mr-line {
-  background: var(--del-bg);
-  color: var(--del);
-  text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--del) 45%, transparent);
+  background: var(--code-del);
+  box-shadow: inset 3px 0 0 var(--gutter-removed);
+  color: color-mix(in srgb, var(--del) 60%, var(--fg));
 }
 
 .mode-changes .mr-content tr.mr-row-added > * {
@@ -872,32 +726,50 @@
 }
 
 .mode-changes .mr-content tr.mr-ghost-row > * {
-  background: var(--del-bg);
+  color: var(--muted);
   text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--del) 45%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--del) 60%, transparent);
 }
 
 .mode-clean .mr-content tr.mr-ghost-row {
   display: none;
 }
 
-.mode-changes .mr-content [data-mr-change="added"] {
-  border-radius: 3px;
-  background-color: var(--add-wash);
-  box-shadow: 0 0 0 0.35em var(--add-wash);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
+/* New blocks are not tinted: the green margin bar marks them, and the text reads as text. */
 .mode-changes .mr-content pre[data-mr-change="added"] {
-  background-color: color-mix(in srgb, var(--add) 9%, var(--code-bg));
+  background-color: color-mix(in srgb, var(--add) 4%, var(--code-bg));
 }
 
+/* Removed blocks stay where they were, quietly: muted text under a small label, no fill. */
 .mode-changes .mr-content .mr-ghost {
-  border-radius: 3px;
-  background-color: var(--del-bg);
-  box-shadow: 0 0 0 0.35em var(--del-bg);
+  color: color-mix(in srgb, var(--del) 35%, var(--muted));
+}
+
+.mode-changes .mr-content .mr-ghost::before {
+  content: "Removed";
+  display: block;
+  margin: 0 0 2px;
   color: var(--del);
+  font: 600 10.5px/1.6 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mr-content .mr-ghost > :first-child {
+  margin-top: 0;
+}
+
+.mode-changes .mr-content .mr-ghost:has(+ .mr-rewritten)::before {
+  content: "Previous version";
+}
+
+.mode-changes .mr-content li.mr-ghost::before {
+  display: inline;
+  margin-right: 8px;
+}
+
+.mode-changes .mr-content .mr-code-line.mr-ghost::before {
+  content: none;
 }
 
 .mr-content .mr-ghost :where(a, code, blockquote, th) {
@@ -939,7 +811,7 @@
 .mr-mark {
   position: absolute;
   left: 0;
-  width: 2px;
+  width: 3px;
   border-radius: 2px;
   background: var(--gutter-modified);
   cursor: pointer;
@@ -961,23 +833,32 @@
 
 .mr-mark.is-point {
   left: -2px;
-  width: 7px;
-  height: 7px !important;
+  width: 8px;
+  height: 8px !important;
   border-radius: 50%;
 }
 
 /* ------------------------------------------------------------------ contents rail, pill, footer */
 
+/* Sticky in the same scroll flow as the top bar (not fixed to the viewport), so both move together
+   when the reader bounces at either end. It takes no height; its list hangs below it. */
 .mr-toc {
-  position: fixed;
+  position: sticky;
   top: 128px;
-  left: max(20px, calc(50vw - var(--measure) / 2 - 300px));
+  z-index: 5;
   display: none;
+  box-sizing: border-box;
   width: 220px;
-  max-height: calc(100vh - 220px);
-  overflow-y: auto;
+  height: 0;
+  margin: 0 max(20px, calc(50vw - var(--measure) / 2 - 300px)) 0 auto;
+  overflow: visible;
   font-size: 13px;
   line-height: 1.35;
+}
+
+.mr-toc-list {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
 }
 
 @media (min-width: 1260px) {
@@ -1029,31 +910,6 @@
   margin-left: auto;
   color: var(--gutter-modified);
   transform: translateY(-1px);
-}
-
-.mr-pill {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin: 0 8px 0 0;
-}
-
-.mr-pill[hidden] {
-  display: none;
-}
-
-.mr-pill .mr-btn {
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-}
-
-.mr-pill-label {
-  min-width: 128px;
-  padding: 0 8px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------------ loading & errors */
@@ -1154,37 +1010,6 @@
     left: -11px;
   }
 
-  .mr-topbar {
-    display: flex;
-    gap: 6px;
-    padding: 0 8px;
-  }
-
-  .mr-tb-left,
-  .mr-tb-right {
-    flex: none;
-  }
-
-  .mr-tb-center {
-    display: flex;
-    flex: 1 1 auto;
-    justify-content: center;
-    min-width: 0;
-  }
-
-  .mr-brand,
-  .mr-pr-title,
-  .mr-hide-sm,
-  .mr-count {
-    display: none;
-  }
-
-  .mr-file-btn {
-    min-width: 0;
-    max-width: 100%;
-    padding: 0 6px;
-  }
-
   .mr-seg button {
     padding: 0 9px;
   }
@@ -1203,85 +1028,10 @@
 .mr-root [hidden] { display: none !important; }
 .mr-main { padding-bottom: calc(var(--composer-height, 180px) + 110px); }
 .mr-document + .mr-document { margin-top: 90px; }
-/* Pin a padded reading surface without moving text or animating between blocks. */
 .mr-article { isolation: isolate; }
 .mr-doc { position: relative; z-index: 1; }
 .mr-gutter { z-index: 2; }
-.mr-target-surface {
-  --target-pad-x: 20px;
-  --target-pad-y: 12px;
-  position: absolute;
-  z-index: 0;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--fg) 1%, var(--bg));
-  box-shadow: 0 3px 18px -6px color-mix(in srgb, var(--fg) 16%, transparent), 0 0 12px color-mix(in srgb, var(--fg) 3%, transparent);
-  pointer-events: none;
-}
-.mr-target-surface.is-code-panel { --target-pad-x: 0px; --target-pad-y: 0px; background: transparent; border-radius: 10px; }
-@media (max-width: 760px) {
-  .mr-target-surface { --target-pad-x: 10px; --target-pad-y: 10px; border-radius: 10px; }
-}
-.mr-reading-marker {
-  position: absolute;
-  left: -10px;
-  width: 6px;
-  height: 10px;
-  transform: translateY(-50%);
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
-  background: var(--muted);
-  opacity: 0.65;
-  pointer-events: none;
-}
-.mr-reading-marker.is-pinned { background: var(--fg); opacity: 0.85; }
-@media (max-width: 760px) { .mr-reading-marker { left: 4px; width: 4px; height: 8px; } }
 .mr-empty-changes { color: var(--muted); font-size: 15px; }
-.mr-comment-receipt { font-family: var(--sans); font-size: 12px; color: var(--accent); }
-.mr-comment-receipt a { color: inherit; }
-.mr-composer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-  padding: 12px max(24px, calc((100vw - 800px) / 2));
-  border-top: 1px solid var(--rule);
-  background: var(--bg);
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.04);
-  font: 13px/1.4 var(--sans);
-}
-.mr-comment-context { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.mr-comment-context label { min-width: 0; flex: 1; overflow-wrap: anywhere; }
-.mr-comment-target { font-weight: 600; }
-.mr-comment-context .mr-btn { color: var(--muted); font-size: 12px; padding: 0 8px; }
-.mr-comment-quote { margin: 0 0 8px; padding: 4px 10px; border-left: 2px solid color-mix(in srgb, var(--muted) 45%, transparent); max-height: 48px; overflow: auto; color: var(--muted); white-space: pre-wrap; }
-.mr-comment-row { display: flex; align-items: flex-end; gap: 10px; }
-.mr-comment-row textarea {
-  box-sizing: border-box;
-  flex: 1;
-  min-width: 0;
-  width: 100%;
-  max-height: 180px;
-  padding: 10px 12px;
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  background: var(--code-bg);
-  color: var(--fg);
-  font: 14px/1.4 var(--sans);
-  resize: vertical;
-}
-.mr-comment-row textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-.mr-comment-row .mr-primary { border-radius: 10px; height: 40px; }
-.mr-submit:disabled { opacity: 0.45; cursor: default; }
-.mr-comment-status { margin: 7px 0 0; min-height: 18px; color: var(--muted); font-size: 12px; }
-.mr-comment-status a { color: var(--accent); }
-@media (max-width: 760px) {
-  .mr-composer { padding: 8px 12px; }
-  .mr-comment-context { align-items: flex-start; }
-  .mr-comment-row { gap: 6px; }
-  .mr-comment-row .mr-primary { padding: 0 10px; font-size: 12px; }
-  .mr-comment-quote { max-height: 32px; }
-}
-
 .mr-content .mr-context-gap { margin: 18px 0; list-style: none; font: 12px/1.4 var(--sans); }
 .mr-context-toggle {
   appearance: none; display: flex; align-items: center; gap: 10px;
@@ -1303,73 +1053,7 @@
 .mr-context-toggle[aria-expanded="true"]::before, .mr-content details[open] > summary::before { transform: rotate(45deg); }
 @media (max-width: 760px) { .mr-context-toggle { min-height: 44px; } }
 
-@media (max-width: 760px) {
-  .mr-pill-label { min-width: 0; padding: 0 2px; font-size: 11px; }
-  .mr-pill .mr-btn { width: 26px; height: 26px; }
-}
-
-/* File identity and review actions share one sticky navigation bar. */
-.mr-pill-label { font-size: 12px; min-width: 0; color: var(--muted); }
-.mr-toc { top: 128px; }
-.mr-files-progress { margin: 6px 10px 10px; color: var(--muted); font-size: 12px; }
-.mr-menu-item .mr-path { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.mr-tb-center { display: flex; align-items: center; min-width: 0; }
-.mr-file-btn { width: 100%; max-width: 100%; height: 34px; gap: 8px; }
-.mr-file-btn .mr-path { display: flex; flex: 1; min-width: 0; text-align: left; }
-.mr-file-btn .mr-count { flex: none; }
-.mr-path-dir, .mr-path-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mr-path-dir { flex: 0 1 auto; }
-.mr-path-name { flex: 0 1 auto; }
-.mr-file-check { flex: none; font-size: 11px; color: var(--accent); }
-
-.mr-viewed { height: 34px; padding: 0 10px; font-size: 12px; color: var(--muted); border: 1px solid var(--rule); }
-.mr-viewed[aria-pressed="true"] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--rule)); background: var(--add-wash); }
-.mr-viewed:disabled { opacity: 0.55; cursor: wait; }
-.mr-viewed-feedback { position: fixed; top: 56px; right: 16px; z-index: 15; max-width: min(500px, calc(100vw - 56px)); margin: 0; padding: 8px 12px; font-size: 12px; background: var(--bg); color: var(--del); border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); }
 .mr-main { padding-top: 32px; }
-
-/* A modal drawer keeps configuration within reach without crowding the review. */
-.mr-root.settings-open { overflow-y: hidden; }
-.mr-settings { position: fixed; inset: 0; z-index: 40; width: auto; padding: 0; }
-.mr-settings-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.22); }
-.mr-settings-panel {
-  position: absolute;
-  top: 0; bottom: 0; right: 0;
-  box-sizing: border-box;
-  width: min(420px, 100%);
-  padding: 24px;
-  overflow: auto;
-  overscroll-behavior: contain;
-  background: var(--bg);
-  color: var(--fg);
-  border-left: 1px solid var(--rule);
-  box-shadow: var(--shadow);
-}
-.mr-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 30px; }
-.mr-settings-heading h2 { margin: 0; font: 600 19px/1.3 var(--sans); letter-spacing: -0.02em; }
-.mr-settings-section { margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--rule); }
-.mr-settings-section h3 { margin: 0 0 16px; color: var(--muted); font: 600 11px/1.4 var(--sans); text-transform: uppercase; letter-spacing: 0.1em; }
-.mr-settings .mr-set-row { display: flex; align-items: flex-start; flex-direction: column; gap: 8px; margin: 16px 0; }
-.mr-settings-note { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 12px 0 0; }
-.mr-settings .mr-keys { margin: 0; padding-top: 0; border-top: 0; }
-@media (max-width: 1200px) {
-  .mr-topbar { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .mr-pr-title, .mr-pill-label { display: none; }
-}
-@media (max-width: 760px) {
-  .mr-topbar { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; }
-  .mr-tb-center { justify-content: flex-start; }
-  .mr-tb-right { gap: 4px; }
-  .mr-pill { display: none; }
-  .mr-file-btn .mr-status, .mr-file-btn .mr-count, .mr-path-dir { display: none; }
-  .mr-file-btn .mr-path { font-size: 11px; }
-  .mr-tb-right { min-width: 0; }
-  .mr-count { display: inline; }
-  .mr-pill { margin-right: 0; }
-  .mr-pill-label { padding: 0 3px; font-size: 11px; }
-  .mr-viewed { font-size: 11px; padding: 0 7px; }
-  .mr-settings-panel { width: min(380px, calc(100% - 16px)); padding: 20px; }
-}
 
 /* Render diagrams from trusted Mermaid fences, with old/new source available to reviewers. */
 .mr-content .mr-diagram { margin: 32px 0; }
@@ -1385,16 +1069,1244 @@
 @media (max-width: 760px) { .mr-diagram-view { padding: 12px; } }
 
 /* Optional source files follow the document stream. Source is always plain text. */
-.mr-code-toggle { border: 1px solid var(--rule); font-size: 12px; }
-.mr-code-toggle[aria-pressed="true"] { color: var(--accent); background: var(--add-wash); border-color: var(--accent); }
 .mr-empty-reader { padding: 24px 0; }
-.mr-code-lines { box-sizing: border-box; width: max(100%, min(1120px, calc(100% + 50vw - var(--measure) / 2 - 24px))); overflow: auto; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 0; background: var(--code-bg); }
-.mr-code-line { display: grid; grid-template-columns: 42px 42px 20px minmax(0, 1fr); width: max-content; min-width: 100%; box-sizing: border-box; min-height: 24px; padding-right: 16px; font: 13px/24px var(--mono); white-space: pre; }
+.mr-code-lines { box-sizing: border-box; width: 100%; overflow: auto; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 0; background: var(--code-bg); }
+.mr-code-line { display: grid; grid-template-columns: 42px 42px 20px minmax(0, 1fr); width: 100%; box-sizing: border-box; min-height: 24px; padding-right: 16px; font: 13px/24px var(--mono); white-space: pre-wrap; }
+.mr-code-text { --hang: calc(var(--indent, 0ch) + 2ch); padding-left: var(--hang); text-indent: calc(-1 * var(--hang)); overflow-wrap: anywhere; }
 .mr-code-number { color: var(--muted); text-align: right; padding-right: 10px; user-select: none; }
 .mr-code-sign { color: var(--muted); text-align: center; user-select: none; }
-.mr-code-line[data-mr-change="added"] { background: var(--add-wash); }
-.mr-code-line[data-mr-change="removed"] { background: var(--del-bg); color: var(--del); }
+.mr-code-line[data-mr-change="added"] { background: var(--code-add); box-shadow: inset 3px 0 0 var(--gutter-added); }
+.mr-code-line[data-mr-change="removed"] { background: var(--code-del); box-shadow: inset 3px 0 0 var(--gutter-removed); color: color-mix(in srgb, var(--del) 60%, var(--fg)); }
 .mr-content .mr-code-line.mr-ghost { margin: 0; padding-top: 0; padding-bottom: 0; border: 0; text-decoration: none; }
 .mr-code-lines .mr-context-gap { padding: 0 12px; }
-.mode-clean .mr-code-line[data-mr-change="added"] { background: transparent; }
-@media (max-width: 760px) { .mr-code-lines { width: 100%; } .mr-code-line { grid-template-columns: 32px 32px 18px minmax(0, 1fr); font-size: 12px; } }
+.mode-clean .mr-code-line[data-mr-change="added"] { background: transparent; box-shadow: none; }
+@media (max-width: 760px) { .mr-code-line { grid-template-columns: 32px 32px 18px minmax(0, 1fr); font-size: 12px; } }
+
+/* ------------------------------------------------------------------ top bar */
+/* One quiet row: close and wordmark, the current document, change navigation and two icon buttons.
+   The PR, full paths and statuses live in the documents menu; configuration lives in the sheet. */
+
+/* Stacking order inside the reader: article content, then the contents rail (5), then this bar (15),
+   then menus, composer and sheets. */
+.mr-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--measure)) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease, transform 0.28s ease;
+}
+
+.mr-topbar.is-scrolled {
+  border-bottom-color: var(--rule);
+}
+
+.mr-topbar.is-hidden {
+  transform: translateY(-100%);
+}
+
+.mr-tb-left,
+.mr-tb-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mr-tb-left {
+  gap: 8px;
+}
+
+.mr-tb-center {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.mr-tb-right {
+  justify-content: flex-end;
+}
+
+.mr-brand {
+  flex: none;
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.mr-dev {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f08a24;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 3px;
+}
+
+.mr-icon-btn {
+  justify-content: center;
+  width: 34px;
+  padding: 0;
+  color: var(--muted);
+}
+
+.mr-icon-btn:hover,
+.mr-icon-btn[aria-expanded="true"] {
+  color: var(--fg);
+}
+
+/* The current document: a status dot, the file name and its position. */
+.mr-file-btn {
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 10px 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.mr-file-btn[aria-expanded="true"] {
+  background: var(--soft);
+}
+
+.mr-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mr-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.mr-count:empty {
+  display: none;
+}
+
+.mr-file-btn .mr-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.mr-file-btn[aria-expanded="true"] .mr-icon {
+  transform: rotate(180deg);
+}
+
+.mr-status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.mr-status-dot.is-added {
+  background: var(--add);
+}
+
+.mr-status-dot.is-modified,
+.mr-status-dot.is-renamed {
+  background: var(--mod);
+}
+
+.mr-status-dot.is-removed {
+  background: var(--del);
+}
+
+/* Change navigation, set apart from the two tools by a hairline. */
+.mr-pill {
+  display: flex;
+  align-items: center;
+}
+
+.mr-pill::after {
+  content: "";
+  width: 1px;
+  height: 18px;
+  margin: 0 8px 0 6px;
+  background: var(--rule);
+}
+
+.mr-pill .mr-btn {
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--muted);
+}
+
+.mr-pill .mr-btn:hover {
+  color: var(--fg);
+}
+
+.mr-pill-label {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mr-viewed .mr-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.mr-viewed[aria-pressed="true"] {
+  color: var(--accent);
+}
+
+.mr-viewed[aria-pressed="true"] circle {
+  fill: var(--accent);
+}
+
+.mr-viewed[aria-pressed="true"] path {
+  stroke: var(--bg);
+}
+
+.mr-viewed:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mr-viewed.is-busy {
+  cursor: progress;
+}
+
+.mr-viewed.is-busy .mr-icon {
+  animation: mr-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.mr-viewed.is-error {
+  color: var(--del);
+}
+
+.mr-viewed-feedback {
+  position: fixed;
+  top: 58px;
+  right: 12px;
+  z-index: 15;
+  max-width: min(480px, calc(100vw - 24px));
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--del);
+  font-size: 12px;
+  box-shadow: var(--shadow);
+}
+
+/* ------------------------------------------------------------------ documents menu */
+
+.mr-menu {
+  position: fixed;
+  top: 56px;
+  z-index: 20;
+  box-sizing: border-box;
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  animation: mr-pop 0.16s ease-out;
+}
+
+.mr-files {
+  width: min(460px, calc(100vw - 24px));
+}
+
+.mr-files-head {
+  margin: 0 0 4px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.mr-files-title {
+  margin: 0;
+  color: var(--fg);
+  font: 600 15px/1.35 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.mr-files-title:empty {
+  display: none;
+}
+
+.mr-files-meta {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mr-files-source::after {
+  content: "·";
+  margin: 0 6px;
+}
+
+.mr-menu-item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mr-menu-item:hover,
+.mr-menu-item[aria-current="true"] {
+  background: var(--soft);
+}
+
+.mr-menu-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mr-menu-name .mr-path-name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.mr-menu-name .mr-path-dir {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.mr-menu-status {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mr-file-check {
+  display: inline-flex;
+  flex: none;
+  color: var(--accent);
+}
+
+.mr-file-check .mr-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ------------------------------------------------------------------ settings sheet */
+/* A small sheet under the settings button; on phones it rises from the bottom. */
+
+.mr-root.settings-open {
+  overflow-y: hidden;
+}
+
+.mr-settings {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.mr-settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.08);
+  animation: mr-fade 0.18s ease-out;
+}
+
+.mr-root.is-dark .mr-settings-backdrop {
+  background: rgba(0, 0, 0, 0.36);
+}
+
+.mr-settings-panel {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100% - 68px);
+  padding: 14px 18px 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+  outline: none;
+  animation: mr-pop 0.18s ease-out;
+}
+
+.mr-settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 -8px 4px 0;
+}
+
+.mr-settings-heading h2 {
+  margin: 0;
+  font: 600 15px/1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.mr-settings-section {
+  margin: 0;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.mr-set-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 10px 0;
+}
+
+.mr-set-row > span {
+  flex: 1 1 96px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+
+.mr-set-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mr-settings .mr-seg button {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+.mr-settings .mr-seg .mr-larger-sample {
+  font-size: 15px;
+}
+
+.mr-switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.mr-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s ease;
+}
+
+.mr-switch[aria-checked="true"] {
+  background: var(--accent);
+}
+
+.mr-switch[aria-checked="true"]::after {
+  transform: translateX(14px);
+}
+
+.mr-keys-section {
+  border-bottom: 0;
+}
+
+.mr-keys-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  color: var(--muted);
+  font-size: 13px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.mr-keys-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.mr-keys-section summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.mr-keys-section[open] summary::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.mr-settings .mr-keys {
+  margin: 4px 0 8px;
+  padding: 0;
+  border: 0;
+}
+
+.mr-settings-note {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@keyframes mr-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes mr-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mr-sheet {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+
+@keyframes mr-pulse {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 1100px) {
+  .mr-topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .mr-pill-label {
+    display: none;
+  }
+}
+
+/* Phones: the wordmark gives way to the document name, and settings become a bottom sheet. */
+@media (max-width: 760px) {
+  .mr-topbar {
+    gap: 4px;
+    padding: 0 6px;
+  }
+
+  .mr-brand,
+  .mr-count {
+    display: none;
+  }
+
+  .mr-tb-center {
+    justify-content: flex-start;
+  }
+
+  .mr-file-btn {
+    padding: 0 8px;
+    font-size: 13.5px;
+  }
+
+  .mr-pill::after {
+    margin: 0 4px 0 2px;
+  }
+
+  .mr-files {
+    width: calc(100vw - 12px);
+  }
+
+  .mr-settings-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 86%;
+    padding: 8px 20px calc(16px + env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: 18px 18px 0 0;
+    animation: mr-sheet 0.22s ease-out;
+  }
+
+  .mr-settings-panel::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 8px;
+    border-radius: 2px;
+    background: var(--rule);
+  }
+}
+
+/* ------------------------------------------------------------------ comments */
+
+.mr-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The comment button waits in the left margin beside the block under the pointer. */
+.mr-comment-btn {
+  position: absolute;
+  left: -78px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  transform: translateY(-50%);
+  cursor: pointer;
+  animation: mr-fade 0.15s ease-out;
+}
+
+.mr-comment-btn:hover {
+  border-color: currentColor;
+  color: var(--accent);
+}
+
+.mr-comment-btn .mr-icon {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 860px), (hover: none) {
+  .mr-comment-btn {
+    display: none;
+  }
+}
+
+.mr-select-chip {
+  position: fixed;
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font: 600 13px/1 var(--sans);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  animation: mr-pop 0.14s ease-out;
+}
+
+.mr-select-chip .mr-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.mr-select-chip:disabled {
+  background: var(--soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* The paragraph being commented on: a flat neutral tint (green and red mean changes), no shadow. */
+.mr-content .mr-targeted {
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--fg) 5%, transparent);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--fg) 5%, transparent);
+}
+
+.mr-content .mr-code-line.mr-targeted {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+::highlight(galley-quote) {
+  background-color: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+
+/* Two columns: what is being commented on, and the comment. */
+.mr-composer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 28px;
+  box-sizing: border-box;
+  padding: 18px max(24px, calc((100vw - 1080px) / 2)) calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--rule);
+  background: var(--bg);
+  box-shadow: 0 -12px 32px -16px rgba(0, 0, 0, 0.18);
+  font: 13px/1.45 var(--sans);
+  animation: mr-dock 0.2s ease-out;
+}
+
+.mr-compose-context {
+  min-width: 0;
+}
+
+.mr-compose-label {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mr-comment-target {
+  margin: 0 0 10px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.mr-comment-quote {
+  display: -webkit-box;
+  margin: 0;
+  padding: 1px 0 1px 14px;
+  overflow: hidden;
+  border-left: 2px solid color-mix(in srgb, var(--fg) 30%, transparent);
+  color: var(--fg);
+  font: italic 16px/1.55 var(--body-font);
+  white-space: pre-wrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+
+.mr-compose-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mr-compose-input textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 84px;
+  max-height: 220px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 var(--sans);
+  resize: none;
+}
+
+.mr-compose-input textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--rule));
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.mr-compose-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mr-comment-status {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mr-compose-actions .mr-btn {
+  height: 34px;
+  padding: 0 14px;
+}
+
+.mr-submit:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mr-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 30;
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font: 13px/1.3 var(--sans);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  animation: mr-pop 0.18s ease-out;
+}
+
+.mr-toast a {
+  color: inherit;
+  font-weight: 600;
+}
+
+@keyframes mr-dock {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .mr-composer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .mr-comment-target {
+    margin-bottom: 6px;
+  }
+
+  .mr-comment-quote {
+    -webkit-line-clamp: 2;
+  }
+
+  .mr-compose-input textarea {
+    min-height: 64px;
+  }
+}
+
+/* ------------------------------------------------------------------ threads */
+/* Wide screens: a rail in the left margin, each card level with its paragraph. Narrow screens:
+   the same cards sit below the paragraph. */
+
+.mr-threads {
+  position: absolute;
+  top: 0;
+  left: calc(-1 * (var(--rail-width) + 96px));
+  width: var(--rail-width);
+}
+
+.mr-root:not(.has-rail) .mr-threads {
+  display: none;
+}
+
+.mr-thread {
+  box-sizing: border-box;
+  color: var(--fg);
+  font: 13px/1.5 var(--sans);
+  letter-spacing: 0;
+}
+
+.mr-threads .mr-thread {
+  position: absolute;
+  right: 0;
+  left: 0;
+}
+
+.mr-thread,
+.mr-file-threads .mr-thread {
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.mr-content .mr-thread {
+  margin: 12px 0 24px;
+  background: color-mix(in srgb, var(--soft) 50%, var(--bg));
+}
+
+.mr-thread.is-own {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
+}
+
+.mr-thread.is-resolved {
+  opacity: 0.7;
+}
+
+.mr-thread-comment + .mr-thread-comment,
+.mr-thread-more + .mr-thread-comment {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.mr-thread-comment.is-folded {
+  display: none;
+}
+
+.mr-thread.is-expanded .mr-thread-comment.is-folded {
+  display: block;
+}
+
+.mr-thread-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.mr-avatar {
+  display: inline-grid;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  place-items: center;
+}
+
+.mr-thread-author {
+  font-weight: 600;
+}
+
+.mr-thread-time {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mr-thread-body {
+  overflow-wrap: anywhere;
+}
+
+.mr-thread .mr-thread-body :where(p, ul, ol, pre, blockquote) {
+  margin: 0 0 6px;
+  font: inherit;
+}
+
+.mr-thread .mr-thread-body > :last-child {
+  margin-bottom: 0;
+}
+
+.mr-thread .mr-thread-body :where(code, pre) {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.mr-thread .mr-thread-body pre {
+  padding: 8px 10px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--code-bg);
+}
+
+.mr-thread .mr-thread-body img {
+  max-width: 100%;
+}
+
+.mr-thread-more {
+  height: 26px;
+  margin-top: 6px;
+  padding: 0;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.mr-thread-more:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+.mr-thread-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.mr-thread-foot:empty {
+  display: none;
+}
+
+.mr-thread-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.mr-thread-link:hover {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
+.mr-thread-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mr-file-threads {
+  margin: -24px 0 40px;
+}
+
+.mr-file-threads-title {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mr-file-threads .mr-thread + .mr-thread {
+  margin-top: 10px;
+}
+
+/* ------------------------------------------------------------------ link changes, held images, notes */
+
+.mr-link-note {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  max-width: 100%;
+  margin: 0 0.3em;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--mod) 12%, transparent);
+  font: 12px/1.6 var(--sans);
+  overflow-wrap: anywhere;
+  vertical-align: 0.1em;
+  user-select: none;
+}
+
+.mr-link-note-label {
+  color: var(--mod);
+  font-weight: 600;
+}
+
+.mode-changes .mr-content .mr-link-note ins.mr-ins {
+  background-image: none;
+  color: var(--add);
+}
+
+.mode-clean .mr-content .mr-link-note {
+  display: none;
+}
+
+.mr-img-hold {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 8px 8px 8px 14px;
+  border: 1px dashed var(--rule);
+  border-radius: 10px;
+  color: var(--muted);
+  font: 13px/1.4 var(--sans);
+  vertical-align: middle;
+}
+
+.mr-img-hold > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mr-img-load {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mr-img-load:hover {
+  background: var(--soft);
+}
+
+.mr-byline .mr-chip.is-hidden {
+  color: var(--muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.mr-byline .mr-btn.mr-chip {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  color: var(--fg);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ syntax colours */
+/* Quiet, per-theme token colours: code should read as code without competing with change marks. */
+
+.mr-root {
+  --hl-comment: #6e7781;
+  --hl-keyword: #b42b40;
+  --hl-string: #0b5a35;
+  --hl-number: #0b4f9c;
+  --hl-title: #6639ba;
+  --hl-attr: #0b4f9c;
+  --hl-builtin: #8a4600;
+  --hl-tag: #116329;
+  --hl-meta: #57606a;
+}
+
+.mr-root.is-sepia {
+  --hl-comment: #8c7a63;
+  --hl-keyword: #9b3a26;
+  --hl-string: #4f6b1d;
+  --hl-number: #2b5a85;
+  --hl-title: #74468f;
+  --hl-attr: #2b5a85;
+  --hl-builtin: #8a5a12;
+  --hl-tag: #4f6b1d;
+  --hl-meta: #7d6b55;
+}
+
+.mr-root.is-dark {
+  --hl-comment: #8b949e;
+  --hl-keyword: #ff8f87;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-title: #d2a8ff;
+  --hl-attr: #79c0ff;
+  --hl-builtin: #ffa657;
+  --hl-tag: #7ee787;
+  --hl-meta: #9ea7b3;
+}
+
+.mr-root :is(.hljs-comment, .hljs-quote) {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+
+.mr-root :is(.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-doctag, .hljs-template-tag) {
+  color: var(--hl-keyword);
+}
+
+.mr-root :is(.hljs-string, .hljs-regexp, .hljs-char, .hljs-link) {
+  color: var(--hl-string);
+}
+
+.mr-root :is(.hljs-number, .hljs-symbol, .hljs-bullet) {
+  color: var(--hl-number);
+}
+
+.mr-root :is(.hljs-title, .hljs-section, .hljs-selector-id, .hljs-selector-class) {
+  color: var(--hl-title);
+}
+
+.mr-root :is(.hljs-attr, .hljs-attribute, .hljs-property, .hljs-variable, .hljs-template-variable, .hljs-params) {
+  color: var(--hl-attr);
+}
+
+.mr-root :is(.hljs-built_in, .hljs-type, .hljs-class) {
+  color: var(--hl-builtin);
+}
+
+.mr-root :is(.hljs-name, .hljs-tag) {
+  color: var(--hl-tag);
+}
+
+.mr-root :is(.hljs-meta, .hljs-subst) {
+  color: var(--hl-meta);
+}
+
+.mr-root .hljs-emphasis {
+  font-style: italic;
+}
+
+.mr-root .hljs-strong {
+  font-weight: 600;
+}
+
+/* Removed lines keep their colours, faded, so they read as gone without turning into a red wall. */
+.mode-changes .mr-content :is(del.mr-line, .mr-code-line[data-mr-change="removed"] .mr-code-text) [class^="hljs-"] {
+  opacity: 0.7;
+}
+
+/* Source files are titled by path, in the code face. */
+.mr-content .mr-code-title,
+.mr-title.mr-code-title {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.mr-code-dir {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* A whole new or deleted file is announced once by its banner and margin bar, not by tinting every line. */
+.mr-document:is(.doc-added, .doc-removed) .mr-code-line[data-mr-change] {
+  background: none;
+  box-shadow: none;
+  color: inherit;
+}
