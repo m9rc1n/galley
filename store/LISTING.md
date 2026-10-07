@@ -23,7 +23,9 @@ Read markdown changes in GitHub pull requests and GitLab merge requests as types
 **Description** (plain text; paste as-is)
 
 ```
-Reviewing an RFC, ADR, runbook or README in a pull request means reading raw markdown in a monospaced diff: hash marks for headings, brackets for links, and a re-wrapped paragraph that shows up as ten changed lines. Galley turns that review back into reading.
+Make room for better reviews.
+
+A good review starts with understanding. Galley gives your team's RFCs, decisions, runbooks and READMEs room to be read carefully and discussed thoughtfully. Our mission is to make the everyday work of reviewing clearer, calmer and easier on the people who do it.
 
 On any GitHub pull request or GitLab merge request that changes markdown files, Galley adds a Read button. Each changed document opens as a clean, typeset article, with the changes marked inside the text.
 
@@ -42,8 +44,12 @@ WORKS WHERE YOU REVIEW
 • GitLab.com and self-managed GitLab: uses your signed-in session, nothing to set up. Self-managed instances are enabled from the toolbar popup, one domain at a time.
 • GitHub.com and GitHub Enterprise Server: public repositories work right away. For private repositories, add a fine-grained token in the popup. Galley keeps it in its own storage, away from web pages.
 
-PRIVATE BY DESIGN
-• No servers, no accounts, no analytics. Documents are rendered in your browser.
+BUILT IN THE OPEN
+• Free, MIT-licensed and open source. Inspect the code, permissions, data handling and known limitations at github.com/m9rc1n/galley.
+• Comments stay in your existing GitHub or GitLab review, where teammates can read them without Galley.
+
+PRIVATE BY DEFAULT
+• No Galley server or account, no analytics, no advertising and no telemetry. Documents and diagrams render in your browser.
 • Galley itself only contacts the GitHub or GitLab site you are using. Images hosted on other websites load only when you choose.
 • Rendered documents are sanitised, so content from forks cannot run scripts or imitate Galley's change markers.
 

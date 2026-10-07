@@ -4,24 +4,39 @@
 [![Coverage](https://codecov.io/gh/m9rc1n/galley/branch/main/graph/badge.svg)](https://codecov.io/gh/m9rc1n/galley)
 [![License: MIT](https://img.shields.io/github/license/m9rc1n/galley)](LICENSE)
 
-Read markdown changes in GitHub pull requests and GitLab merge requests like an article, not like a diff.
+**Make room for better reviews.**
 
-![A changed RFC in the Galley reader](store/assets/screenshot-1-changes.jpg)
+![Galley: a calmer way to read changes, understand ideas and review together. Open source, local rendering, no tracking.](store/assets/readme-hero-1600x640.png)
 
-RFCs, ADRs, runbooks and guides are reviewed in the same monospaced diff as code, so reviewers render the markdown in their heads and skim. Galley adds a **Read** button to every pull/merge request that changes markdown files. Each changed document opens as a typeset article (a 680px serif column with Medium-style rhythm) and the changes are marked inside the text:
+Galley is a free, open-source browser extension for reviewing Markdown in GitHub pull requests and GitLab merge requests. Read the document with its changes in place, keep the context nearby, and join the conversation through your team's existing review tools.
 
-- inserted words carry a soft green band, removed words are struck through in red;
-- every changed block gets a bar in the margin (green new, amber edited, red removed); removed paragraphs stay in place, muted, under a small **Removed** label;
-- a link or image that keeps its text but points somewhere new is named inline (**Link changed** old → new), including changes to reference definitions;
-- tables are compared cell by cell, code line by line with syntax colours, and indentation changes in code count;
-- re-wrapping a paragraph is not a change;
-- **Clean** mode drops the markup and keeps quiet margin markers, so you read the new version as it will be published.
+## Why we're building this
 
-| Changes | Clean, dark |
+A good review starts with understanding. RFCs, decisions and runbooks ask people to consider someone else's thinking, often at the end of an already busy day. Reading raw Markdown, piecing together scattered context and chasing comments all take attention away from that work.
+
+**Our mission is to make reviewing clearer, calmer and easier on the people who do it.** Galley gives ideas room to be read carefully and discussed thoughtfully. We want to reduce the everyday friction of a review while keeping the team, the document and its history together.
+
+## What you can count on
+
+- **Built in the open.** Galley is [MIT-licensed](LICENSE). Its source, [permissions and data handling](PRIVACY.md), and [known limitations](#limitations) are available to inspect. Questions and improvements belong in the open, too.
+- **Private by default.** Documents and diagrams render in your browser. Galley has no backend, analytics, advertising or telemetry. Images from other websites wait for your permission to load.
+- **Your existing workflow.** Comments are ordinary GitHub or GitLab review comments. Teammates can read them without installing Galley, and your review stays with the repository.
+- **Care for the reviewer.** Comfortable type, quiet change markers, nearby context and keyboard controls help you keep your attention on the ideas. You choose when to comment and what to share.
+
+Reading fetches files and threads from your code host; posting sends your comment back to that review. Repository content is never uploaded to a Galley service. Private GitHub repositories require an access token, stored on your device. The [privacy policy](PRIVACY.md) explains these boundaries in detail.
+
+## From change to conversation
+
+| What you need | How Galley helps |
 | --- | --- |
-| ![Table and paragraph edits](store/assets/screenshot-3-tables.jpg) | ![Clean mode in the dark theme](store/assets/screenshot-4-clean-dark.jpg) |
+| Understand the change | Read rendered documents in one continuous stream. Changed paragraphs appear first; reveal nearby unchanged content whenever you need it. |
+| See what matters | Edits appear in the text. Changed link and image destinations are called out; re-wrapped prose produces no noise. Tables are compared cell by cell. |
+| Discuss the idea | Existing threads appear beside their paragraphs. Select text or choose a paragraph to post a comment anchored to its source. |
+| Finish the review | Render Mermaid diagrams, read syntax-coloured code, optionally include source files after documents, and track files you've viewed. |
 
-The reader opens all changed documents in one continuous stream, showing changed paragraphs by default. Each hidden stretch has an arrow control to expand or collapse nearby unchanged content; **Whole files** restores every paragraph. Existing review threads appear beside the paragraphs they discuss, in the left margin on wide screens and below the paragraph on narrow ones. To comment, select text and press **Comment**, use the button that appears beside a paragraph in the margin, or press <kbd>R</kbd> for the paragraph in focus. A composer opens at the bottom, with what you are commenting on beside the input, and posts an ordinary GitHub or GitLab review comment.
+![The real Galley reader: document changes and the team's review conversation in context.](store/assets/screenshot-1-changes.jpg)
+
+Light, sepia and dark themes, serif or sans text, adjustable type size and a clean reading mode let you make the reader comfortable for you.
 
 ## Try it
 
@@ -139,7 +154,7 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 
 ## Roadmap
 
-Toward changing how we review merge requests together:
+We are building toward a complete, considerate review flow:
 
 1. **Conversation in the margin.** Reply to and resolve the threads that the reader already shows beside their paragraphs.
 2. **Review flow.** Approve or request changes from the reader.
@@ -151,8 +166,9 @@ Toward changing how we review merge requests together:
 [PUBLISHING.md](PUBLISHING.md) walks through the Chrome Web Store submission. What is already prepared:
 
 - `npm run release` runs the tests and the type check, then builds `dist/galley-chrome-<version>.zip`. The zip includes `THIRD_PARTY_NOTICES.txt` with the licences of the bundled libraries.
+- [`store/ARTWORK.md`](store/ARTWORK.md) explains the mission artwork and its reproducible templates.
 - [`store/LISTING.md`](store/LISTING.md) has the listing copy, the privacy-practices answers (single purpose, permission justifications, data disclosures) and the reviewer test instructions.
-- `npm run store-assets` renders the five 1280×800 screenshots, both promo tiles and the store icon into `store/assets/`, from the real reader.
+- `npm run store-assets` renders the five 1280×800 screenshots, both promo tiles, the README hero and the store icon into `store/assets/`. Screenshots come from the real reader; the mission artwork is a typeset illustration.
 - [`PRIVACY.md`](PRIVACY.md) is the privacy policy. `npm run privacy-page` turns it into `store/privacy-policy.html` for hosting.
 
 ## Develop in your own Chrome
@@ -188,14 +204,15 @@ npm run typecheck  # TypeScript, no emit
 npm run check      # typecheck, lint and unit tests: what a pull request needs to pass
 npm run icons      # redraw the toolbar icons
 npm run release    # tests, type check, store-ready zips, privacy page
-npm run store-assets  # store screenshots and promo tiles (needs Chrome)
+npm run store-assets  # real screenshots, mission artwork and README hero (needs Chrome)
+npm run artwork       # local artwork and README preview on http://localhost:4180
 ```
 
 Requires Node 22.12 or newer (22.12+, 24 or 26+). Tests, coverage and lint rules are described in [CONTRIBUTING.md](CONTRIBUTING.md#tests-and-lint).
 
 ## Contributing
 
-Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Security reports go through [SECURITY.md](SECURITY.md).
+Tell us what makes reviews harder for you: a long document, missing context, an accessibility barrier, or a conversation that is difficult to follow. [Issues](https://github.com/m9rc1n/galley/issues) and pull requests help shape the project; see [CONTRIBUTING.md](CONTRIBUTING.md). Security reports go through [SECURITY.md](SECURITY.md).
 
 ## License
 
