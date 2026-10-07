@@ -1,4 +1,4 @@
-import { getToken, setToken } from '../ui/settings.ts';
+import { getToken, migrateTokens, setToken } from '../platforms/tokens.ts';
 
 const BUILT_IN = new Set(['https://github.com', 'https://gitlab.com']);
 
@@ -66,14 +66,37 @@ async function renderSite(origin: string | null, tabId: number | undefined): Pro
   section.append(el('p', `Using self-hosted GitLab or GitHub Enterprise on ${host}?`, 'muted'), on);
 }
 
+/** A token for another site is only saved once the site answers like a GitHub Enterprise Server. */
+async function checkEnterprise(origin: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${origin}/api/v3/meta`, { credentials: 'omit', cache: 'no-store' });
+    const meta = (await res.json()) as { installed_version?: unknown };
+    if (res.ok && typeof meta.installed_version === 'string') return null;
+  } catch {
+    // Treated as "not GitHub Enterprise" below.
+  }
+  return `${new URL(origin).host} did not answer like a GitHub Enterprise Server, so the token was not saved.`;
+}
+
 async function renderToken(origin: string): Promise<void> {
   const section = $('#token');
   section.hidden = false;
   const host = new URL(origin).host;
-  $('h2').firstChild!.textContent = origin === 'https://github.com' ? 'GitHub token ' : `GitHub token for ${host} `;
+  const github = origin === 'https://github.com';
+  $('h2').firstChild!.textContent = github ? 'GitHub token ' : `GitHub token for ${host} `;
   $<HTMLAnchorElement>('#token-link').href = `${origin}/settings/personal-access-tokens/new`;
   const input = $<HTMLInputElement>('#token-input');
   const status = $('#token-status');
+  // Name the exact site: a token pasted into a look-alike site's prompt is a stolen token.
+  $('#token-site').textContent = github
+    ? 'Galley sends it only to github.com.'
+    : `Only save a token here if ${host} is your organisation’s GitHub Enterprise Server. Galley sends it only to ${host}.`;
+  if (!origin.startsWith('https://')) {
+    input.disabled = true;
+    $<HTMLButtonElement>('#token-form button').disabled = true;
+    status.replaceChildren(statusLine(false, 'Tokens can only be saved for sites served over https.'));
+    return;
+  }
   const refresh = async () => {
     const saved = await getToken(origin);
     status.replaceChildren();
@@ -92,6 +115,11 @@ async function renderToken(origin: string): Promise<void> {
     e.preventDefault();
     const value = input.value.trim();
     if (!value) return;
+    const problem = github ? null : await checkEnterprise(origin);
+    if (problem) {
+      status.replaceChildren(statusLine(false, problem));
+      return;
+    }
     await setToken(origin, value);
     await refresh();
   });
@@ -99,6 +127,7 @@ async function renderToken(origin: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await migrateTokens().catch(() => {});
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   let url: URL | null = null;
   try {

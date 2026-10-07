@@ -8,14 +8,15 @@ export interface Settings {
   mode: 'changes' | 'clean';
   scope: 'changed' | 'all';
   codeFiles: boolean;
+  /** External images in documents: wait for a click, or always load them. */
+  images: 'ask' | 'load';
 }
 
 export const TEXT_SIZES = [17, 18, 20, 22, 24];
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false };
+export const DEFAULT_SETTINGS: Settings = { theme: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false, images: 'ask' };
 
 const SETTINGS_KEY = 'galley:settings';
-const TOKENS_KEY = 'galley:tokens';
 
 /** chrome.storage.local in the extension; localStorage in the demo page. */
 function extensionStorage(): chrome.storage.StorageArea | null {
@@ -53,16 +54,4 @@ export async function loadSettings(): Promise<Settings> {
 
 export function saveSettings(settings: Settings): Promise<void> {
   return write(SETTINGS_KEY, settings);
-}
-
-/** GitHub tokens are stored per origin (github.com, or a GitHub Enterprise Server host). */
-export async function getToken(origin: string): Promise<string | null> {
-  return (await read<Record<string, string>>(TOKENS_KEY))?.[origin] ?? null;
-}
-
-export async function setToken(origin: string, token: string | null): Promise<void> {
-  const tokens = (await read<Record<string, string>>(TOKENS_KEY)) ?? {};
-  if (token) tokens[origin] = token;
-  else delete tokens[origin];
-  await write(TOKENS_KEY, tokens);
 }

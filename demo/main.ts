@@ -52,6 +52,28 @@ const source: ReviewSource = {
       },
     };
   },
+  async loadThreads() {
+    if (!source.docs.length) return [];
+    const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+    const [rfc, readme] = docs;
+    return [
+      {
+        doc: rfc, side: 'head', line: 13, url: '#thread-1',
+        comments: [
+          { author: 'dana', body: 'Love this framing. Could we link the **skim-reading** study here?', createdAt: ago(26), url: '#thread-1' },
+          { author: 'lee', body: 'Good idea, I will add it as a footnote in the next revision.', createdAt: ago(3), url: '#thread-1-reply' },
+        ],
+      },
+      {
+        doc: rfc, side: 'head', line: 21, url: '#thread-2',
+        comments: [{ author: 'sam', body: 'Does “source of truth” also cover comments written in the reader?', createdAt: ago(5), url: '#thread-2' }],
+      },
+      {
+        doc: readme, side: 'head', line: null, url: '#thread-3',
+        comments: [{ author: 'kim', body: 'The install section reads much better now.', createdAt: ago(50), url: '#thread-3' }],
+      },
+    ];
+  },
   links: () => ({ raw: (path) => `samples/head/${path}`, blob: (path) => `samples/head/${path}` }),
 };
 

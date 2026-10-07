@@ -3,7 +3,8 @@ import { test, type TestContext } from 'node:test';
 import { loadGitHub } from '../src/platforms/github.ts';
 import { loadGitLab } from '../src/platforms/gitlab.ts';
 import { diffLines, diffRange } from '../src/platforms/comments.ts';
-import { setToken } from '../src/ui/settings.ts';
+import { getToken, setToken } from '../src/platforms/tokens.ts';
+import { directApi } from '../src/platforms/github-api.ts';
 import type { CommentTarget } from '../src/platforms/types.ts';
 
 const patch = '@@ -1,4 +1,5 @@\n # Guide\n-old wording\n+new wording\n+another line\n context\n end';
@@ -44,7 +45,7 @@ test('GitHub posts ordinary inline/file comments, keeps the reviewed head, and c
     if (String(url).includes('/files?')) return response([{ filename: 'new.md', previous_filename: 'old.md', status: 'renamed', changes: 2, patch, raw_url: 'https://github.com/acme/docs/raw/base-sha/new.md' }]);
     return response({ head: { sha: head }, base: { sha: 'base-sha' } });
   });
-  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'acme', repo: 'docs', number: 1, title: 'Docs' }, null);
+  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'acme', repo: 'docs', number: 1, title: 'Docs' }, directApi('https://github.com', getToken));
   const selected = { ...target, doc: source.docs[0] };
   const inline = await source.prepareComment!(selected);
   assert.equal(inline.kind, 'inline');
@@ -81,7 +82,7 @@ test('GitHub preserves permission failures and never retries a rejected write as
     if (String(url).includes('/files?')) return response([{ filename: 'new.md', status: 'modified', changes: 2, patch, raw_url: '' }]);
     return response({ head: { sha: 'h' }, base: { sha: 'b' } });
   });
-  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, 'read-only');
+  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, directApi('https://github.com', getToken));
   const plan = await source.prepareComment!({ ...target, doc: source.docs[0] });
   await assert.rejects(plan.post(''), /Write a comment/);
   await assert.rejects(plan.post('Hello'), /did not allow/);
@@ -146,7 +147,7 @@ test('GitHub offers source files after docs without fetching them until requeste
     ]);
     return response({ head: { sha: 'h' }, base: { sha: 'b' } });
   });
-  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, null);
+  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, directApi('https://github.com', getToken));
   assert.deepEqual(source.docs.map((doc) => doc.path), ['README.md']);
   assert.deepEqual(source.codeDocs!.map((doc) => doc.path), ['src/main.ts', 'src/renamed.unknown']);
   assert.equal(rawReads, 0);
@@ -178,4 +179,39 @@ test('GitLab offers source-only reviews and sends old-side source comments with 
   const plan = await source.prepareComment!({ doc: source.codeDocs![0], side: 'base', startLine: 1, endLine: 1, quote: 'old value' });
   assert.equal(plan.kind, 'inline'); await plan.post('Why remove this?');
   assert.equal(writes[0].position.old_path, 'src/main.py'); assert.equal(writes[0].position.old_line, 1); assert.equal(writes[0].position.new_line, undefined);
+});
+
+test('GitHub review comments become threads anchored to a version and line', async () => {
+  const { githubThreads } = await import('../src/platforms/comments.ts');
+  const doc = { path: 'docs/a.md', oldPath: 'docs/old.md', status: 'renamed' as const };
+  const at = '2026-10-01T10:00:00Z';
+  const threads = githubThreads([doc], [
+    { id: 3, in_reply_to_id: 1, path: 'docs/a.md', line: 12, side: 'RIGHT', body: 'Reply', user: { login: 'lee' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r3' },
+    { id: 1, path: 'docs/a.md', line: 12, side: 'RIGHT', body: 'Root', user: { login: 'dana' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r1' },
+    { id: 2, path: 'docs/old.md', line: 4, side: 'LEFT', body: 'Old side', user: null, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r2' },
+    { id: 4, path: 'docs/a.md', line: null, side: 'RIGHT', body: 'Outdated', user: { login: 'sam' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r4' },
+    { id: 5, path: 'docs/a.md', subject_type: 'file', body: 'Whole file', user: { login: 'kim' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r5' },
+    { id: 6, path: 'src/other.ts', line: 1, side: 'RIGHT', body: 'Elsewhere', user: { login: 'x' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r6' },
+  ]);
+  assert.deepEqual(threads.map((t) => [t.side, t.line, Boolean(t.outdated), t.comments.map((c) => `${c.author}: ${c.body}`)]), [
+    ['head', 12, false, ['dana: Root', 'lee: Reply']],
+    ['base', 4, false, ['ghost: Old side']],
+    ['head', null, true, ['sam: Outdated']],
+    ['head', null, false, ['kim: Whole file']],
+  ]);
+});
+
+test('GitLab diff discussions become threads; system notes and general discussions are left out', async () => {
+  const { gitlabThreads } = await import('../src/platforms/comments.ts');
+  const doc = { path: 'README.md', oldPath: 'README.md', status: 'modified' as const };
+  const at = '2026-10-01T10:00:00Z';
+  const threads = gitlabThreads([doc], [
+    { notes: [{ id: 10, body: 'Nice', created_at: at, author: { username: 'dana' }, resolved: true, position: { new_path: 'README.md', old_path: 'README.md', new_line: 7, old_line: 7 } }, { id: 11, body: 'changed the description', system: true, created_at: at }, { id: 12, body: 'Thanks', created_at: at, author: { username: 'lee' } }] },
+    { notes: [{ id: 20, body: 'Removed line?', created_at: at, author: { username: 'sam' }, position: { new_path: 'README.md', old_path: 'README.md', new_line: null, old_line: 3 } }] },
+    { notes: [{ id: 30, body: 'General comment', created_at: at, author: { username: 'kim' } }] },
+  ], (id) => `https://gitlab.example/g/p/-/merge_requests/1#note_${id}`);
+  assert.deepEqual(threads.map((t) => [t.side, t.line, t.resolved, t.url, t.comments.map((c) => c.author)]), [
+    ['head', 7, true, 'https://gitlab.example/g/p/-/merge_requests/1#note_10', ['dana', 'lee']],
+    ['base', 3, false, 'https://gitlab.example/g/p/-/merge_requests/1#note_20', ['sam']],
+  ]);
 });

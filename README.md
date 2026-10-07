@@ -6,9 +6,10 @@ Read markdown changes in GitHub pull requests and GitLab merge requests like an 
 
 RFCs, ADRs, runbooks and guides are reviewed in the same monospaced diff as code, so reviewers render the markdown in their heads and skim. Galley adds a **Read** button to every pull/merge request that changes markdown files. Each changed document opens as a typeset article (a 680px serif column with Medium-style rhythm) and the changes are marked inside the text:
 
-- inserted words are highlighted, removed words struck through;
-- new paragraphs, list items and sections get a green wash, removed ones stay in place in red;
-- tables are compared cell by cell and code blocks line by line;
+- inserted words carry a soft green band, removed words are struck through in red;
+- every changed block gets a bar in the margin (green new, amber edited, red removed); removed paragraphs stay in place, muted, under a small **Removed** label;
+- a link or image that keeps its text but points somewhere new is named inline (**Link changed** old → new), including changes to reference definitions;
+- tables are compared cell by cell, code line by line with syntax colours, and indentation changes in code count;
 - re-wrapping a paragraph is not a change;
 - **Clean** mode drops the markup and keeps quiet margin markers, so you read the new version as it will be published.
 
@@ -16,7 +17,7 @@ RFCs, ADRs, runbooks and guides are reviewed in the same monospaced diff as code
 | --- | --- |
 | ![Table and paragraph edits](store/assets/screenshot-3-tables.jpg) | ![Clean mode in the dark theme](store/assets/screenshot-4-clean-dark.jpg) |
 
-The reader opens all changed documents in one continuous stream, showing changed paragraphs by default. Each hidden stretch has an arrow control to expand or collapse nearby unchanged content; **Entire files** restores every paragraph. A small neutral pointer in the change gutter follows the reading line. Clicking or selecting text pins that line and reveals a softly shaded surface with space around the comment target; source files keep that surface around the code panel. Text stays in place, and releasing the target removes the surface. Click a paragraph or select a phrase to pin a comment target, then write in the bottom composer and post an ordinary GitHub or GitLab review comment.
+The reader opens all changed documents in one continuous stream, showing changed paragraphs by default. Each hidden stretch has an arrow control to expand or collapse nearby unchanged content; **Whole files** restores every paragraph. Existing review threads appear beside the paragraphs they discuss, in the left margin on wide screens and below the paragraph on narrow ones. To comment, select text and press **Comment**, use the button that appears beside a paragraph in the margin, or press <kbd>R</kbd> for the paragraph in focus. A composer opens at the bottom, with what you are commenting on beside the input, and posts an ordinary GitHub or GitLab review comment.
 
 ## Try it
 
@@ -42,18 +43,20 @@ npm run build
 
 ## Using it
 
-Open a pull or merge request and press **Read** in the bottom-right corner. The number counts changed Markdown documents, or supported source files when there are no documents. Documents appear first; **Reading settings → Include code files after documents** appends changed source and configuration files to the same stream. The option is off by default and remembered for future reviews. Code contents are fetched only when enabled, with old/new line numbers, additions and deletions, and controls to reveal unchanged lines. Binary files and unknown file types are excluded; source files over 500,000 characters show a link back to the platform diff.
+Open a pull or merge request and press **Read** in the bottom-right corner. The number counts changed Markdown documents, or supported source files when there are no documents. Documents appear first; **Reading settings → Code files** appends changed source and configuration files to the same stream. The option is off by default and remembered for future reviews. Code contents are fetched only when enabled, with old/new line numbers, additions and deletions, and controls to reveal unchanged lines. Binary files and unknown file types are excluded; source files over 500,000 characters show a link back to the platform diff.
 
 | Key | Action |
 | --- | --- |
 | <kbd>J</kbd> / <kbd>K</kbd> | Next / previous change |
 | <kbd>]</kbd> / <kbd>[</kbd> | Next / previous document |
+| <kbd>R</kbd> | Comment on the paragraph in focus |
+| <kbd>V</kbd> | Mark the current document as viewed |
 | <kbd>C</kbd> | Switch between Changes and Clean |
 | <kbd>+</kbd> / <kbd>−</kbd> | Text size |
 | <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Post the comment in the focused composer |
-| <kbd>Esc</kbd> | Close the reader |
+| <kbd>Esc</kbd> | Close the innermost layer: menu, comment chip, empty composer, then the reader |
 
-The **Reading settings** button opens a drawer with the code-files option, paragraph filter, Changes/Clean highlighting, theme (auto, light, sepia, dark), serif or sans text, and text size. Esc closes the drawer first, then the reader. The sticky top bar shows the current file path and Viewed action, updating as you scroll between files. The **×** button closes the reader (its tooltip shows **Esc**). File-menu entries and document shortcuts scroll to the selected file without replacing the others. **Changes/Clean** controls the change markup independently of the paragraph filter. Long documents get a contents rail on wide screens, with a dot next to every section that changed.
+The top bar stays quiet: the current document (a status dot, its name and position), change navigation, a **Viewed** toggle and **Reading settings**. The document menu lists every changed file with its folder, status and viewed progress, under the pull request title. Reading settings opens as a small sheet (a bottom sheet on phones) with Changes/Clean, the paragraph filter, code files, external images, theme (auto, light, sepia, dark), serif or sans text and text size. Long documents get a contents rail on the right, with a dot next to every section that changed. A draft is never discarded by Esc; only **Cancel** discards it.
 
 ### GitLab (gitlab.com and self-managed)
 
@@ -63,7 +66,13 @@ Nothing to configure: Galley reads the merge request with your signed-in session
 
 Public repositories work without setup. GitHub allows 60 API requests per hour without a token. Galley uses three requests for a pull request with up to 100 files, additional requests for each page of files, and one comparison request when a patch is omitted. Posting a comment also checks that the reviewed version is still current.
 
-Private repositories need a token, because GitHub's API does not accept the browser session. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with read-only **Contents** and **Pull requests** access to the repositories you review, then paste it into the Galley popup. To comment, give the token **Pull requests: read and write** access; **Contents** can remain read-only. Public reading still works without a token. The token stays in the browser's extension storage and is only sent to the GitHub API. For GitHub Enterprise Server, enable the site in the popup and save a token for it there.
+Private repositories need a token, because GitHub's API does not accept the browser session. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with read-only **Contents** and **Pull requests** access to the repositories you review, then paste it into the Galley popup. To comment, give the token **Pull requests: read and write** access; **Contents** can remain read-only. Public reading still works without a token.
+
+The token is kept in Galley's own extension storage, which web pages (including GitHub's) cannot read. Requests that need it are made by Galley's background worker, never from the page, and only for the few API calls the reader uses on the pull request open in that tab. Tokens are only saved and sent for https sites. For GitHub Enterprise Server, enable the site in the popup and save a token for it there; Galley first checks that the site answers like a GitHub Enterprise Server.
+
+### Code
+
+Code blocks and source files are shown one line per block: long lines wrap under their own indentation instead of disappearing past the edge, so nothing needs sideways scrolling. Syntax colours come from highlight.js, bundled with the extension and loaded only when code is on screen; both versions of a file are highlighted as a whole, so comments and strings that span lines colour correctly. Changed lines get a faint tint and a coloured edge rather than a full fill, and a file that is entirely new or deleted is announced once instead of tinting every line. Source files are titled by their path, with their language in the byline.
 
 ### Diagrams
 
@@ -71,9 +80,9 @@ Fenced `mermaid` blocks render as diagrams using an engine bundled with the exte
 
 ### Commenting
 
-The composer shows the file, old/new version and source lines of the paragraph behind your selection. Selected text is quoted exactly; the anchor covers its containing Markdown paragraph(s), so rendering and line wrapping do not guess at sentence-level source positions. Click deleted words or a removed paragraph to target the old version. Source-file comments target the selected line or line range, preserving the quoted code. Selections crossing files or mixing old and new text are rejected. Once you click a paragraph or start a draft, the target stays pinned while scrolling; **Follow reading** chooses the paragraph at your current reading position.
+Nothing follows your scrolling: you choose what to comment on. Select text and press the **Comment** chip that appears above it, use the comment button beside a paragraph in the left margin, or press <kbd>R</kbd>. On touch screens, tap a paragraph. The paragraph gets a neutral tint (a selection stays highlighted) and the composer opens with two columns: on the left the file, version, source lines and the exact quote that will be attached; on the right your comment. Selected text is quoted exactly; the anchor covers its containing Markdown paragraph(s), so rendering and line wrapping do not guess at sentence-level source positions. Removed paragraphs and old diagram versions target the old version. Source-file comments target the selected line or line range, preserving the quoted code. Selections crossing files or mixing old and new text are rejected. Choosing another paragraph while drafting keeps the draft.
 
-Comments use the platform's own review APIs: [GitHub review comments](https://docs.github.com/en/rest/pulls/comments#create-a-review-comment-for-a-pull-request) and [GitLab discussions](https://docs.gitlab.com/api/discussions/#create-a-new-thread-in-the-merge-request-diff). Other reviewers see ordinary platform comments without Galley. A successful post leaves a thread link beside the paragraph. Existing threads are not loaded yet.
+Comments use the platform's own review APIs: [GitHub review comments](https://docs.github.com/en/rest/pulls/comments#create-a-review-comment-for-a-pull-request) and [GitLab discussions](https://docs.gitlab.com/api/discussions/#create-a-new-thread-in-the-merge-request-diff). Other reviewers see ordinary platform comments without Galley. Existing review threads load with the review and sit beside their paragraphs: authors, times and the comment text, rendered through the same sanitiser as documents. File comments and threads whose line is gone are listed under the document's byline. A posted comment joins the margin at once.
 
 GitLab uses your signed-in session and the page's CSRF token. GitHub requires a token with **Pull requests: read and write**. When the source range is outside the available diff (including omitted or truncated patches), the composer explicitly identifies a quoted GitHub file comment or a GitLab discussion instead of an inline comment. Posting checks the current review revision first. A failed post keeps the draft, and writes are never retried automatically; if a network failure leaves the result uncertain, check the platform before posting again.
 
@@ -88,8 +97,8 @@ The demo saves comments in browser session storage and Viewed progress locally, 
    - GitLab: the raw files at the merge base and at the head commit.
    - GitHub: the head file through the same-origin raw URL. The base version is rebuilt by reversing the pull request's patch, and fetched at the merge base only when GitHub omits the patch.
 3. Both versions are parsed with markdown-it: GFM tables, task lists, footnotes, alerts (`> [!NOTE]`) and front matter. Every leaf block (paragraph, list item, heading, table, code block) remembers its source lines.
-4. A block diff matches the two documents. Blocks are compared by whitespace-normalised text, then edited blocks are paired by word similarity. Inside paired blocks, a word diff marks what changed, using `Intl.Segmenter` tokens and a clean-up pass so rewrites read as phrases rather than confetti.
-5. The result is sanitised with DOMPurify and shown in a shadow-DOM overlay, so the page's styles and the reader's never mix.
+4. A block diff matches the two documents. Prose is compared by whitespace-normalised text plus its resolved link and image destinations; code and raw HTML are compared exactly. Edited blocks are paired by word similarity, and inside paired blocks a word diff marks what changed, using `Intl.Segmenter` tokens and a clean-up pass so rewrites read as phrases rather than confetti. Every diff has a work limit, so hostile input degrades to "replaced" instead of freezing the tab.
+5. The result is sanitised with DOMPurify and shown in a shadow-DOM overlay, so the page's styles and the reader's never mix. Changed source lines that render nowhere (HTML comments, link definitions) are counted and linked to the platform diff.
 
 | Path | What it is |
 | --- | --- |
@@ -98,6 +107,7 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 | `src/core/` | Markdown parsing into blocks, block diff, word diff, DOM highlighting, patch reversal |
 | `src/ui/` | Reader overlay, its stylesheet, rendering pipeline, settings |
 | `src/popup/` | Toolbar popup: enable self-hosted sites, GitHub token |
+| `src/background/` | Background worker: holds the GitHub token and makes the token-bearing API calls |
 | `demo/` | Sample merge request for trying the reader without the extension |
 | `test/` | Unit tests (`node --test`) |
 
@@ -106,12 +116,14 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 - No server, no analytics. Galley itself only contacts the GitHub or GitLab instance you are on. On GitHub.com that includes `api.github.com`, and the `raw.githubusercontent.com` downloads that raw files redirect to.
 - Markdown HTML is sanitised: no scripts, iframes, forms or inline styles. Source files are displayed as plain text. Mermaid SVGs are separately sanitised and displayed as inert images; rendering directives and external image/icon assets are disabled. Pull requests can come from forks.
 - Raw HTML in a document cannot use Galley's own classes or attributes, so it cannot fake change markers, banners or block IDs.
-- Images inside documents load from wherever they are hosted. GitHub's own preview proxies external images; Galley does not.
-- Permissions: github.com and gitlab.com. Other domains only after you enable them in the popup. Calls to GitHub's API are ordinary cross-origin requests from the page and need no extra permission.
+- Documents cannot load anything by themselves. Images hosted on the review site load normally; images hosted elsewhere wait behind a **Load** button (or the **External images: Load** setting), so a pull request cannot track who reads it. Video, audio, `srcset`, `background` and external SVG references are removed.
+- Changed link and image destinations are shown inline, and changes that render nowhere are counted, so a reviewer is not told "no visible changes" when something changed.
+- The GitHub token never enters the page: it lives in extension storage that web pages cannot read, and only Galley's background worker sends it, for an allowlist of the reader's own API calls.
+- Permissions: github.com and gitlab.com. Other domains only after you enable them in the popup. GitHub API calls are cross-origin requests that need no extra permission.
 
 ## Limitations
 
-- Comments anchor to containing source blocks; existing threads, replies and resolution are not shown in the reader yet.
+- Comments anchor to containing source blocks. Existing threads are shown, but replying and resolving happen on the platform for now.
 - Platform-specific syntax renders approximately: GitLab's `[[_TOC_]]`, math and PlantUML diagrams appear as text or code, and `#123` / `@user` references are not linked.
 - The whole pull/merge request is used; picking a commit range in the platform UI is not reflected.
 - Paragraphs rewritten by more than 60% are shown as the old version removed and the new one added, not as word edits.
@@ -122,7 +134,7 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 
 Toward changing how we review merge requests together:
 
-1. **Threads in the margin.** Show existing review threads next to the paragraphs they discuss, and resolve them from the reader.
+1. **Conversation in the margin.** Reply to and resolve the threads that the reader already shows beside their paragraphs.
 2. **Review flow.** Approve or request changes from the reader.
 3. **Richer rendering.** Math, issue and user references.
 4. **Distribution.** Chrome Web Store and Firefox Add-ons listings.
@@ -152,11 +164,13 @@ Then, once: open `chrome://extensions`, turn on **Developer mode**, click **Load
   - manifest or dev-worker changes need one click on the reload icon of Galley (dev) in `chrome://extensions`.
 - Source maps are included, so DevTools shows the TypeScript sources.
 - The dev build keeps its own settings and GitHub token, separate from the store version.
+- `npm run dev:zip` makes a dev build with the same name and badges that works without `npm run dev` (no live reload), plus a zip of it.
 
 ## Development
 
 ```bash
 npm run dev        # dev build in dist/dev with live reload (see above)
+npm run dev:zip    # one-off dev build that works without the dev server (dist/dev-standalone + zip)
 npm run demo       # build and serve the demo on http://localhost:4173
 npm test           # unit tests
 npm run typecheck  # TypeScript, no emit

@@ -1,4 +1,4 @@
-import { diffArrays } from 'diff';
+import { boundedDiff } from './limits.ts';
 
 export type OpType = 'eq' | 'ins' | 'del';
 
@@ -101,7 +101,7 @@ function factor(ops: Op[]): Op[] {
 }
 
 export function wordDiff(before: string, after: string): Op[] {
-  const parts = diffArrays(tokenize(before), tokenize(after));
+  const parts = boundedDiff(tokenize(before), tokenize(after));
   return factor(
     cleanup(parts.map((p): Op => ({ type: p.added ? 'ins' : p.removed ? 'del' : 'eq', text: p.value.join('') }))),
   );

@@ -30,7 +30,9 @@ const common = {
 const bundles = [
   { name: 'content', entryPoints: ['src/content/main.ts'], outfile: 'dist/.build/content.js', shipped: true },
   { name: 'popup', entryPoints: ['src/popup/popup.ts'], outfile: 'dist/.build/popup.js', shipped: true },
+  { name: 'background', entryPoints: ['src/background/worker.ts'], outfile: 'dist/.build/background.js', shipped: true },
   { name: 'mermaid', entryPoints: ['src/ui/mermaid-engine.ts'], outfile: 'dist/.build/mermaid.js', format: 'esm', shipped: true },
+  { name: 'highlighter', entryPoints: ['src/ui/highlight-engine.ts'], outfile: 'dist/.build/highlighter.js', format: 'esm', shipped: true },
   { name: 'demo', entryPoints: ['demo/main.ts'], outfile: 'demo/build/demo.js', shipped: false },
 ];
 const metafiles = new Map();
@@ -55,10 +57,21 @@ async function thirdPartyNotices() {
   return text;
 }
 
+/** Token storage must only ever run in the popup and the background worker, never inside a web page. */
+function checkTokenIsolation() {
+  for (const name of ['content', 'mermaid', 'highlighter']) {
+    const inputs = Object.keys(metafiles.get(name)?.inputs ?? {});
+    const leak = inputs.find((input) => /src\/(platforms\/tokens|background\/)/.test(input));
+    if (leak) throw new Error(`${name}.js must not include ${leak}: GitHub tokens would be reachable from the page.`);
+  }
+}
+
 async function assemble() {
   if (!bundles.every((bundle) => metafiles.has(bundle.name))) return;
+  checkTokenIsolation();
   await mkdir(`${root}demo/build`, { recursive: true });
   await cp(`${root}dist/.build/mermaid.js`, `${root}demo/build/mermaid.js`);
+  await cp(`${root}dist/.build/highlighter.js`, `${root}demo/build/highlighter.js`);
   const manifest = JSON.parse(await readFile(`${root}src/manifest.json`, 'utf8'));
   manifest.version = pkg.version;
   const notices = await thirdPartyNotices();
@@ -68,12 +81,16 @@ async function assemble() {
     await mkdir(out, { recursive: true });
     await cp(`${root}dist/.build/content.js`, `${out}/content.js`);
     await cp(`${root}dist/.build/mermaid.js`, `${out}/mermaid.js`);
+    await cp(`${root}dist/.build/highlighter.js`, `${out}/highlighter.js`);
     await cp(`${root}dist/.build/popup.js`, `${out}/popup.js`);
+    await cp(`${root}dist/.build/background.js`, `${out}/background.js`);
     await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
     await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
     await cp(`${root}src/icons`, `${out}/icons`, { recursive: true });
     await writeFile(`${out}/THIRD_PARTY_NOTICES.txt`, notices);
     const m = structuredClone(manifest);
+    // Chrome runs the background as a service worker; Firefox as an event page script.
+    m.background = browser === 'firefox' ? { scripts: ['background.js'] } : { service_worker: 'background.js' };
     if (browser === 'firefox') {
       delete m.minimum_chrome_version;
       for (const resource of m.web_accessible_resources ?? []) delete resource.use_dynamic_url;

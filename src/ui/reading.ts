@@ -24,7 +24,8 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
   const gaps: Array<{ blocks: RenderedBlock[]; anchor: HTMLElement; parent: HTMLElement }> = [];
   let previous: typeof gaps[number] | undefined;
   for (const block of r.blocks) {
-    const unchanged = block.kind === 'same' && !context.has(block.el);
+    // Blocks with review threads stay in view, like changed ones.
+    const unchanged = block.kind === 'same' && !context.has(block.el) && !('mrThreads' in block.el.dataset);
     block.el.hidden = unchanged && !expanded.has(block.el);
     if (!unchanged) { previous = undefined; continue; }
     const anchor = block.el.classList.contains('mr-tight') ? block.el.closest('li')! : block.el;
@@ -92,8 +93,10 @@ export function selectionTarget(doc: DocRef, blocks: RenderedBlock[], range: Ran
   if (doc.kind === 'code') {
     // DOM ranges include gutters and concatenate rows. Quote only source text, with its newlines.
     const rows = covered.flatMap((block) => {
-      const text = block.el.querySelector('.mr-code-text')?.firstChild;
-      if (!text || !range.intersectsNode(text)) return [];
+      // The whole line: once highlighted, its text is split across token spans. Blank lines count too.
+      const text = block.el.querySelector('.mr-code-text');
+      if (!text || !range.intersectsNode(block.el)) return [];
+      if (!text.textContent) return [{ block, text: '' }];
       const selected = block.el.ownerDocument.createRange();
       selected.selectNodeContents(text);
       if (range.compareBoundaryPoints(0, selected) > 0) selected.setStart(range.startContainer, range.startOffset);

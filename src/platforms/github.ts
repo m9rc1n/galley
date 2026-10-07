@@ -1,10 +1,10 @@
 import { githubViewed } from './github-viewed.ts';
-import { getToken } from '../ui/settings.ts';
-import { commentContext, diffRange, requireBody, validateTarget } from './comments.ts';
+import { commentContext, diffRange, githubThreads, requireBody, validateTarget, type GitHubReviewComment } from './comments.ts';
 import { reconstructBase } from '../core/patch.ts';
 import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitHubContext } from './detect.ts';
-import { getJson, getText, HttpError } from './http.ts';
+import type { GitHubApi } from './github-api.ts';
+import { getText, HttpError } from './http.ts';
 import { ReaderError, type DocRef, type DocStatus, type ReviewSource } from './types.ts';
 
 interface GitHubFile {
@@ -54,14 +54,18 @@ function explain(err: unknown, hasToken: boolean): Error {
   return new ReaderError(`GitHub returned an error (${err.status}).`, 'Try again in a moment.');
 }
 
-export async function loadGitHub(ctx: GitHubContext, token: string | null): Promise<ReviewSource> {
-  const headers: Record<string, string> = { Accept: 'application/vnd.github+json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+/**
+ * `github` makes the API calls; in the extension it is the background worker, which holds the token
+ * (see github-api.ts). Raw files are read same-origin with the reviewer's GitHub session.
+ */
+export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise<ReviewSource> {
+  const hasToken = await github.hasToken();
+  const repoApi = `${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}`;
   const api = async <T>(path: string) => {
     try {
-      return await getJson<T>(`${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}${path}`, { headers, credentials: 'omit', cache: 'no-store' });
+      return await github.request<T>(`${repoApi}${path}`);
     } catch (err) {
-      throw explain(err, Boolean(token));
+      throw explain(err, hasToken);
     }
   };
 
@@ -102,7 +106,7 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
     diffUrl: `${repoUrl}/pull/${ctx.number}/files`,
     docs,
     codeDocs,
-    viewed: token ? githubViewed(ctx, all, headSha, pr.base.sha) : undefined,
+    viewed: hasToken ? githubViewed(ctx, github, all, headSha, pr.base.sha) : undefined,
     async load(ref) {
       const { file } = ref as GitHubDoc;
       const head = ref.status === 'removed' ? '' : await getText(raw(headSha, ref.path));
@@ -117,6 +121,15 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
       const base = await getText(raw(await getMergeBase(), ref.oldPath));
       return { base, head };
     },
+    async loadThreads() {
+      const comments: GitHubReviewComment[] = [];
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const { data } = await api<GitHubReviewComment[]>(`/pulls/${ctx.number}/comments?per_page=100&page=${page}`);
+        comments.push(...data);
+        if (data.length < 100) break;
+      }
+      return githubThreads(all, comments);
+    },
     async prepareComment(target) {
       validateTarget(all, target);
       const file = (target.doc as GitHubDoc).file;
@@ -127,17 +140,16 @@ export async function loadGitHub(ctx: GitHubContext, token: string | null): Prom
         label: range ? 'Post inline on GitHub' : 'Post file comment on GitHub (selection quoted)',
         async post(body) {
           requireBody(body);
-          const currentToken = await getToken(ctx.origin);
-          if (!currentToken) throw new ReaderError('Add a GitHub token to comment.', 'In the Galley popup, save a token with Contents: read and Pull requests: read and write. Your draft is kept.');
-          const writeHeaders = { ...headers, Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' };
+          // Checked at posting time, so a token saved after opening the reader is picked up.
+          if (!(await github.hasToken())) throw new ReaderError('Add a GitHub token to comment.', 'In the Galley popup, save a token with Contents: read and Pull requests: read and write. Your draft is kept.');
           try {
-            const { data: latest } = await getJson<{ head: { sha: string }; base: { sha: string } }>(`${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.number}`, { headers: writeHeaders, credentials: 'omit', cache: 'no-store' });
+            const { data: latest } = await github.request<{ head: { sha: string }; base: { sha: string } }>(`${repoApi}/pulls/${ctx.number}`);
             if (latest.head.sha !== headSha || latest.base.sha !== pr.base.sha) throw new ReaderError('This pull request changed while you were reading.', 'Copy your draft and reopen the reader to comment on the latest version.');
             const side = target.side === 'base' ? 'LEFT' : 'RIGHT';
             const payload = range
               ? { body: commentContext(target, body), path: target.doc.path, commit_id: headSha, line: target.endLine, side, ...(target.startLine < target.endLine ? { start_line: target.startLine, start_side: side } : {}) }
               : { body: commentContext(target, body), path: target.doc.path, commit_id: headSha, subject_type: 'file' };
-            const { data } = await getJson<{ html_url: string }>(`${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}/pulls/${ctx.number}/comments`, { method: 'POST', headers: writeHeaders, credentials: 'omit', body: JSON.stringify(payload) });
+            const { data } = await github.request<{ html_url: string }>(`${repoApi}/pulls/${ctx.number}/comments`, { method: 'POST', body: payload });
             return { url: data.html_url };
           } catch (err) {
             if (err instanceof HttpError && err.status === 403) throw new ReaderError('GitHub did not allow this comment.', 'Check Pull requests: read and write access, repository permissions and any SSO authorization. Your draft is kept.');

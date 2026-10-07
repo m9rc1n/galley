@@ -162,3 +162,14 @@ kbd {
   text-transform: uppercase;
   vertical-align: 4px;
 }
+
+.warning {
+  margin: 8px 0;
+  color: #9a5b00;
+}
+
+@media (prefers-color-scheme: dark) {
+  .warning {
+    color: #e3b341;
+  }
+}
