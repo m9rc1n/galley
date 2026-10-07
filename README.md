@@ -95,11 +95,11 @@ The token is kept in Galley's own extension storage, which web pages (including 
 
 ### Code
 
-Code blocks and source files are shown one line per block: long lines wrap under their own indentation instead of disappearing past the edge, so nothing needs sideways scrolling. Syntax colours come from highlight.js, bundled with the extension and loaded only when code is on screen; both versions of a file are highlighted as a whole, so comments and strings that span lines colour correctly. Changed lines get a faint tint and a coloured edge rather than a full fill, and a file that is entirely new or deleted is announced once instead of tinting every line. Source files are titled by their path, with their language in the byline.
+Code blocks and source files are shown one line per block: long lines wrap under their own indentation instead of disappearing past the edge, so nothing needs sideways scrolling. Syntax colours come from highlight.js, bundled with the extension and loaded only when code is on screen in a sandboxed frame, so even a pathological file cannot freeze the page; both versions of a file are highlighted as a whole, so comments and strings that span lines colour correctly. Changed lines get a faint tint and a coloured edge rather than a full fill, and a file that is entirely new or deleted is announced once instead of tinting every line. Source files are titled by their path, with their language in the byline.
 
 ### Diagrams
 
-Fenced `mermaid` blocks render as diagrams using an engine bundled with the extension and loaded only when needed. Edited diagrams show **Before** and **After** versions; Clean mode shows the new version. **View source** reveals the original Mermaid code. Clicking either version targets the matching source fence for comments. Invalid or unsupported diagrams keep their readable source. Rendering happens locally, with no CDN or external diagram images/icon packs. Diagrams are limited to 20,000 source characters and 300 edges.
+Fenced `mermaid` blocks render as diagrams using an engine bundled with the extension and loaded only when needed. Edited diagrams show **Before** and **After** versions; Clean mode shows the new version. **View source** reveals the original Mermaid code. Clicking either version targets the matching source fence for comments. Invalid or unsupported diagrams keep their readable source. Rendering happens locally, with no CDN or external diagram images/icon packs, inside a sandboxed frame that cannot reach the page, your session or the network. Diagrams are limited to 20,000 source characters and 300 edges.
 
 ### Commenting
 
@@ -140,9 +140,10 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 ## Privacy and security
 
 - No server, no analytics. Galley itself only contacts the GitHub or GitLab instance you are on. On GitHub.com that includes `api.github.com`, and the `raw.githubusercontent.com` downloads that raw files redirect to.
-- Markdown HTML is sanitised: no scripts, iframes, forms or inline styles. Source files are displayed as plain text. Mermaid SVGs are separately sanitised and displayed as inert images; rendering directives and external image/icon assets are disabled. Pull requests can come from forks.
+- Markdown HTML is sanitised: no scripts, iframes, forms or inline styles. Source files are displayed as plain text. Mermaid and highlight.js run in sandboxed extension frames with no access to the page, extension APIs, storage or the network; their output is treated as untrusted. Mermaid SVGs are separately sanitised and displayed as inert images; rendering directives and external image/icon assets are disabled. Pull requests can come from forks.
 - Raw HTML in a document cannot use Galley's own classes or attributes, so it cannot fake change markers, banners or block IDs.
 - Documents cannot load anything by themselves. Images hosted on the review site load normally; images hosted elsewhere wait behind a **Load** button (or the **External images: Load** setting), so a pull request cannot track who reads it. Video, audio, `srcset`, `background` and external SVG references are removed.
+- Text Galley adds to a posted comment (file path and quoted selection) is sent as code, so a pull request cannot make your comment mention people, link issues or show images.
 - Changed link and image destinations are shown inline, and changes that render nowhere are counted, so a reviewer is not told "no visible changes" when something changed.
 - The GitHub token never enters the page: it lives in extension storage that web pages cannot read, and only Galley's background worker sends it, for an allowlist of the reader's own API calls.
 - Permissions: github.com and gitlab.com. Other domains only after you enable them in the popup. GitHub API calls are cross-origin requests that need no extra permission.

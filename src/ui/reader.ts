@@ -6,7 +6,7 @@ import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
 import { loadReaderFonts } from './fonts.ts';
-import { loadImage, renderDocument, renderSnippet, type RenderedBlock, type RenderedDoc } from './render.ts';
+import { loadImage, platformLink, renderDocument, renderSnippet, type RenderedBlock, type RenderedDoc } from './render.ts';
 import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
 import { DEFAULT_SETTINGS, TEXT_SIZES, loadSettings, saveSettings, type Settings } from './settings.ts';
 
@@ -1294,9 +1294,10 @@ class Reader {
   private toast(text: string, url?: string): void {
     const toast = this.el.toast;
     toast.replaceChildren(text);
-    if (url) {
+    const href = url && platformLink(url, location.origin);
+    if (href) {
       const link = h('a', '', 'View on platform');
-      link.href = url;
+      link.href = href;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       toast.append(' · ', link);
@@ -1383,9 +1384,10 @@ class Reader {
     const foot = h('div', 'mr-thread-foot');
     if (thread.outdated) foot.append(h('span', 'mr-thread-tag', 'Outdated'));
     if (thread.resolved) foot.append(h('span', 'mr-thread-tag', 'Resolved'));
-    if (/^(https?:|#)/i.test(thread.url)) {
+    const href = platformLink(thread.url, location.origin);
+    if (href) {
       const link = h('a', 'mr-thread-link', own ? 'View on platform' : 'Reply on platform');
-      link.href = thread.url;
+      link.href = href;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       foot.append(link);

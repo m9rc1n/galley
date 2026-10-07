@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { expect, it } from 'vitest';
 import { renderMarkdown } from '../testing/render.ts';
-import { renderDocument, renderSnippet } from './render.ts';
+import { platformLink, renderDocument, renderSnippet } from './render.ts';
 
 const marked = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('[data-mr-change]')];
 const cellText = (row: Element) => [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim());
@@ -269,4 +269,38 @@ it('comment bodies go through the document sanitiser and image rules', () => {
   expect(box.querySelector('.mr-img-hold')).toBeTruthy();
   expect(box.querySelectorAll('a')).toHaveLength(2);
   expect([...box.querySelectorAll('a')][1].getAttribute('href')).toBe(null);
+});
+
+it('document ids and names cannot collide with the reader’s own ids', () => {
+  const r = renderMarkdown('', '# MR comment status\n\n<p id="mr-comment">x</p><a name="mr-code-label">y</a>\n\nSee[^1] and <span id="user-content-kept">z</span>.\n\n[^1]: Note.\n', 'added');
+  const ids = [...r.content.querySelectorAll('[id]')].map((el) => el.id);
+  expect(ids).toContain('user-content-mr-comment-status');
+  expect(ids).toContain('user-content-mr-comment');
+  expect(ids).toContain('user-content-kept');
+  expect(ids.every((id) => id.startsWith('user-content-'))).toBe(true);
+  expect(r.content.querySelector('a[name]')!.getAttribute('name')).toBe('user-content-mr-code-label');
+  // Footnote links still find their targets the way the reader resolves #fragments.
+  for (const link of r.content.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
+    const id = decodeURIComponent(link.getAttribute('href')!.slice(1));
+    expect(ids.some((candidate) => candidate === id || candidate === `user-content-${id}`), id).toBe(true);
+  }
+});
+
+it('links built from platform data stay on the platform', () => {
+  const origin = 'https://gitlab.example';
+  expect(platformLink('https://gitlab.example/g/p/-/merge_requests/1#note_5', origin)).toBe('https://gitlab.example/g/p/-/merge_requests/1#note_5');
+  expect(platformLink('#thread-1', origin)).toBe('#thread-1');
+  for (const url of ['javascript:alert(1)', 'data:text/html,x', 'https://evil.example/', 'https://gitlab.example.evil.example/', 'http://gitlab.example/', '//evil.example', '# x', 'not a url']) {
+    expect(platformLink(url, origin), url).toBe(null);
+  }
+});
+
+it('very long comment bodies are shortened before rendering', () => {
+  const box = document.createElement('div');
+  box.append(renderSnippet(document, `${'word '.repeat(20_000)}TAIL`, 'https://gitlab.example'));
+  expect(box.textContent).not.toContain('TAIL');
+  expect(box.textContent!.length).toBeLessThan(66_000);
+  expect(box.lastElementChild!.textContent).toContain('Open it on the platform');
+  const short = document.createElement('div'); short.append(renderSnippet(document, 'Fine', 'https://gitlab.example'));
+  expect(short.textContent!.trim()).toBe('Fine'); expect(short.children).toHaveLength(1);
 });

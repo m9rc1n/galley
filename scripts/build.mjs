@@ -31,10 +31,12 @@ const bundles = [
   { name: 'content', entryPoints: ['src/content/main.ts'], outfile: 'dist/.build/content.js', shipped: true },
   { name: 'popup', entryPoints: ['src/popup/popup.ts'], outfile: 'dist/.build/popup.js', shipped: true },
   { name: 'background', entryPoints: ['src/background/worker.ts'], outfile: 'dist/.build/background.js', shipped: true },
-  { name: 'mermaid', entryPoints: ['src/ui/mermaid-engine.ts'], outfile: 'dist/.build/mermaid.js', format: 'esm', shipped: true },
-  { name: 'highlighter', entryPoints: ['src/ui/highlight-engine.ts'], outfile: 'dist/.build/highlighter.js', format: 'esm', shipped: true },
+  // Mermaid and highlight.js run only inside sandboxed frames (src/ui/sandbox.ts), never in the page.
+  { name: 'diagram-frame', entryPoints: ['src/ui/diagram-frame.ts'], outfile: 'dist/.build/diagram-frame.js', shipped: true },
+  { name: 'highlight-frame', entryPoints: ['src/ui/highlight-frame.ts'], outfile: 'dist/.build/highlight-frame.js', shipped: true },
   { name: 'demo', entryPoints: ['demo/main.ts'], outfile: 'demo/build/demo.js', shipped: false },
 ];
+const FRAMES = ['diagram-frame', 'highlight-frame'];
 const metafiles = new Map();
 
 /** License texts of every npm package that ends up inside the shipped bundles. */
@@ -63,7 +65,7 @@ async function thirdPartyNotices() {
 
 /** Token storage must only ever run in the popup and the background worker, never inside a web page. */
 function checkTokenIsolation() {
-  for (const name of ['content', 'mermaid', 'highlighter']) {
+  for (const name of ['content', 'diagram-frame', 'highlight-frame']) {
     const inputs = Object.keys(metafiles.get(name)?.inputs ?? {});
     const leak = inputs.find((input) => /src\/(platforms\/tokens|background\/)/.test(input));
     if (leak) throw new Error(`${name}.js must not include ${leak}: GitHub tokens would be reachable from the page.`);
@@ -74,8 +76,10 @@ async function assemble() {
   if (!bundles.every((bundle) => metafiles.has(bundle.name))) return;
   checkTokenIsolation();
   await mkdir(`${root}demo/build`, { recursive: true });
-  await cp(`${root}dist/.build/mermaid.js`, `${root}demo/build/mermaid.js`);
-  await cp(`${root}dist/.build/highlighter.js`, `${root}demo/build/highlighter.js`);
+  for (const frame of FRAMES) {
+    await cp(`${root}dist/.build/${frame}.js`, `${root}demo/build/${frame}.js`);
+    await cp(`${root}src/ui/${frame}.html`, `${root}demo/build/${frame}.html`);
+  }
   const manifest = JSON.parse(await readFile(`${root}src/manifest.json`, 'utf8'));
   manifest.version = pkg.version;
   const notices = await thirdPartyNotices();
@@ -84,8 +88,10 @@ async function assemble() {
     await rm(out, { recursive: true, force: true });
     await mkdir(out, { recursive: true });
     await cp(`${root}dist/.build/content.js`, `${out}/content.js`);
-    await cp(`${root}dist/.build/mermaid.js`, `${out}/mermaid.js`);
-    await cp(`${root}dist/.build/highlighter.js`, `${out}/highlighter.js`);
+    for (const frame of FRAMES) {
+      await cp(`${root}dist/.build/${frame}.js`, `${out}/${frame}.js`);
+      await cp(`${root}src/ui/${frame}.html`, `${out}/${frame}.html`);
+    }
     await cp(`${root}dist/.build/popup.js`, `${out}/popup.js`);
     await cp(`${root}dist/.build/background.js`, `${out}/background.js`);
     await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
@@ -98,6 +104,10 @@ async function assemble() {
     if (browser === 'firefox') {
       delete m.minimum_chrome_version;
       for (const resource of m.web_accessible_resources ?? []) delete resource.use_dynamic_url;
+      // Firefox has no sandbox pages. The frame's sandbox attribute gives it an opaque origin without
+      // extension APIs there, and the page's own meta CSP still blocks network access.
+      delete m.sandbox;
+      delete m.content_security_policy;
       m.browser_specific_settings = {
         gecko: { id: 'galley@m9rc1n.github.io', strict_min_version: '128.0', data_collection_permissions: { required: ['none'] } },
       };

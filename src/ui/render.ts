@@ -126,6 +126,9 @@ export function sanitize(doc: Document, html: string): DocumentFragment {
     // No data-* attributes from documents, except the two Galley renders itself.
     ALLOW_DATA_ATTR: false,
     ADD_ATTR: ['data-mr-u', 'data-lang'],
+    // Document ids and names become user-content-*, like on GitHub, so they can never take over the
+    // reader's own ids (labels, aria-describedby) in the shared shadow root.
+    SANITIZE_NAMED_PROPS: true,
   }) as unknown as DocumentFragment;
 }
 
@@ -142,6 +145,17 @@ export function isPlatformUrl(url: string, origin: string): boolean {
   if (target.protocol !== 'https:' && target.protocol !== site.protocol) return false;
   const host = site.hostname;
   return target.hostname === host || target.hostname.endsWith(`.${host}`) || (host === 'github.com' && target.hostname.endsWith('.githubusercontent.com'));
+}
+
+/** Links built from platform API data (threads, posted comments) open only on the review platform itself, or a fragment in the demo. */
+export function platformLink(url: string, origin: string): string | null {
+  if (/^#\S*$/.test(url)) return url;
+  try {
+    const target = new URL(url);
+    return /^https?:$/.test(target.protocol) && target.origin === new URL(origin).origin ? target.href : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Show a held image. */
@@ -438,12 +452,21 @@ function decorate(doc: Document, root: HTMLElement, input: RenderInput): { repla
   return { replacements, held };
 }
 
+/** GitHub's own limit for a comment; GitLab allows far longer notes, which the platform still shows in full. */
+const MAX_SNIPPET_CHARS = 65_536;
+
 /**
  * Render a review comment's markdown. Comments are written by anyone who can comment, so they go
  * through the same sanitiser as documents, and their images follow the same loading rules.
  */
 export function renderSnippet(doc: Document, markdown: string, origin: string, images: 'ask' | 'load' = 'ask'): DocumentFragment {
-  const frag = sanitize(doc, parseDocument(markdown).html);
+  const long = markdown.length > MAX_SNIPPET_CHARS;
+  const frag = sanitize(doc, parseDocument(long ? markdown.slice(0, MAX_SNIPPET_CHARS) : markdown).html);
+  if (long) {
+    const note = doc.createElement('p');
+    note.textContent = '… Shortened in the reader. Open it on the platform to read the whole comment.';
+    frag.append(note);
+  }
   for (const el of frag.querySelectorAll('[data-mr-u]')) el.removeAttribute('data-mr-u');
   for (const el of frag.querySelectorAll('[id]')) el.removeAttribute('id');
   for (const a of frag.querySelectorAll('a[href]')) {

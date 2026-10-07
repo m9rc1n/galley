@@ -72,6 +72,8 @@ async function writeStatic() {
   await writeFile(`${out}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
   await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
   await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
+  await cp(`${root}src/ui/diagram-frame.html`, `${out}/diagram-frame.html`);
+  await cp(`${root}src/ui/highlight-frame.html`, `${out}/highlight-frame.html`);
   for (const font of ['Newsreader', 'DM-Sans'])
     await cp(`${root}src/ui/fonts/${font}-OFL.txt`, `${out}/${font}-OFL.txt`);
 }
@@ -117,8 +119,7 @@ const options = (entry, file) => ({
   entryPoints: [entry],
   outfile: `${out}/${file}`,
   bundle: true,
-  // Mermaid and the syntax highlighter are imported on demand by the content script as modules.
-  format: file === 'mermaid.js' || file === 'highlighter.js' ? 'esm' : 'iife',
+  format: 'iife',
   target: ['chrome111'],
   loader: { '.css': 'text', '.woff2': 'binary' },
   charset: 'utf8',
@@ -128,8 +129,8 @@ const options = (entry, file) => ({
 });
 
 if (standalone) {
-  await esbuild.build({ ...options('src/ui/mermaid-engine.ts', 'mermaid.js'), logLevel: 'error' });
-  await esbuild.build({ ...options('src/ui/highlight-engine.ts', 'highlighter.js'), logLevel: 'error' });
+  await esbuild.build({ ...options('src/ui/diagram-frame.ts', 'diagram-frame.js'), logLevel: 'error' });
+  await esbuild.build({ ...options('src/ui/highlight-frame.ts', 'highlight-frame.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/content/main.ts', 'content.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/popup/popup.ts', 'popup.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/background/worker.ts', 'background.js'), logLevel: 'error' });
@@ -144,8 +145,8 @@ if (standalone) {
 }
 
 for (const [entry, file, kind] of [
-  ['src/ui/mermaid-engine.ts', 'mermaid.js', 'content'],
-  ['src/ui/highlight-engine.ts', 'highlighter.js', 'content'],
+  ['src/ui/diagram-frame.ts', 'diagram-frame.js', 'content'],
+  ['src/ui/highlight-frame.ts', 'highlight-frame.js', 'content'],
   ['src/content/main.ts', 'content.js', 'content'],
   ['src/popup/popup.ts', 'popup.js', 'popup'],
   ['src/dev/reload.ts', 'dev-reload.js', 'worker'],

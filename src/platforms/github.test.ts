@@ -34,7 +34,7 @@ it('GitHub posts ordinary inline/file comments, keeps the reviewed head, and che
   expect(writes[0].start_line).toBe(2);
   expect(writes[0].line).toBe(3);
   expect(writes[0].side).toBe('RIGHT');
-  expect(writes[0].body as string).toMatch(/> new wording/);
+  expect(writes[0].body).toBe('Please clarify\n\n---\n` new.md ` · new lines 2–3\n\n```\nnew wording\nanother line\n```');
   const old = await source.prepareComment!({ ...selected, side: 'base', startLine: 2, endLine: 2 });
   await old.post('Why remove this?');
   expect(writes[1].side).toBe('LEFT');

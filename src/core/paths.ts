@@ -32,10 +32,12 @@ export function resolveHref(docPath: string, href: string): ResolvedHref {
   const dir = docPath.includes('/') ? docPath.slice(0, docPath.lastIndexOf('/')) : '';
   const joined = m[1].startsWith('/') ? m[1].slice(1) : dir ? `${dir}/${m[1]}` : m[1];
   const out: string[] = [];
-  for (const part of joined.split('/')) {
+  // Decode before resolving dot segments: `%2e%2e` and `%2F` must not survive as a later `../`,
+  // which the browser would apply after encodePath and so leave the repository.
+  for (const part of joined.split('/').flatMap((segment) => safeDecode(segment).split('/'))) {
     if (part === '' || part === '.') continue;
     if (part === '..') out.pop();
-    else out.push(safeDecode(part));
+    else out.push(part);
   }
   return { type: 'repo', path: out.join('/'), suffix: m[2] };
 }

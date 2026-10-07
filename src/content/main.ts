@@ -1,5 +1,6 @@
 import { detectContext, type PageContext } from '../platforms/detect.ts';
 import { loadSource } from '../platforms/index.ts';
+import { TOKENS_CHANGED, type TokensChanged } from '../platforms/token-signal.ts';
 import type { ReviewSource } from '../platforms/types.ts';
 import { Launcher } from '../ui/launcher.ts';
 import { openReader } from '../ui/reader.ts';
@@ -63,9 +64,10 @@ function start(): void {
   window.addEventListener('popstate', refresh);
   setInterval(() => (location.href === href ? launcher.reattach() : refresh()), 1000);
 
-  // A token saved in the toolbar popup takes effect without reloading the page.
+  // A token saved in the toolbar popup for this site takes effect without reloading the page.
   chrome.storage?.onChanged?.addListener((changes) => {
-    if (!changes['galley:tokens'] || !current) return;
+    const signal = changes[TOKENS_CHANGED]?.newValue as Partial<TokensChanged> | undefined;
+    if (signal?.origin !== location.origin || !current) return;
     sources.delete(current.key);
     current = null;
     refresh();

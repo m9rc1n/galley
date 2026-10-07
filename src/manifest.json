@@ -45,11 +45,20 @@
       "run_at": "document_idle"
     }
   ],
+  "sandbox": {
+    "pages": [
+      "diagram-frame.html",
+      "highlight-frame.html"
+    ]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'unsafe-inline'"
+  },
   "web_accessible_resources": [
     {
       "resources": [
-        "mermaid.js",
-        "highlighter.js"
+        "diagram-frame.html",
+        "highlight-frame.html"
       ],
       "matches": [
         "https://*/*",
