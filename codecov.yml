@@ -9,8 +9,7 @@ coverage:
     patch:
       default:
         target: auto
-        # src/ui/reader.ts is driven by the browser checks (e2e/), not by unit tests, so changes to it
-        # would otherwise always read as untested.
+        # Vitest enforces the overall and per-folder floors; patch coverage stays advisory.
         informational: true
 
 ignore:
@@ -31,6 +30,15 @@ component_management:
     - component_id: ui
       name: ui
       paths: [src/ui/**]
+    - component_id: content
+      name: content
+      paths: [src/content/**]
+    - component_id: popup
+      name: popup
+      paths: [src/popup/**]
+    - component_id: dev
+      name: dev
+      paths: [src/dev/**]
 
 comment:
   layout: "condensed_header, condensed_files, components"

@@ -1,12 +1,12 @@
 // Renders the Chrome Web Store graphics from the real reader (via the demo) into store/assets/:
-//   5 screenshots (1280×800 JPEG), small promo tile (440×280), marquee (1400×560), store icon (128×128 PNG).
+//   5 real screenshots, two mission promo tiles, a README hero, and the store icon.
 //   npm run store-assets        (uses Chrome from CHROME_PATH, or the usual install locations)
 import { existsSync, readdirSync } from 'node:fs';
-import { copyFile, mkdir, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdir, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
-import { iconSvg } from './icons.mjs';
+import { ARTWORK, artworkHtml } from './artwork.mjs';
 import { startDemoServer } from './serve.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -32,8 +32,6 @@ function findChrome() {
   if (!found) throw new Error('Chrome not found. Set CHROME_PATH to a Chrome or Chromium executable.');
   return found;
 }
-
-const ICON = iconSvg();
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -61,8 +59,6 @@ async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
       scroller.scrollTop += el.getBoundingClientRect().top - 100;
     }, heading);
     await sleep(300);
-    // Scrolling down hides the top bar, as on Medium; show it in the picture.
-    await page.evaluate(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar').classList.remove('is-hidden'));
   }
   if (menu) await page.evaluate((act) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-act="${act}"]`).click(), menu);
   await page.waitForFunction(
@@ -76,13 +72,13 @@ async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
   return page;
 }
 
-async function save(page, name) {
-  await page.screenshot({ path: `${out}/${name}`, type: 'jpeg', quality: 92 });
+async function save(page, name, type = 'jpeg') {
+  await page.screenshot({ path: `${out}/${name}`, type, ...(type === 'jpeg' ? { quality: 92 } : {}) });
   await page.close();
   console.log(`  ${name}`);
 }
 
-const light = { theme: 'light', font: 'serif', size: 2, mode: 'changes' };
+const light = { theme: 'light', font: 'serif', size: 1, mode: 'changes' };
 console.log('store/assets/');
 await save(await readerShot({ settings: light }), 'screenshot-1-changes.jpg');
 
@@ -94,25 +90,18 @@ await entry.waitForFunction(() => document.querySelector('#galley-launcher') && 
 await sleep(600);
 await save(entry, 'screenshot-2-entry.jpg');
 
-await save(await readerShot({ settings: light, heading: 'How it works' }), 'screenshot-3-tables.jpg');
+await save(await readerShot({ settings: light, heading: 'A small browser extension' }), 'screenshot-3-tables.jpg');
 await save(await readerShot({ settings: { ...light, theme: 'dark', mode: 'clean' }, heading: 'Goals' }), 'screenshot-4-clean-dark.jpg');
 
-await save(await readerShot({ settings: { ...light, theme: 'sepia' }, heading: 'Paragraphs are matched', menu: 'settings' }), 'screenshot-5-sepia-settings.jpg');
+await save(await readerShot({ settings: { ...light, theme: 'sepia' }, heading: 'A small browser extension', menu: 'settings' }), 'screenshot-5-sepia-settings.jpg');
 
-// Promo tiles: HTML templates with the icon and, for the marquee, a sharp 2× capture of the reader.
-const hero = await readerShot({ settings: light, scale: 2 });
-const shot = `data:image/jpeg;base64,${Buffer.from(await hero.screenshot({ type: 'jpeg', quality: 90 })).toString('base64')}`;
-await hero.close();
-for (const [template, name, width, height] of [
-  ['promo-small.html', 'promo-small-440x280.jpg', 440, 280],
-  ['promo-marquee.html', 'promo-marquee-1400x560.jpg', 1400, 560],
-]) {
+// The mission illustration is separate from real product screenshots, shared with the README.
+for (const artwork of ARTWORK) {
   const page = await browser.newPage();
-  await page.setViewport({ width, height, deviceScaleFactor: 1 });
-  const html = (await readFile(`${root}store/templates/${template}`, 'utf8')).replace('{{ICON}}', ICON).replace('{{SHOT}}', shot);
-  await page.setContent(html, { waitUntil: 'load' });
-  await sleep(300);
-  await save(page, name);
+  await page.setViewport({ width: artwork.width, height: artwork.height, deviceScaleFactor: 1 });
+  await page.setContent(await artworkHtml(artwork), { waitUntil: 'load' });
+  await page.evaluate(() => document.fonts.ready);
+  await save(page, artwork.name, artwork.type);
 }
 
 await copyFile(`${root}src/icons/icon128.png`, `${out}/icon-128.png`);

@@ -30,6 +30,7 @@
     "lint:fix": "biome lint --write .",
     "check": "npm run typecheck && npm run lint && npm test",
     "store-assets": "node scripts/build.mjs && node scripts/store-assets.mjs",
+    "artwork": "node scripts/artwork-preview.mjs",
     "release": "npm run check && node scripts/build.mjs --zip && node scripts/privacy-page.mjs",
     "privacy-page": "node scripts/privacy-page.mjs",
     "submit-helper": "node scripts/submit-helper.mjs"
