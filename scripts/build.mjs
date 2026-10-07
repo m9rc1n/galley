@@ -3,7 +3,7 @@
 //   node scripts/build.mjs --watch   rebuild on change
 //   node scripts/build.mjs --zip     also write store-ready zips to dist/
 import { execFileSync } from 'node:child_process';
-import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
 
@@ -32,7 +32,17 @@ const bundles = [
   { name: 'popup', entryPoints: ['src/popup/popup.ts'], outfile: 'dist/.build/popup.js', shipped: true },
   { name: 'background', entryPoints: ['src/background/worker.ts'], outfile: 'dist/.build/background.js', shipped: true },
   // Mermaid and highlight.js run only inside sandboxed frames (src/ui/sandbox.ts), never in the page.
-  { name: 'diagram-frame', entryPoints: ['src/ui/diagram-frame.ts'], outfile: 'dist/.build/diagram-frame.js', shipped: true },
+  // Mermaid, unmodified from npm, is minified: readable it is over 10 MB, and addons.mozilla.org does not
+  // scan a file over 5 MB. Minified it is still 5.2 MB, so its layout engine, elkjs, is a script of its
+  // own that src/ui/elk-shim.ts loads on first use. Our own bundles stay readable.
+  {
+    name: 'diagram-frame', entryPoints: ['src/ui/diagram-frame.ts'], outfile: 'dist/.build/diagram-frame.js', shipped: true,
+    minify: true, alias: { 'elkjs/lib/elk.bundled.js': './src/ui/elk-shim.ts' },
+  },
+  {
+    name: 'elk', entryPoints: ['node_modules/elkjs/lib/elk.bundled.js'], outfile: 'dist/.build/elk.js', shipped: true,
+    minify: true, globalName: '__galleyELK',
+  },
   { name: 'highlight-frame', entryPoints: ['src/ui/highlight-frame.ts'], outfile: 'dist/.build/highlight-frame.js', shipped: true },
   { name: 'demo', entryPoints: ['demo/main.ts'], outfile: 'demo/build/demo.js', shipped: false },
 ];
@@ -80,6 +90,7 @@ async function assemble() {
     await cp(`${root}dist/.build/${frame}.js`, `${root}demo/build/${frame}.js`);
     await cp(`${root}src/ui/${frame}.html`, `${root}demo/build/${frame}.html`);
   }
+  await cp(`${root}dist/.build/elk.js`, `${root}demo/build/elk.js`);
   const manifest = JSON.parse(await readFile(`${root}src/manifest.json`, 'utf8'));
   manifest.version = pkg.version;
   const notices = await thirdPartyNotices();
@@ -92,6 +103,7 @@ async function assemble() {
       await cp(`${root}dist/.build/${frame}.js`, `${out}/${frame}.js`);
       await cp(`${root}src/ui/${frame}.html`, `${out}/${frame}.html`);
     }
+    await cp(`${root}dist/.build/elk.js`, `${out}/elk.js`);
     await cp(`${root}dist/.build/popup.js`, `${out}/popup.js`);
     await cp(`${root}dist/.build/background.js`, `${out}/background.js`);
     await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
@@ -108,9 +120,19 @@ async function assemble() {
       // extension APIs there, and the page's own meta CSP still blocks network access.
       delete m.sandbox;
       delete m.content_security_policy;
+      // addons.mozilla.org allows 45 characters; the Chrome name is longer.
+      m.name = 'Galley: Markdown for pull & merge requests';
+      // data_collection_permissions needs Firefox 140 (Android 142); older versions would ignore it.
       m.browser_specific_settings = {
-        gecko: { id: 'galley@m9rc1n.github.io', strict_min_version: '128.0', data_collection_permissions: { required: ['none'] } },
+        gecko: { id: 'galley@m9rc1n.github.io', strict_min_version: '140.0', data_collection_permissions: { required: ['none'] } },
+        gecko_android: { strict_min_version: '142.0' },
       };
+      // Limits addons.mozilla.org enforces on upload, caught here instead of at submission.
+      if (m.name.length > 45) throw new Error(`The Firefox add-on name is ${m.name.length} characters; addons.mozilla.org allows 45.`);
+      for (const file of await readdir(out, { recursive: true, withFileTypes: true })) {
+        const { size } = file.isFile() ? await stat(`${file.parentPath}/${file.name}`) : { size: 0 };
+        if (size > 5 * 1024 * 1024) throw new Error(`${file.name} is ${(size / 1048576).toFixed(1)} MB; addons.mozilla.org does not scan files over 5 MB.`);
+      }
     }
     await writeFile(`${out}/manifest.json`, `${JSON.stringify(m, null, 2)}\n`);
     if (zip) {

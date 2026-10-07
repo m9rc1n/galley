@@ -1,6 +1,6 @@
 # Firefox Add-ons listing
 
-What to enter at [addons.mozilla.org](https://addons.mozilla.org/developers/) for Galley. The Chrome listing in [`LISTING.md`](LISTING.md) is the source for the copy; this page covers what is different. The steps that need your account are marked **You**.
+What to enter at [addons.mozilla.org](https://addons.mozilla.org/developers/) for Galley. The Chrome listing in [`LISTING.md`](LISTING.md) is the source for the long description; the name and summary differ, as explained below. The steps that need your account are marked **You**.
 
 ## What to upload
 
@@ -9,23 +9,31 @@ Every release attaches three files, built by [`release.yml`](../.github/workflow
 | File | Where it goes |
 | --- | --- |
 | `galley-firefox-<version>.zip` | The add-on package |
-| `galley-source-<version>.zip` | "Source code" (Mozilla asks for it because the add-on is bundled and minified) |
+| `galley-source-<version>.zip` | "Source code" (Mozilla asks for it because the add-on is bundled, and its third-party engines are minified) |
 | `SHA256SUMS.txt` | Not uploaded; it lets anyone check both zips |
 
-The package carries the add-on id `galley@m9rc1n.github.io` (`browser_specific_settings.gecko.id`). It identifies the add-on to Mozilla for good, so never change it, even if the repository moves. It also declares `data_collection_permissions: none`, and needs Firefox 128 or newer.
+The package carries the add-on id `galley@m9rc1n.github.io` (`browser_specific_settings.gecko.id`). It identifies the add-on to Mozilla for good, so never change it, even if the repository moves.
+
+It declares `data_collection_permissions: none`, which Firefox reads from version 140 on desktop and 142 on Android, so those are the minimum versions. Android has not been tried.
+
+The validator turns two things into errors, and the Firefox build now fails if either is broken, so they cannot reach an upload again:
+
+- **Name:** at most 45 characters. The Firefox package is named `Galley: Markdown for pull & merge requests` (42); Chrome keeps the longer `Galley: Markdown reader for pull & merge requests`.
+- **File size:** a file over 5 MB is not scanned. Mermaid is minified, and its layout engine ships as a second script, `elk.js`, so the largest file is about 3.6 MB.
 
 ## First submission
 
 1. **You:** create a free developer account at addons.mozilla.org and turn on two-factor authentication.
-2. **Submit a New Add-on** → **On this site** (listed). Upload `galley-firefox-<version>.zip`; the validator runs on upload.
-3. Answer **Do you need to submit source code?** with **Yes** and upload `galley-source-<version>.zip`.
-4. Fill in the listing:
+2. **Submit a New Add-on** → **On this site** (listed). Upload `galley-firefox-<version>.zip`; the validator runs on upload. It should report no errors. If it warns about `innerHTML`, that is expected and is explained in the reviewer notes below.
+3. Leave **Firefox for Android** unticked in the compatibility choice until it has been tried there.
+4. Answer **Do you need to submit source code?** with **Yes** and upload `galley-source-<version>.zip`.
+5. Fill in the listing:
 
 | Field | Value |
 | --- | --- |
-| Name | `Galley: Markdown reader for pull & merge requests` |
+| Name | `Galley: Markdown for pull & merge requests` |
 | Add-on URL | `galley` |
-| Summary (250 characters) | `Read markdown changes in GitHub pull requests and GitLab merge requests as typeset articles, with every edit marked in the text.` |
+| Summary (250 characters) | `Make room for better reviews. A free, open-source browser extension that turns Markdown changes in GitHub pull requests and GitLab merge requests into clear, typeset articles you can discuss in place.` |
 | Description | The **Description** block in [`LISTING.md`](LISTING.md), pasted as is |
 | Categories | Web Development (check the names offered in the form) |
 | License | MIT License |
@@ -35,21 +43,24 @@ The package carries the add-on id `galley@m9rc1n.github.io` (`browser_specific_s
 | Privacy policy | `https://github.com/m9rc1n/galley/blob/main/PRIVACY.md` |
 | Screenshots | `assets/screenshot-1-changes.jpg` to `assets/screenshot-5-sepia-settings.jpg` |
 
-5. Paste the reviewer notes below into **Notes to Reviewer**, then **Submit Version**.
-6. Review is by a person for a listed add-on, so it can take days. Mozilla emails the result.
+The summary is the same wording as the GitHub project description, the website and `package.json`. The manifest `description` (132 characters at most, shown in Firefox's add-on manager) is shorter and stays: `Read markdown changes in GitHub pull requests and GitLab merge requests as typeset articles, with every edit marked in the text.`
+
+6. Paste the reviewer notes below into **Notes to Reviewer**, then **Submit Version**.
+7. Review is by a person for a listed add-on, so it can take days. Mozilla emails the result.
 
 ## Notes to reviewer
 
 ```
 Galley is a reader for markdown changes in GitHub pull requests and GitLab merge requests. It is open source (MIT): https://github.com/m9rc1n/galley
 
-BUILD. The package is bundled and minified with esbuild from TypeScript. The source package contains everything needed:
+BUILD. The package is bundled with esbuild from TypeScript. Galley's own code is not minified, so content.js, highlight-frame.js, popup.js and background.js can be read as written. Only the bundled third-party diagram engine is minified: Mermaid (diagram-frame.js, about 3.6 MB) and its layout engine elkjs (elk.js, about 1.4 MB), which is a separate file because addons.mozilla.org does not scan a file over 5 MB. elk.js is loaded by a script element, from the same sandboxed frame, the first time a diagram is laid out (src/ui/elk-shim.ts).
+The source package contains everything needed:
   Node.js 22.12 or newer (tested on 22 and 24) and npm; the `zip` command for the package step.
   npm ci --ignore-scripts
   npm run build -- --zip
 The unpacked add-on is in dist/firefox and the package is dist/galley-firefox-<version>.zip. The build is reproducible: building the source package in a clean directory gives byte-identical files to the submitted package.
 
-THIRD-PARTY CODE. Runtime dependencies (dompurify, markdown-it, markdown-it-footnote, diff, mermaid and highlight.js) are bundled from npm, unmodified. Their licences are listed in THIRD_PARTY_NOTICES.txt inside the package. Mermaid (diagram-frame.js, about 10 MB) and highlight.js (highlight-frame.js) are the large files.
+THIRD-PARTY CODE. Runtime dependencies (dompurify, markdown-it, markdown-it-footnote, diff, mermaid and highlight.js, plus mermaid's own dependencies such as elkjs) are bundled from npm, unmodified. Their licences are listed in THIRD_PARTY_NOTICES.txt inside the package.
 
 PERMISSIONS.
   host_permissions github.com, gitlab.com: read the pull or merge request being viewed.
@@ -59,6 +70,11 @@ PERMISSIONS.
 No code is loaded from the network. No data is sent to any Galley server: there is none.
 
 SANDBOXED FRAMES. Mermaid and highlight.js run inside diagram-frame.html and highlight-frame.html, shown in an iframe with sandbox="allow-scripts" (an opaque origin with no extension APIs) and a meta Content-Security-Policy that blocks all network access. The reader exchanges messages with them and treats every reply as untrusted.
+
+INNERHTML WARNINGS. The validator lists six assignments to innerHTML. None of them takes document content:
+  content.js, src/ui/launcher.ts and src/ui/reader.ts: static templates, CSS text and icon constants bundled with the extension. A lint rule in the repository (lint/no-unsanitized-html.grit) fails the build on any other innerHTML assignment, and pull request content goes through DOMPurify (src/ui/render.ts).
+  content.js, DOMPurify: the sanitizer's own parser, writing into an inert document.
+  highlight-frame.js, highlight.js: highlightElement, library code Galley never calls. Galley calls hljs.highlight(), which returns a string, and rebuilds every line from the text and hljs-* classes.
 
 TO TRY IT. Open any GitHub pull request or GitLab merge request that changes a .md file and press Read. A public example: https://github.com/mermaid-js/mermaid/pull/8144
 ```
