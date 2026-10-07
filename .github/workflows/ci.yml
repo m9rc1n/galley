@@ -55,12 +55,12 @@ jobs:
       - name: Unit tests with coverage
         run: npm run test:coverage
       - name: Coverage per folder
-        if: ${{ !cancelled() && matrix.node == 22 }}
+        if: ${{ !cancelled() && matrix.node == 22 && hashFiles('coverage/coverage-summary.json') != '' }}
         run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
       # Once per run (the Node 22 leg), so the numbers on Codecov are not counted twice. Pull requests
       # from forks cannot read the secret, so their upload cannot authenticate; it never fails the run.
       - name: Send coverage to Codecov
-        if: ${{ !cancelled() && matrix.node == 22 }}
+        if: ${{ success() && matrix.node == 22 && hashFiles('coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
