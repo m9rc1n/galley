@@ -55,11 +55,13 @@ try {
     const s = document.querySelector('#galley-reader').shadowRoot;
     const title = getComputedStyle(s.querySelector('h1.mr-lead'));
     const insertion = getComputedStyle(s.querySelector('ins.mr-ins'));
-    return { family: title.fontFamily, weight: title.fontWeight, insertion: insertion.backgroundColor };
+    const replacement = getComputedStyle(s.querySelector('p del.mr-del + ins.mr-ins'));
+    return { family: title.fontFamily, weight: title.fontWeight, insertion: insertion.backgroundColor, replacementGap: parseFloat(replacement.marginInlineStart) };
   });
   assert.match(typography.family, /Galley Newsreader/);
   assert.equal(typography.weight, '400');
   assert.equal(typography.insertion, 'rgb(225, 235, 208)');
+  assert.ok(typography.replacementGap >= 3, 'Adjacent old and new words need a visible gap');
   const initial = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     return { files: [...s.querySelectorAll('.mr-document')].filter((el) => !el.hidden).length, nextButtons: s.querySelectorAll('.mr-next').length, filter: s.querySelector('[data-scope="changed"]').getAttribute('aria-pressed'), close: s.querySelector('[data-act="close"]').getAttribute('title'), hidden: s.querySelectorAll('.mr-content [hidden]').length, composer: s.querySelector('.mr-composer').hidden, threads: s.querySelectorAll('.mr-thread').length, rail: s.querySelectorAll('.mr-threads .mr-thread').length };
@@ -202,6 +204,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path === 'README.md');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-content').length), 3);
   // Mobile layout must not extend past either side of the viewport.
+  assert.equal(await inspect(() => getComputedStyle(document.querySelector('#galley-reader').shadowRoot.querySelector('p del.mr-del + ins.mr-ins')).marginInlineStart), '0px', 'Clean reading must retain the document’s original spacing');
   await page.setViewport({ width: 390, height: 844 });
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;

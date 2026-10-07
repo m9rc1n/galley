@@ -684,6 +684,11 @@
   text-decoration-color: var(--del-strike);
 }
 
+/* Separate the old and new wording of a replacement without adding spaces to the document. */
+.mode-changes .mr-content :is(del.mr-del + ins.mr-ins, ins.mr-ins + del.mr-del) {
+  margin-inline-start: 0.18em;
+}
+
 /* Code wraps instead of scrolling sideways: every line is a block, and wrapped parts continue under
    the line's own indentation plus two characters (--indent is set per line). */
 .mr-content pre {
