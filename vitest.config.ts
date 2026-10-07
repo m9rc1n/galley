@@ -29,6 +29,8 @@ export default defineConfig({
     ],
     coverage: {
       provider: 'v8',
+      // Keep diagnostic reports when a test fails; the test run still exits unsuccessfully.
+      reportOnFailure: true,
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/testing/**', 'src/**/*.d.ts'],
       reporter: ci ? ['text', 'json-summary', 'lcov'] : ['text-summary', 'html', 'json-summary', 'lcov'],

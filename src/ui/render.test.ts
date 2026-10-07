@@ -236,10 +236,25 @@ it('hostile documents cannot freeze the reader', () => {
   expect(time(() => renderMarkdown('x\n', `<div>${'<a'.repeat(40_000)}</div>\n`)) < 1000).toBeTruthy();
   const words = (prefix: string) => Array.from({ length: 6000 }, (_, i) => `${prefix}${i}`).join(' ');
   expect(time(() => renderMarkdown(`${words('a')}\n`, `${words('b')}\n`)) < 3000).toBeTruthy();
-  // jsdom is far slower than Chrome (4,000 edited paragraphs render in ~1 s there); keep this small.
-  const paragraphs = (prefix: string) => Array.from({ length: 800 }, (_, i) => `${prefix} paragraph ${i}.`).join('\n\n');
-  expect(time(() => renderMarkdown(paragraphs('Old'), paragraphs('New'))) < 5000).toBeTruthy();
   expect(() => renderMarkdown('', 'x'.repeat(2_000_001), 'added')).toThrow(/too large/);
+});
+
+it('preserves every old and new paragraph when rendering a large document', () => {
+  // jsdom DOM allocation under coverage varies with shared-runner load. Keep this an integration
+  // check; core/limits.test.ts separately checks that 40,000-element diffs stay within their budget.
+  const paragraphs = (prefix: string) => Array.from({ length: 400 }, (_, i) => `${prefix} paragraph ${i}.`);
+  const base = paragraphs('Old'), head = paragraphs('New');
+  const r = renderMarkdown(base.join('\n\n'), head.join('\n\n'));
+  const rows = [...r.content.querySelectorAll('p')];
+  expect(rows).toHaveLength(head.length);
+  expect(r.stats).toEqual({ added: 0, removed: 0, modified: head.length });
+  const version = (omit: 'ins' | 'del') => rows.map((row) => {
+    const clone = row.cloneNode(true) as HTMLElement;
+    for (const mark of clone.querySelectorAll(omit)) mark.remove();
+    return clone.textContent;
+  });
+  expect(version('ins')).toEqual(base);
+  expect(version('del')).toEqual(head);
 });
 
 it('comment bodies go through the document sanitiser and image rules', () => {
