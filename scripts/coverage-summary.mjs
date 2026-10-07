@@ -1,6 +1,6 @@
 // Prints the test coverage per source folder as a Markdown table, for the CI job summary:
 //   node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
-// Reads coverage/coverage-summary.json, which `npm run test:coverage` writes when CI is set.
+// Reads coverage/coverage-summary.json, which `npm run test:coverage` writes locally and in CI.
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 
@@ -28,4 +28,4 @@ console.log(`| Folder | ${metrics.join(' | ')} |`);
 console.log(`| --- | ${metrics.map(() => '---:').join(' | ')} |`);
 console.log(rows.join('\n'));
 console.log(`| **All of src** | ${metrics.map((m) => `**${total[m].pct}%**`).join(' | ')} |`);
-console.log('\n`src/ui` is mostly `reader.ts`, which the browser checks (`npm run test:e2e`) exercise rather than unit tests.');
+console.log('\nReader workflows and extension entry points are included. Browser checks (`npm run test:e2e`) separately verify real layout and selection behavior.');

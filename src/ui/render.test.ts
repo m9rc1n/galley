@@ -4,6 +4,7 @@ import { renderMarkdown } from '../testing/render.ts';
 import { renderDocument, renderSnippet } from './render.ts';
 
 const marked = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('[data-mr-change]')];
+const cellText = (row: Element) => [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim());
 
 it('raw HTML cannot borrow a block id to hide a real edit', () => {
   const decoy = '\n\n<p data-mr-u="1">Nothing to see here.</p>\n\n<p data-mr-u="0000000000000000:1">Nor here.</p>\n';
@@ -127,6 +128,49 @@ it('indentation changes inside code blocks are changes', () => {
   expect(r.content.querySelector('ins.mr-line')!.textContent).toBe('if: always()');
   // Re-wrapping prose is still not a change.
   expect(renderMarkdown('One two\nthree.\n', 'One\ntwo three.\n').stats).toStrictEqual({ added: 0, removed: 0, modified: 0 });
+});
+
+it('table edits highlight only the changed cell and preserve neighbouring values and markup', () => {
+  const base = '| Plan | Limit | Notes |\n|---|---|---|\n| Starter | 10 | Keep |\n| Team | 20 | **Shared** |\n| Enterprise | 50 | Private |\n';
+  const r = renderMarkdown(base, base.replace('| Team | 20 |', '| Team | 25 |'));
+  const rows = [...r.content.querySelectorAll('tbody tr')];
+  expect(r.stats).toEqual({ added: 0, removed: 0, modified: 1 });
+  expect(r.content.querySelector('.mr-table')?.getAttribute('data-mr-change')).toBe('modified');
+  const team = rows[1].querySelectorAll('td');
+  expect(team[1].querySelector('del')?.textContent).toBe('20');
+  expect(team[1].querySelector('ins')?.textContent).toBe('25');
+  expect(team[0].textContent).toBe('Team');
+  expect(team[2].querySelector('strong')?.textContent).toBe('Shared');
+  expect(team[0].querySelector('ins, del')).toBeNull();
+  expect(team[2].querySelector('ins, del')).toBeNull();
+  expect(cellText(rows[0])).toEqual(['Starter', '10', 'Keep']);
+  expect(cellText(rows[2])).toEqual(['Enterprise', '50', 'Private']);
+  expect(r.content.querySelectorAll('ins, del')).toHaveLength(2);
+});
+
+it('retains deleted table rows in their original position and distinguishes newly added rows', () => {
+  const header = '| Name | Detail |\n|---|---|\n';
+  const first = '| First | First detail |\n', last = '| Last | Last detail |\n';
+  const r = renderMarkdown(`${header}${first}| Removed | Obsolete policy |\n${last}`, `${header}${first}${last}| New | New policy |\n`);
+  const rows = [...r.content.querySelectorAll('tbody tr')];
+  expect(rows.map((row) => row.firstElementChild?.textContent)).toEqual(['First', 'Removed', 'Last', 'New']);
+  expect(rows[1].classList).toContain('mr-ghost-row');
+  expect(cellText(rows[1])).toEqual(['Removed', 'Obsolete policy']);
+  expect(rows[3].classList).toContain('mr-row-added');
+  expect(rows[0].querySelector('ins, del')).toBeNull();
+  expect(rows[2].querySelector('ins, del')).toBeNull();
+});
+
+it('retains a deleted final table row and names changed link destinations even when cell text stays the same', () => {
+  const header = '| Name | Reference |\n|---|---|\n';
+  const row = '| Policy | [Read](https://good.example/policy) |\n';
+  const r = renderMarkdown(`${header}${row}| Retired | Legacy guidance |\n`, header + row.replace('good.example', 'new.example'));
+  expect(r.content.querySelector('tbody tr:last-child')?.classList).toContain('mr-ghost-row');
+  expect(cellText(r.content.querySelector('tbody tr:last-child')!)).toEqual(['Retired', 'Legacy guidance']);
+  const note = r.content.querySelector('.mr-link-note')!;
+  expect(note.querySelector('del')?.textContent).toBe('https://good.example/policy');
+  expect(note.querySelector('ins')?.textContent).toBe('https://new.example/policy');
+  expect(r.content.querySelector('tbody tr:first-child a')?.getAttribute('href')).toBe('https://new.example/policy');
 });
 
 it('external images wait for a click; platform, repository and inline images load', () => {

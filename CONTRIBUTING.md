@@ -26,7 +26,7 @@ CI runs all of these, on Node 22 and 24, and fails if test coverage drops. `test
 
 ## Tests and lint
 
-**Unit tests** use [Vitest](https://vitest.dev) and sit next to the code they cover: `src/core/markdown.ts` is tested by `src/core/markdown.test.ts`. Each folder is its own Vitest project (`core`, `platforms`, `background`, `ui`), so a layer can be run alone and the report is grouped by folder:
+**Unit tests** use [Vitest](https://vitest.dev) and sit next to the code they cover: `src/core/markdown.ts` is tested by `src/core/markdown.test.ts`. Each folder is its own Vitest project (`core`, `platforms`, `background`, `ui`, `content`, `popup`, `dev`), so a layer can be run alone and the report is grouped by folder:
 
 ```bash
 npm test                          # everything, once
@@ -36,11 +36,12 @@ npx vitest run src/ui/render      # files matching a name
 npm run test:coverage             # coverage report in coverage/, and the thresholds
 ```
 
-- Tests in `core` and `platforms` run in Node. `ui` tests run in jsdom; any other file that needs a DOM starts with `// @vitest-environment jsdom`.
-- `src/testing/` holds what tests share: `renderMarkdown` (render two versions of a document), `mockFetch` and `jsonResponse`, and an in-memory IndexedDB for the GitHub token store. It is never part of a build.
+- Tests in `core`, `platforms`, `background` and `dev` run in Node. `ui`, `content` and `popup` tests run in jsdom; any other file that needs a DOM starts with `// @vitest-environment jsdom`.
+- `src/testing/` holds what tests share: `renderMarkdown` (render two versions of a document), `mockFetch` and `jsonResponse`, an in-memory IndexedDB for the GitHub token store, and a reader harness that supplies browser geometry for jsdom. It is never part of a build.
 - `fetch`, globals and storage are restored after every test, so tests cannot leak into each other. Stub with `vi.stubGlobal` and `vi.spyOn`, or `mockFetch`; don't assign globals by hand.
 - Write the test for the behaviour a reviewer would notice, and say it in the title: *"raw HTML cannot borrow a block id to hide a real edit"*, not *"test sanitize"*. For a bug fix, write the test that fails first.
-- **Coverage thresholds** in `vitest.config.ts` are set just under today's numbers per folder, so coverage can rise but not slip. When you add tests, raise the numbers. `src/ui/reader.ts` is a 1,500-line DOM controller that is driven by `e2e/` rather than unit tests, which is why `ui` is lower.
+- **Coverage thresholds** in `vitest.config.ts` enforce overall floors of 95% lines, 92% statements, 90% functions and 80% branches, plus separate thresholds per folder. When you add tests, raise the numbers. The reader tests exercise its public interface and DOM events with real document rendering: review navigation, settings, comment targeting and submission, viewed progress, and image consent. Browser checks still verify real layout and selection behavior that jsdom cannot model.
+- `npm run test:coverage` produces an HTML report at `coverage/index.html` locally, plus `coverage-summary.json` and `lcov.info` both locally and in CI. `node scripts/coverage-summary.mjs` prints a folder summary. Production source stays in the denominator; only test files, test helpers and type declarations are excluded.
 
 **Browser checks** (`e2e/reader.mjs`) drive the real reader in Chrome against the demo page: layout at several widths, selection, focus, the sticky bar, comments. `npm run test:e2e` builds the demo, serves it and runs them; screenshots land in `reports/e2e/`.
 
