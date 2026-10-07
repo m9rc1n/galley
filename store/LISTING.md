@@ -38,7 +38,7 @@ WHAT YOU GET
 • Re-wrapped paragraphs are not reported as changes.
 • Clean mode: hide the markup and read the new version as it will be published, with quiet markers in the margin.
 • Keyboard navigation: J and K for the next and previous change, [ and ] for the next and previous document, R to comment, V to mark a file viewed, C to switch modes, Esc to go back.
-• Light, sepia and dark themes, serif or sans text, adjustable text size.
+• Paper, Sage, Sepia and Slate palettes, each with light, dark or system appearance; serif or sans text and adjustable text size.
 
 WORKS WHERE YOU REVIEW
 • GitLab.com and self-managed GitLab: uses your signed-in session, nothing to set up. Self-managed instances are enabled from the toolbar popup, one domain at a time.

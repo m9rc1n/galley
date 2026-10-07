@@ -13,6 +13,15 @@ import { join } from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { startDemoServer } from '../scripts/serve.mjs';
 
+function contrast(first, second) {
+  const luminance = (colour) => colour.match(/[\d.]+/g).slice(0, 3)
+    .map((channel) => Number(channel) / 255)
+    .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, channel, i) => sum + channel * [0.2126, 0.7152, 0.0722][i], 0);
+  const a = luminance(first), b = luminance(second);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 function findChrome() {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   const cache = join(homedir(), '.cache', 'puppeteer', 'chrome');
@@ -321,6 +330,51 @@ try {
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelector('.mr-viewed')?.getAttribute('aria-pressed') === 'true');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'false');
+  // Colour and brightness are independent, with readable light and dark versions of every palette.
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
+  const backgrounds = { light: new Set(), dark: new Set() };
+  for (const theme of ['paper', 'sage', 'sepia', 'slate']) {
+    await inspect((theme) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-setting="theme"] [data-value="${theme}"]`).click(), theme);
+    for (const appearance of ['light', 'dark']) {
+      const colours = await inspect((appearance) => {
+        const s = document.querySelector('#galley-reader').shadowRoot;
+        s.querySelector(`[data-setting="appearance"] [data-value="${appearance}"]`).click();
+        const root = s.querySelector('.mr-root'), style = getComputedStyle(root);
+        return { theme: root.dataset.theme, dark: root.classList.contains('is-dark'), background: style.backgroundColor, foreground: style.color, muted: getComputedStyle(s.querySelector('.mr-theme-caption')).color };
+      }, appearance);
+      assert.equal(colours.theme, theme, 'Appearance must not replace the palette');
+      assert.equal(colours.dark, appearance === 'dark');
+      assert.ok(contrast(colours.foreground, colours.background) >= 7, `${theme} ${appearance}: prose contrast`);
+      assert.ok(contrast(colours.muted, colours.background) >= 4.5, `${theme} ${appearance}: interface contrast`);
+      backgrounds[appearance].add(colours.background);
+    }
+  }
+  assert.equal(backgrounds.light.size, 4); assert.equal(backgrounds.dark.size, 4);
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="auto"]').click());
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark'));
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark'));
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').dataset.theme), 'slate');
+  for (const width of [390, 320]) {
+    await page.setViewport({ width, height: 844 });
+    const cards = await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-theme-options button')].map((button) => {
+      const rect = button.getBoundingClientRect(); return { left: rect.left, right: rect.right, height: rect.height, client: button.clientWidth, scroll: button.scrollWidth };
+    }));
+    for (const card of cards) assert.ok(card.left >= 0 && card.right <= width && card.height >= 44 && card.scroll <= card.client + 1, JSON.stringify({ width, card }));
+    if (width === 390) await page.screenshot({ path: join(screenshots, 'galley-reader-themes-mobile.png') });
+  }
+  await page.setViewport({ width: 1440, height: 1000 });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="paper"]').click());
+  await page.screenshot({ path: join(screenshots, 'galley-reader-themes.png') });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="dark"]').click());
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark')), true, 'Manual appearance must ignore system changes');
+  await page.reload({ waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => {
+    const root = document.querySelector('#galley-reader')?.shadowRoot.querySelector('.mr-root');
+    return root?.dataset.theme === 'paper' && root.classList.contains('is-dark');
+  });
   assert.deepEqual(errors, []);
   // Host pages can forbid font URLs. The extension's bundled binary faces still load in that policy.
   await page.goto(`${demoUrl}/?closed`, { waitUntil: 'networkidle0' });
@@ -331,7 +385,7 @@ try {
     document.querySelector('#galley-launcher').shadowRoot.querySelector('button').click();
   });
   await page.waitForFunction(() => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'));
-  console.log('Reader browser checks passed: continuous files, filtering, margin threads, selection chip, margin comment button, draft retargeting, posting, mobile composer, dark theme, current file in the sticky top bar, settings sheet focus, persisted Viewed progress, Mermaid versions, optional source files and line comments, Escape layers.');
+  console.log('Reader browser checks passed: continuous files, filtering, margin threads, selection chip, margin comment button, draft retargeting, posting, mobile composer, four independent light/dark palettes, system appearance, colour contrast, persisted theme choices, current file in the sticky top bar, settings sheet focus, persisted Viewed progress, Mermaid versions, optional source files and line comments, Escape layers.');
 } finally {
   await browser.close();
   server?.close();

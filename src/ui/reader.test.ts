@@ -147,6 +147,25 @@ it('traps focus in settings, persists appearance, and uses Escape to close the d
   expect(document.querySelector('#galley-reader')).toBeNull();
 });
 
+it('changes palettes without changing brightness and remembers both after reopening', async () => {
+  await ui.open(review());
+  ui.click('[data-act="settings"]');
+  ui.click('[data-value="dark"]');
+  ui.click('[data-value="paper"]');
+  expect(ui.q('.mr-root').dataset.theme).toBe('paper');
+  expect(ui.q('.mr-root').classList).toContain('is-dark');
+  ui.click('[data-value="light"]');
+  expect(ui.q('.mr-root').dataset.theme).toBe('paper');
+  expect(ui.q('.mr-root').classList).not.toContain('is-dark');
+  ui.click('[data-value="slate"]');
+  ui.close();
+  await ui.open(review());
+  expect(ui.q('.mr-root').dataset.theme).toBe('slate');
+  expect(ui.q('.mr-root').classList).not.toContain('is-dark');
+  expect(ui.q('[data-value="slate"]').getAttribute('aria-pressed')).toBe('true');
+  expect(ui.q('[data-value="light"]').getAttribute('aria-pressed')).toBe('true');
+});
+
 it('shields page shortcuts while respecting text input and modifier keys', async () => {
   const pageKey = vi.fn(); window.addEventListener('keydown', pageKey);
   try {
@@ -394,11 +413,12 @@ it('reflects renamed and unchanged documents and warns about edits that Markdown
 
 it('restores automatic colour scheme behavior and responds to system theme changes', async () => {
   await ui.open(review());
-  ui.click('[data-value="sepia"]'); expect(ui.q('.mr-root').classList).toContain('is-sepia');
+  ui.click('[data-value="sepia"]'); expect(ui.q('.mr-root').dataset.theme).toBe('sepia');
   ui.click('[data-value="auto"]');
   Object.defineProperty(ui.media, 'matches', { value: true }); ui.media.dispatchEvent(new Event('change'));
   expect(ui.q('.mr-root').classList).toContain('is-dark');
   ui.click('[data-value="light"]'); ui.media.dispatchEvent(new Event('change'));
+  expect(ui.q('.mr-root').dataset.theme).toBe('sepia');
   expect(ui.q('.mr-root').classList).not.toContain('is-dark');
 });
 

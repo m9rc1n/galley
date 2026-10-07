@@ -1,7 +1,11 @@
-export type Theme = 'auto' | 'light' | 'sepia' | 'dark';
+export const THEMES = ['paper', 'sage', 'sepia', 'slate'] as const;
+export const APPEARANCES = ['auto', 'light', 'dark'] as const;
+export type Theme = typeof THEMES[number];
+export type Appearance = typeof APPEARANCES[number];
 
 export interface Settings {
   theme: Theme;
+  appearance: Appearance;
   font: 'serif' | 'sans';
   /** Index into TEXT_SIZES. */
   size: number;
@@ -14,7 +18,7 @@ export interface Settings {
 
 export const TEXT_SIZES = [17, 18, 20, 22, 24];
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false, images: 'ask' };
+export const DEFAULT_SETTINGS: Settings = { theme: 'sage', appearance: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false, images: 'ask' };
 
 const SETTINGS_KEY = 'galley:settings';
 
@@ -49,7 +53,12 @@ async function write(key: string, value: unknown): Promise<void> {
 }
 
 export async function loadSettings(): Promise<Settings> {
-  return { ...DEFAULT_SETTINGS, ...(await read<Partial<Settings>>(SETTINGS_KEY)) };
+  // Earlier versions used one setting for both colour and brightness. Preserve that choice.
+  const saved = await read<Partial<Omit<Settings, 'theme'>> & { theme?: Theme | Appearance }>(SETTINGS_KEY) ?? {};
+  const theme = THEMES.find((theme) => theme === saved.theme) ?? DEFAULT_SETTINGS.theme;
+  const legacyAppearance = saved.theme === 'dark' ? 'dark' : saved.theme === 'light' || saved.theme === 'sepia' ? 'light' : 'auto';
+  const appearance = APPEARANCES.find((appearance) => appearance === saved.appearance) ?? legacyAppearance;
+  return { ...DEFAULT_SETTINGS, ...saved, theme, appearance };
 }
 
 export function saveSettings(settings: Settings): Promise<void> {

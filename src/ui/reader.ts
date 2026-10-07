@@ -39,16 +39,24 @@ const TEMPLATE = `
     <div class="mr-settings-backdrop" data-act="close-settings"></div>
     <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
       <header class="mr-settings-heading"><h2 id="mr-settings-title">Reading settings</h2><button class="mr-btn mr-icon-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
+      <section class="mr-settings-section" aria-label="Appearance">
+        <div class="mr-set-row mr-theme-row"><span>Theme<small>Choose your reading palette</small></span>
+          <div class="mr-theme-options" data-setting="theme" role="group" aria-label="Theme">
+            <button data-value="paper"><span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span>Aa</span></span><span class="mr-theme-name">Paper</span><span class="mr-theme-caption">Neutral</span></button>
+            <button data-value="sage"><span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span>Aa</span></span><span class="mr-theme-name">Sage</span><span class="mr-theme-caption">Soft green</span></button>
+            <button data-value="sepia"><span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span>Aa</span></span><span class="mr-theme-name">Sepia</span><span class="mr-theme-caption">Warm paper</span></button>
+            <button data-value="slate"><span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span>Aa</span></span><span class="mr-theme-name">Slate</span><span class="mr-theme-caption">Cool blue</span></button>
+          </div>
+        </div>
+        <div class="mr-set-row"><span>Appearance</span><div class="mr-seg mr-appearance" data-setting="appearance" role="group" aria-label="Appearance"><button data-value="auto">System</button><button data-value="light">Light</button><button data-value="dark">Dark</button></div></div>
+        <div class="mr-set-row"><span>Typeface</span><div class="mr-seg" data-setting="font" role="group" aria-label="Typeface"><button data-value="serif" class="mr-serif-sample">Serif</button><button data-value="sans">Sans</button></div></div>
+        <div class="mr-set-row"><span>Text size</span><div class="mr-seg"><button data-act="smaller" aria-label="Smaller text">A−</button><button data-act="larger" aria-label="Larger text" class="mr-larger-sample">A+</button></div></div>
+      </section>
       <section class="mr-settings-section" aria-label="Review">
         <div class="mr-set-row"><span>Changes</span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Marked</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
         <div class="mr-set-row"><span>Show</span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
         <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
         <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-      </section>
-      <section class="mr-settings-section" aria-label="Appearance">
-        <div class="mr-set-row"><span>Theme</span><div class="mr-seg" data-setting="theme" role="group" aria-label="Theme"><button data-value="auto">Auto</button><button data-value="light">Light</button><button data-value="sepia">Sepia</button><button data-value="dark">Dark</button></div></div>
-        <div class="mr-set-row"><span>Typeface</span><div class="mr-seg" data-setting="font" role="group" aria-label="Typeface"><button data-value="serif" class="mr-serif-sample">Serif</button><button data-value="sans">Sans</button></div></div>
-        <div class="mr-set-row"><span>Text size</span><div class="mr-seg"><button data-act="smaller" aria-label="Smaller text">A−</button><button data-act="larger" aria-label="Larger text" class="mr-larger-sample">A+</button></div></div>
       </section>
       <details class="mr-settings-section mr-keys-section"><summary>Keyboard shortcuts</summary><dl class="mr-keys">
         <dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Next / previous change</dd>
@@ -763,12 +771,12 @@ class Reader {
     r.classList.toggle('mode-changes', s.mode === 'changes');
     r.classList.toggle('mode-clean', s.mode === 'clean');
     r.classList.toggle('font-sans', s.font === 'sans');
-    r.classList.toggle('is-sepia', s.theme === 'sepia');
-    r.classList.toggle('is-dark', s.theme === 'dark' || (s.theme === 'auto' && this.dark.matches));
+    r.dataset.theme = s.theme;
+    r.classList.toggle('is-dark', s.appearance === 'dark' || (s.appearance === 'auto' && this.dark.matches));
     r.style.setProperty('--body-size', `${TEXT_SIZES[s.size] ?? 20}px`);
     for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === s.mode));
     for (const group of this.shadow.querySelectorAll<HTMLElement>('[data-setting]')) {
-      const value = s[group.dataset.setting as 'theme' | 'font' | 'images'];
+      const value = s[group.dataset.setting as 'theme' | 'appearance' | 'font' | 'images'];
       for (const b of group.querySelectorAll<HTMLElement>('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === value));
     }
     for (const view of this.views) if (view.rendered) renderDiagrams(view.rendered.diagrams, r.classList.contains('is-dark'), () => this.schedule(true));
@@ -939,7 +947,7 @@ class Reader {
     }
     const setting = target.closest<HTMLElement>('[data-setting] [data-value]');
     if (setting) {
-      const key = setting.parentElement!.dataset.setting as 'theme' | 'font' | 'images';
+      const key = setting.parentElement!.dataset.setting as 'theme' | 'appearance' | 'font' | 'images';
       this.update({ [key]: setting.dataset.value } as Partial<Settings>);
       return;
     }
