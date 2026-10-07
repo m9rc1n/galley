@@ -49,7 +49,17 @@ try {
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'light' }]);
   await page.goto(demoUrl, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('.mr-content').length === 3);
+  await page.waitForFunction(() => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'));
   const inspect = (fn, ...args) => page.evaluate(fn, ...args);
+  const typography = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    const title = getComputedStyle(s.querySelector('h1.mr-lead'));
+    const insertion = getComputedStyle(s.querySelector('ins.mr-ins'));
+    return { family: title.fontFamily, weight: title.fontWeight, insertion: insertion.backgroundColor };
+  });
+  assert.match(typography.family, /Galley Newsreader/);
+  assert.equal(typography.weight, '400');
+  assert.equal(typography.insertion, 'rgb(225, 235, 208)');
   const initial = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     return { files: [...s.querySelectorAll('.mr-document')].filter((el) => !el.hidden).length, nextButtons: s.querySelectorAll('.mr-next').length, filter: s.querySelector('[data-scope="changed"]').getAttribute('aria-pressed'), close: s.querySelector('[data-act="close"]').getAttribute('title'), hidden: s.querySelectorAll('.mr-content [hidden]').length, composer: s.querySelector('.mr-composer').hidden, threads: s.querySelectorAll('.mr-thread').length, rail: s.querySelectorAll('.mr-threads .mr-thread').length };
@@ -232,6 +242,14 @@ try {
     s.querySelector('[data-act="settings"]').click(); s.querySelector('[data-value="dark"]').click(); s.querySelector('.mr-settings [data-act="close-settings"]').click();
   });
   await page.screenshot({ path: join(screenshots, 'galley-reader-dark.png') });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="sepia"]').click());
+  await page.screenshot({ path: join(screenshots, 'galley-reader-sepia.png') });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="sans"]').click());
+  assert.match(await inspect(() => getComputedStyle(document.querySelector('#galley-reader').shadowRoot.querySelector('h1.mr-lead')).fontFamily), /Galley DM Sans/);
+  await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    s.querySelector('[data-value="serif"]').click(); s.querySelector('[data-value="dark"]').click();
+  });
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot, gap = s.querySelector('.mr-context-toggle'), root = s.querySelector('.mr-root');
     root.scrollTop += gap.getBoundingClientRect().top - 260;
@@ -301,6 +319,15 @@ try {
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'false');
   assert.deepEqual(errors, []);
+  // Host pages can forbid font URLs. The extension's bundled binary faces still load in that policy.
+  await page.goto(`${demoUrl}/?closed`, { waitUntil: 'networkidle0' });
+  await inspect(() => {
+    const policy = document.createElement('meta');
+    policy.httpEquiv = 'Content-Security-Policy'; policy.content = "font-src 'none'";
+    document.head.append(policy);
+    document.querySelector('#galley-launcher').shadowRoot.querySelector('button').click();
+  });
+  await page.waitForFunction(() => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'));
   console.log('Reader browser checks passed: continuous files, filtering, margin threads, selection chip, margin comment button, draft retargeting, posting, mobile composer, dark theme, current file in the sticky top bar, settings sheet focus, persisted Viewed progress, Mermaid versions, optional source files and line comments, Escape layers.');
 } finally {
   await browser.close();

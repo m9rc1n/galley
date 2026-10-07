@@ -72,6 +72,8 @@ async function writeStatic() {
   await writeFile(`${out}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
   await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
   await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
+  for (const font of ['Newsreader', 'DM-Sans'])
+    await cp(`${root}src/ui/fonts/${font}-OFL.txt`, `${out}/${font}-OFL.txt`);
 }
 
 const NEEDS_MANUAL_RELOAD = 'reload "Galley (dev)" once on chrome://extensions to apply it';
@@ -118,7 +120,7 @@ const options = (entry, file) => ({
   // Mermaid and the syntax highlighter are imported on demand by the content script as modules.
   format: file === 'mermaid.js' || file === 'highlighter.js' ? 'esm' : 'iife',
   target: ['chrome111'],
-  loader: { '.css': 'text' },
+  loader: { '.css': 'text', '.woff2': 'binary' },
   charset: 'utf8',
   sourcemap: 'inline',
   logLevel: 'silent',

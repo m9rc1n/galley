@@ -5,6 +5,7 @@ import { renderDiagrams } from './diagrams.ts';
 import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
+import { loadReaderFonts } from './fonts.ts';
 import { loadImage, renderDocument, renderSnippet, type RenderedBlock, type RenderedDoc } from './render.ts';
 import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
 import { DEFAULT_SETTINGS, TEXT_SIZES, loadSettings, saveSettings, type Settings } from './settings.ts';
@@ -240,6 +241,7 @@ class Reader {
   private readonly prevFocus: Element | null;
 
   constructor(private readonly onClose?: () => void) {
+    loadReaderFonts(document);
     this.host.id = __GALLEY_DEV__ ? 'galley-reader-dev' : 'galley-reader';
     // biome-ignore lint/plugin: the bundled stylesheet and a fixed template; no document content.
     this.shadow.innerHTML = `<style>${css}</style>${TEMPLATE}`;

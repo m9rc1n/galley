@@ -50,6 +50,7 @@ async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
   await page.evaluate((s) => localStorage.setItem('galley:settings', JSON.stringify(s)), settings);
   await page.goto(`${base}/?doc=${doc}`, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot?.querySelector('.mr-content'));
+  await page.evaluate(() => document.fonts.ready);
   await sleep(300);
   if (heading) {
     await page.evaluate((text) => {
@@ -64,7 +65,10 @@ async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
   await page.waitForFunction(
     () =>
       [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('img')]
-        .filter((img) => img.getBoundingClientRect().top < innerHeight)
+        .filter((img) => {
+          const rect = img.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
+        })
         .every((img) => img.complete),
     { timeout: 5000 },
   );

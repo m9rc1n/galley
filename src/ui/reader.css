@@ -5,30 +5,31 @@
 /* ------------------------------------------------------------------ palette */
 
 .mr-root {
-  --bg: #ffffff;
-  --fg: #242424;
-  --muted: #6b6b6b;
-  --soft: #f2f2f2;
-  --rule: #e6e6e6;
-  --code-bg: #f7f7f7;
-  --accent: #1a8917;
-  --add: #1a8917;
-  --add-bg: rgba(26, 137, 23, 0.14);
-  --add-wash: rgba(26, 137, 23, 0.06);
-  --mod: #c58a0c;
-  --del: #c4413a;
-  --del-bg: rgba(196, 65, 58, 0.09);
-  /* Change colours, tuned per theme: margin bars, the band under inserted words, code lines. */
-  --ins-band: rgba(26, 137, 23, 0.3);
-  --gutter-added: #3c9d39;
-  --gutter-modified: #d39a19;
-  --gutter-removed: #d0544b;
-  --code-add: rgba(26, 137, 23, 0.07);
-  --code-del: rgba(196, 65, 58, 0.07);
+  --bg: #fffefa;
+  --fg: #243e32;
+  --muted: #646e64;
+  --soft: #f1f4e9;
+  --rule: #d9dfd2;
+  --code-bg: #f6f7ef;
+  --accent: #506b38;
+  --add: #506b38;
+  --add-bg: #e1ebd0;
+  --add-wash: #f1f5e8;
+  --mod: #9c731b;
+  --del: #895d50;
+  --del-bg: #f5e9df;
+  --del-strike: #ac796d;
+  /* Soft word highlights, with stronger margin markers for scanning changes. */
+  --ins-band: #e1ebd0;
+  --gutter-added: #7c9c5a;
+  --gutter-modified: #b28b37;
+  --gutter-removed: #ac796d;
+  --code-add: #f0f5e7;
+  --code-del: #f8efe8;
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
 
-  --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
-  --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Galley Newsreader", Georgia, "Times New Roman", serif;
+  --sans: "Galley DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --rail-width: 220px;
   --body-font: var(--serif);
@@ -50,6 +51,7 @@
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
   text-rendering: optimizeLegibility;
   outline: none;
 }
@@ -71,9 +73,10 @@
   --add-bg: rgba(85, 122, 44, 0.16);
   --add-wash: rgba(85, 122, 44, 0.08);
   --mod: #a8740c;
-  --del: #a8432e;
+  --del: #945e47;
+  --del-strike: #aa7760;
   --del-bg: rgba(168, 67, 46, 0.1);
-  --ins-band: rgba(85, 122, 44, 0.3);
+  --ins-band: #e4e7c9;
   --gutter-added: #6e9045;
   --gutter-modified: #bf8a22;
   --gutter-removed: #b9604a;
@@ -82,24 +85,25 @@
 }
 
 .mr-root.is-dark {
-  --bg: #121212;
-  --fg: #e6e6e6;
-  --muted: #a0a0a0;
-  --soft: #222222;
-  --rule: #2e2e2e;
-  --code-bg: #1b1b1b;
-  --accent: #3fb950;
-  --add: #3fb950;
+  --bg: #19231e;
+  --fg: #e6ebdd;
+  --muted: #aab6a7;
+  --soft: #253128;
+  --rule: #354338;
+  --code-bg: #202b24;
+  --accent: #b5d291;
+  --add: #b5d291;
   --add-bg: rgba(63, 185, 80, 0.24);
   --add-wash: rgba(63, 185, 80, 0.08);
   --mod: #e3b341;
-  --del: #ff7b72;
+  --del: #dfada0;
+  --del-strike: #c49080;
   --del-bg: rgba(255, 123, 114, 0.13);
   /* On a dark page colour needs more strength to read at the same weight. */
-  --ins-band: rgba(63, 185, 80, 0.46);
-  --gutter-added: #3fb950;
+  --ins-band: #384c2f;
+  --gutter-added: #9bb97c;
   --gutter-modified: #e3b341;
-  --gutter-removed: #ff7b72;
+  --gutter-removed: #c49080;
   --code-add: rgba(63, 185, 80, 0.11);
   --code-del: rgba(255, 123, 114, 0.1);
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
@@ -243,17 +247,17 @@
 .mr-content > h1.mr-lead {
   margin: 0;
   color: var(--fg);
-  font-family: var(--sans);
-  font-size: 42px;
-  font-weight: 700;
-  line-height: 1.18;
-  letter-spacing: -0.022em;
+  font-family: var(--body-font);
+  font-size: 52px;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
 }
 
 .mr-subtitle {
   margin: 14px 0 0;
   color: var(--muted);
-  font-family: var(--sans);
+  font-family: var(--body-font);
   font-size: 22px;
   line-height: 1.45;
 }
@@ -344,29 +348,30 @@
 .mr-content :where(h1, h2, h3, h4, h5, h6) {
   margin: 1.95em 0 0;
   color: var(--fg);
-  font-family: var(--sans);
-  font-weight: 700;
-  letter-spacing: -0.016em;
+  font-family: var(--body-font);
+  font-weight: 400;
+  letter-spacing: -0.02em;
   scroll-margin-top: 84px;
 }
 
 .mr-content h1 {
-  font-size: 1.6em;
+  font-size: 1.9em;
   line-height: 1.22;
 }
 
 .mr-content h2 {
-  font-size: 1.36em;
+  font-size: 1.6em;
   line-height: 1.28;
 }
 
 .mr-content h3 {
-  font-size: 1.16em;
+  font-size: 1.3em;
   line-height: 1.32;
 }
 
 .mr-content :where(h4, h5, h6) {
-  font-size: 1em;
+  font-size: 1.1em;
+  font-weight: 600;
   line-height: 1.4;
 }
 
@@ -380,7 +385,7 @@
 }
 
 .mr-content strong {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .mr-content :where(ul, ol) {
@@ -414,7 +419,7 @@
 
 .mr-content blockquote {
   padding-left: 1.15em;
-  border-left: 3px solid var(--fg);
+  border-left: 2px solid var(--gutter-added);
   font-style: italic;
 }
 
@@ -659,20 +664,24 @@
   text-decoration: none;
 }
 
-/* Inserted words carry a soft band through the lower half of the letters. It stays inside its own
-   line box, so long insertions never merge into slabs or touch the line above. */
+/* Paper-like highlights follow each wrapped fragment without changing word spacing. */
 .mode-changes .mr-content ins.mr-ins {
-  background-image: linear-gradient(transparent 46%, var(--ins-band) 46%, var(--ins-band) 94%, transparent 94%);
+  background: var(--ins-band);
+  border-radius: 2px;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
 
-/* Deleted words are struck through and quieter, without a fill. */
+/* Warm deletion highlights retain the strike-through as a second change cue. */
 .mode-changes .mr-content del.mr-del {
   color: var(--del);
+  background: var(--del-bg);
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
-  text-decoration-color: var(--del);
+  text-decoration-color: var(--del-strike);
 }
 
 /* Code wraps instead of scrolling sideways: every line is a block, and wrapped parts continue under
@@ -1001,7 +1010,7 @@
 
   .mr-title,
   .mr-content > h1.mr-lead {
-    font-size: 32px;
+    font-size: 38px;
   }
 
   .mr-subtitle {
@@ -1975,8 +1984,8 @@
 .mr-file-threads .mr-thread {
   padding: 12px 14px;
   border: 1px solid var(--rule);
-  border-radius: 12px;
-  background: var(--bg);
+  border-radius: 6px;
+  background: var(--soft);
 }
 
 .mr-content .mr-thread {

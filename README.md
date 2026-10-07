@@ -36,7 +36,7 @@ Reading fetches files and threads from your code host; posting sends your commen
 
 ![The real Galley reader: document changes and the team's review conversation in context.](store/assets/screenshot-1-changes.jpg)
 
-Light, sepia and dark themes, serif or sans text, adjustable type size and a clean reading mode let you make the reader comfortable for you.
+Newsreader brings the website’s reading typography into the extension, with DM Sans for the controls and soft sage and rose highlights for changes. Both fonts ship locally with Galley. Light, sepia and dark themes, serif or sans text, adjustable type size and a clean reading mode let you make the reader comfortable for you.
 
 ## Try it
 
