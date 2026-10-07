@@ -45,11 +45,12 @@ const browser = await puppeteer.launch({ executablePath: findChrome(), headless:
 async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: scale });
-  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: settings.theme === 'dark' ? 'dark' : 'light' }]);
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: settings.appearance === 'dark' ? 'dark' : 'light' }]);
   await page.goto(`${base}/?closed`);
   await page.evaluate((s) => localStorage.setItem('galley:settings', JSON.stringify(s)), settings);
   await page.goto(`${base}/?doc=${doc}`, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot?.querySelector('.mr-content'));
+  await page.evaluate(() => document.fonts.ready);
   await sleep(300);
   if (heading) {
     await page.evaluate((text) => {
@@ -64,7 +65,10 @@ async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
   await page.waitForFunction(
     () =>
       [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('img')]
-        .filter((img) => img.getBoundingClientRect().top < innerHeight)
+        .filter((img) => {
+          const rect = img.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
+        })
         .every((img) => img.complete),
     { timeout: 5000 },
   );
@@ -78,7 +82,7 @@ async function save(page, name, type = 'jpeg') {
   console.log(`  ${name}`);
 }
 
-const light = { theme: 'light', font: 'serif', size: 1, mode: 'changes' };
+const light = { theme: 'sage', appearance: 'light', font: 'serif', size: 1, mode: 'changes' };
 console.log('store/assets/');
 await save(await readerShot({ settings: light }), 'screenshot-1-changes.jpg');
 
@@ -91,7 +95,7 @@ await sleep(600);
 await save(entry, 'screenshot-2-entry.jpg');
 
 await save(await readerShot({ settings: light, heading: 'A small browser extension' }), 'screenshot-3-tables.jpg');
-await save(await readerShot({ settings: { ...light, theme: 'dark', mode: 'clean' }, heading: 'Goals' }), 'screenshot-4-clean-dark.jpg');
+await save(await readerShot({ settings: { ...light, appearance: 'dark', mode: 'clean' }, heading: 'Goals' }), 'screenshot-4-clean-dark.jpg');
 
 await save(await readerShot({ settings: { ...light, theme: 'sepia' }, heading: 'A small browser extension', menu: 'settings' }), 'screenshot-5-sepia-settings.jpg');
 

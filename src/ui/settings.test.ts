@@ -1,16 +1,38 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings } from './settings.ts';
+import { APPEARANCES, DEFAULT_SETTINGS, THEMES, loadSettings, saveSettings } from './settings.ts';
 
 afterEach(() => localStorage.clear());
 
 it('merges saved preferences with new defaults and isolates the returned settings', async () => {
   localStorage.setItem('galley:settings', JSON.stringify({ theme: 'sepia' }));
   const settings = await loadSettings();
-  expect(settings).toEqual({ ...DEFAULT_SETTINGS, theme: 'sepia' });
+  expect(settings).toEqual({ ...DEFAULT_SETTINGS, theme: 'sepia', appearance: 'light' });
   settings.size = 4;
   expect(DEFAULT_SETTINGS.size).toBe(2);
   await saveSettings(settings);
   expect((await loadSettings()).size).toBe(4);
+});
+
+it.each([
+  ['auto', 'sage', 'auto'],
+  ['light', 'sage', 'light'],
+  ['dark', 'sage', 'dark'],
+  ['sepia', 'sepia', 'light'],
+])('preserves the former %s theme when splitting palette and appearance', async (old, theme, appearance) => {
+  localStorage.setItem('galley:settings', JSON.stringify({ theme: old, font: 'sans', size: 3 }));
+  expect(await loadSettings()).toEqual({ ...DEFAULT_SETTINGS, theme, appearance, font: 'sans', size: 3 });
+});
+
+it.each(THEMES.flatMap((theme) => APPEARANCES.map((appearance) => ({ theme, appearance }))))(
+  'remembers $theme and $appearance independently', async ({ theme, appearance }) => {
+    await saveSettings({ ...DEFAULT_SETTINGS, theme, appearance });
+    expect(await loadSettings()).toEqual({ ...DEFAULT_SETTINGS, theme, appearance });
+  },
+);
+
+it('falls back to valid palette and appearance defaults for unknown saved choices', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ theme: 'unknown', appearance: 'unknown' }));
+  expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
 });
 
 it('uses extension-local storage instead of the host page storage', async () => {

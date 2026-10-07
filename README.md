@@ -36,7 +36,7 @@ Reading fetches files and threads from your code host; posting sends your commen
 
 ![The real Galley reader: document changes and the team's review conversation in context.](store/assets/screenshot-1-changes.jpg)
 
-Light, sepia and dark themes, serif or sans text, adjustable type size and a clean reading mode let you make the reader comfortable for you.
+Newsreader brings the website’s reading typography into the extension, with DM Sans for the controls and soft sage and rose highlights for changes. Both fonts ship locally with Galley. Paper, Sage, Sepia and Slate palettes each offer light, dark or system appearance. Serif or sans text, adjustable type size and a clean reading mode let you make the reader comfortable for you.
 
 ## Try it
 
@@ -79,7 +79,7 @@ Open a pull or merge request and press **Read** in the bottom-right corner. The 
 | <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Post the comment in the focused composer |
 | <kbd>Esc</kbd> | Close the innermost layer: menu, comment chip, empty composer, then the reader |
 
-The top bar stays quiet: the current document (a status dot, its name and position), change navigation, a **Viewed** toggle and **Reading settings**. The document menu lists every changed file with its folder, status and viewed progress, under the pull request title. Reading settings opens as a small sheet (a bottom sheet on phones) with Changes/Clean, the paragraph filter, code files, external images, theme (auto, light, sepia, dark), serif or sans text and text size. Long documents get a contents rail on the right, with a dot next to every section that changed. A draft is never discarded by Esc; only **Cancel** discards it.
+The top bar stays quiet: the current document (a status dot, its name and position), change navigation, a **Viewed** toggle and **Reading settings**. The document menu lists every changed file with its folder, status and viewed progress, under the pull request title. Reading settings opens as a small sheet (a bottom sheet on phones) with Changes/Clean, the paragraph filter, code files, external images, a reading palette (Paper, Sage, Sepia, Slate), appearance (System, Light, Dark), serif or sans text and text size. Long documents get a contents rail on the right, with a dot next to every section that changed. A draft is never discarded by Esc; only **Cancel** discards it.
 
 ### GitLab (gitlab.com and self-managed)
 

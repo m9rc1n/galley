@@ -5,36 +5,39 @@
     <title>Galley — Make room for better reviews</title>
     <style>
       html, body { width: var(--artwork-width, 1400px); height: var(--artwork-height, 560px); margin: 0; overflow: hidden; }
-      body { background: #f4f3eb; color: #25392f; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+      body { background: #f6f5ef; color: #243e32; font-family: var(--sans); }
+      body { font-optical-sizing: auto; font-kerning: normal; -webkit-font-smoothing: antialiased; }
       * { box-sizing: border-box; }
       .canvas { position: relative; width: 1400px; height: 560px; transform: scale(var(--artwork-scale, 1)); transform-origin: top left; overflow: hidden; }
       .copy { position: absolute; left: 64px; top: 46px; width: 550px; }
       .brand { display: flex; align-items: center; gap: 12px; }
       .brand svg { width: 38px; height: 38px; }
-      .word { font: 700 33px/1 Georgia, serif; letter-spacing: -1.4px; }
-      .platforms { margin-left: 18px; color: #67756a; font: 11px/1.4 system-ui, sans-serif; letter-spacing: 1.3px; text-transform: uppercase; }
-      h1 { margin: 55px 0 22px; font: 400 65px/1.04 Georgia, serif; letter-spacing: -2.8px; }
+      .word { font: 600 33px/1 var(--serif); letter-spacing: -1.4px; }
+      .platforms { margin-left: 18px; color: #67756a; font: 11px/1.4 var(--sans); letter-spacing: 1.3px; text-transform: uppercase; }
+      h1 { margin: 55px 0 22px; font: 400 65px/1.04 var(--serif); letter-spacing: -2.8px; }
       .description { margin: 0; color: #55645a; font-size: 21px; line-height: 1.5; }
       .promise { position: absolute; left: 64px; bottom: 43px; }
       .promise strong { display: block; margin-bottom: 9px; font-size: 15px; font-weight: 550; }
       .promise p { margin: 0; color: #657469; font-size: 12px; letter-spacing: .25px; }
       .scene { position: absolute; left: 693px; top: 0; width: 707px; height: 560px; }
       .scene::before { content: ""; position: absolute; inset: 0; background: #e4eadc; border-radius: 180px 0 0 0; }
-      .paper { position: absolute; left: 36px; top: 42px; width: 614px; height: 476px; padding: 29px 43px; background: #fffefa; border: 1px solid #e3e5dc; border-radius: 8px; box-shadow: 0 12px 36px #25392f0d; }
+      .paper { position: absolute; left: 36px; top: 42px; width: 614px; height: 476px; padding: 29px 43px; background: #fffefa; border: 1px solid #e3e5dc; border-radius: 8px; box-shadow: 0 12px 36px #243e320d; }
       .meta { display: flex; justify-content: space-between; gap: 15px; color: #81897d; font: 10px/1.4 ui-monospace, monospace; }
-      .meta span:last-child { font: 9px/1.4 system-ui, sans-serif; letter-spacing: .6px; text-transform: uppercase; }
-      h2 { margin: 37px 0 24px; font: 400 37px/1.12 Georgia, serif; letter-spacing: -1.1px; }
-      .paragraph { position: relative; margin: 0; font: 20px/1.55 Georgia, serif; }
+      .meta span:last-child { font: 9px/1.4 var(--sans); letter-spacing: .6px; text-transform: uppercase; }
+      h2 { margin: 37px 0 24px; font: 400 46px/1.08 var(--serif); letter-spacing: -1.1px; }
+      .paragraph { position: relative; margin: 0; font: 21px/1.5 var(--serif); }
       .paragraph::before { content: ""; position: absolute; left: -20px; top: 5px; bottom: 5px; width: 2px; background: #9caf91; border-radius: 2px; }
-      ins { padding: 1px 2px; background: #e1ead9; text-decoration: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-      .context { margin: 18px 0 0; color: #7a8276; font: 16px/1.5 Georgia, serif; }
+      ins { padding: 1px 2px; background: #e1ebd0; text-decoration: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+      del { color: #895d50; background: #f5e9df; text-decoration-color: #ac796d; text-decoration-thickness: 1.5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+      del + ins { margin-inline-start: .18em; }
+      .context { margin: 18px 0 0; color: #7a8276; font: 16px/1.5 var(--serif); }
       .thread { position: relative; margin-top: 28px; padding: 17px 20px 18px; border-radius: 8px; background: #f0f3e9; }
       .thread::before { content: ""; position: absolute; top: -13px; left: 26px; height: 13px; width: 1px; background: #b6c3ac; }
       .thread-heading { display: flex; align-items: center; gap: 8px; color: #64735d; font-size: 10px; }
       .avatar { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: #dce6d0; color: #4b6241; font-size: 9px; font-weight: 600; }
       .thread-heading strong { font-weight: 600; color: #42563b; }
-      .thread p { margin: 10px 0 0; font: 18px/1.4 Georgia, serif; }
-      .thread .reply { margin-top: 12px; color: #697760; font: 12px/1.4 system-ui, sans-serif; }
+      .thread p { margin: 10px 0 0; font: 18px/1.4 var(--serif); }
+      .thread .reply { margin-top: 12px; color: #697760; font: 12px/1.4 var(--sans); }
       .thread .reply strong { color: #42563b; font-weight: 550; }
     </style>
   </head>
@@ -50,7 +53,7 @@
         <article class="paper">
           <div class="meta"><span>team / review-culture.md</span><span>Illustrated review</span></div>
           <h2>A little room to think.</h2>
-          <p class="paragraph">Give every reviewer <ins>time to understand the change</ins> before asking for an approval.</p>
+          <p class="paragraph">Give every reviewer <del>just the diff</del><ins>time to understand the change</ins> before asking for an approval.</p>
           <p class="context">Keep the context close, so the conversation can move the idea forward.</p>
           <aside class="thread">
             <div class="thread-heading"><span class="avatar">D</span><strong>Dana</strong><span>on this paragraph</span></div>

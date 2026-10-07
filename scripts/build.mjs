@@ -17,7 +17,7 @@ const common = {
   bundle: true,
   format: 'iife',
   target: ['chrome111', 'firefox128', 'safari16'],
-  loader: { '.css': 'text' },
+  loader: { '.css': 'text', '.woff2': 'binary' },
   charset: 'utf8',
   legalComments: 'eof',
   logLevel: 'warning',
@@ -55,6 +55,10 @@ async function thirdPartyNotices() {
     const url = meta.homepage ?? meta.repository?.url ?? meta.repository ?? '';
     text += `${'-'.repeat(72)}\n${meta.name} ${meta.version} — ${meta.license ?? 'see below'}\n${url}\n\n`;
     text += file ? `${(await readFile(`${root}${dir}/${file}`, 'utf8')).trim()}\n\n` : 'License text not included in the package.\n\n';
+  }
+  for (const font of ['Newsreader', 'DM-Sans']) {
+    text += `${'-'.repeat(72)}\n${font} — SIL Open Font License 1.1\n\n`;
+    text += `${(await readFile(`${root}src/ui/fonts/${font}-OFL.txt`, 'utf8')).trim()}\n\n`;
   }
   return text;
 }

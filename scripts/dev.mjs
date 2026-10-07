@@ -74,6 +74,8 @@ async function writeStatic() {
   await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
   await cp(`${root}src/ui/diagram-frame.html`, `${out}/diagram-frame.html`);
   await cp(`${root}src/ui/highlight-frame.html`, `${out}/highlight-frame.html`);
+  for (const font of ['Newsreader', 'DM-Sans'])
+    await cp(`${root}src/ui/fonts/${font}-OFL.txt`, `${out}/${font}-OFL.txt`);
 }
 
 const NEEDS_MANUAL_RELOAD = 'reload "Galley (dev)" once on chrome://extensions to apply it';
@@ -119,7 +121,7 @@ const options = (entry, file) => ({
   bundle: true,
   format: 'iife',
   target: ['chrome111'],
-  loader: { '.css': 'text' },
+  loader: { '.css': 'text', '.woff2': 'binary' },
   charset: 'utf8',
   sourcemap: 'inline',
   logLevel: 'silent',

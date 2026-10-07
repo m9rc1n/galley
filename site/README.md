@@ -1,6 +1,6 @@
 # Galley website
 
-A static, responsive product website. Newsreader headlines and DM Sans interface text are self-hosted alongside the site's assets, with no analytics, remote font requests, or client-side framework. Their SIL Open Font Licenses are included in `site/fonts/`. The real reader demo and a privacy page generated from `PRIVACY.md` ship alongside it.
+A static, responsive product website. Newsreader headlines and DM Sans interface text are self-hosted alongside the site's assets, with no analytics, remote font requests, or client-side framework. Their SIL Open Font Licenses are included in `src/ui/fonts/` (shared with the extension). The real reader demo and a privacy page generated from `PRIVACY.md` ship alongside it.
 
 ## Preview locally
 

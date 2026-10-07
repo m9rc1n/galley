@@ -4,7 +4,7 @@
 
 Galley exists to make reviewing clearer, calmer and easier on the people who do it. The artwork pairs a readable change with a thoughtful question and a reply: understanding and conversation belong together.
 
-Warm paper, forest ink and a muted green insertion keep the emphasis on the words. The extension's existing proof-text icon anchors the identity. System fonts, inline SVG and typeset HTML make the artwork reproducible without hosted fonts or external image services.
+Warm paper, forest ink and a muted green insertion keep the emphasis on the words. The extension's existing proof-text icon anchors the identity. Locally bundled Newsreader and DM Sans fonts, inline SVG and typeset HTML make the artwork reproducible without hosted fonts or external image services. The same fonts, sage insertions, rose deletions and replacement spacing are used in the website and reader.
 
 The illustrated review is labelled as an illustration. Product screenshots come from the actual demo reader. Privacy copy names concrete boundaries: open source, local rendering, no analytics and no Galley server. The README and privacy policy explain that files are fetched from the code host, comments are posted back to the review, and loading external images is a choice.
 
