@@ -112,7 +112,8 @@ export function renderDiagrams(diagrams: Diagram[], dark: boolean, changed: () =
           const code = diagramCode(version.source);
           const runtime = (globalThis as { chrome?: { runtime?: { getURL?: (path: string) => string } } }).chrome?.runtime;
           const url = runtime?.getURL?.('mermaid.js') ?? new URL('build/mermaid.js', location.href).href;
-          const mermaid = await (engine ??= import(url).then((module) => module.default as typeof import('mermaid')['default']));
+          engine ??= import(url).then((module) => module.default as typeof import('mermaid')['default']);
+          const mermaid = await engine;
           const config = {
             startOnLoad: false, securityLevel: 'strict' as const, htmlLabels: false,
             theme: dark ? 'dark' as const : 'default' as const,

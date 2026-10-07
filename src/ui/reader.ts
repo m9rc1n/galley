@@ -241,6 +241,7 @@ class Reader {
 
   constructor(private readonly onClose?: () => void) {
     this.host.id = __GALLEY_DEV__ ? 'galley-reader-dev' : 'galley-reader';
+    // biome-ignore lint/plugin: the bundled stylesheet and a fixed template; no document content.
     this.shadow.innerHTML = `<style>${css}</style>${TEMPLATE}`;
     const q = (sel: string) => this.shadow.querySelector<HTMLElement>(sel)!;
     this.root = q('.mr-root');
@@ -271,6 +272,7 @@ class Reader {
     };
     this.commentBtn.type = 'button';
     this.commentBtn.dataset.act = 'comment-block';
+    // biome-ignore lint/plugin: a bundled icon constant.
     this.commentBtn.innerHTML = icons.comment;
     this.commentBtn.hidden = true;
     this.rail.setAttribute('aria-label', 'Review comments');
@@ -582,6 +584,7 @@ class Reader {
       item.append(dot, name, h('span', 'mr-menu-status', STATUS_LABEL[d.status]));
       if (this.viewed.get(d)?.value) {
         const check = h('span', 'mr-file-check');
+        // biome-ignore lint/plugin: a bundled icon constant.
         check.innerHTML = icons.check;
         check.setAttribute('aria-label', 'Viewed');
         item.append(check);
@@ -593,6 +596,7 @@ class Reader {
 
   private skeleton(): HTMLElement {
     const s = h('div', 'mr-skeleton');
+    // biome-ignore lint/plugin: fixed placeholder markup.
     s.innerHTML = '<i class="h"></i><i></i><i></i><i class="s"></i><i></i><i></i><i></i><i class="s"></i>';
     return s;
   }
@@ -834,7 +838,10 @@ class Reader {
     if (e.key === 'Escape') {
       e.preventDefault();
       if (this.closeMenus() || this.submitting) return;
-      if (!this.el.chip.hidden) return this.hideChip();
+      if (!this.el.chip.hidden) {
+        this.hideChip();
+        return;
+      }
       if (!this.el.composer.hidden) {
         // An empty composer closes; a draft is only ever discarded with Cancel.
         if (!this.textarea.value.trim()) this.closeComposer(true);
@@ -919,28 +926,38 @@ class Reader {
     }
 
     const scope = target.closest<HTMLElement>('[data-scope]');
-    if (scope) return this.update({ scope: scope.dataset.scope as Settings['scope'] });
+    if (scope) {
+      this.update({ scope: scope.dataset.scope as Settings['scope'] });
+      return;
+    }
     const mode = target.closest<HTMLElement>('[data-mode]');
-    if (mode) return this.update({ mode: mode.dataset.mode as Settings['mode'] });
+    if (mode) {
+      this.update({ mode: mode.dataset.mode as Settings['mode'] });
+      return;
+    }
     const setting = target.closest<HTMLElement>('[data-setting] [data-value]');
     if (setting) {
       const key = setting.parentElement!.dataset.setting as 'theme' | 'font' | 'images';
-      return this.update({ [key]: setting.dataset.value } as Partial<Settings>);
+      this.update({ [key]: setting.dataset.value } as Partial<Settings>);
+      return;
     }
 
     const action = target.closest<HTMLElement>('[data-act]');
     if (!action) return;
     switch (action.dataset.act) {
       case 'close':
-        return this.close();
+        this.close();
+        return;
       case 'files':
         if (this.views.some((view) => !view.section.hidden)) this.toggleMenu(this.el.files, action);
         return;
       case 'settings':
-        return this.toggleMenu(this.el.settings, action);
+        this.toggleMenu(this.el.settings, action);
+        return;
       case 'code-files':
         if (!this.settings.codeFiles && !this.source?.codeDocs?.length) return;
-        return this.update({ codeFiles: !this.settings.codeFiles });
+        this.update({ codeFiles: !this.settings.codeFiles });
+        return;
       case 'close-settings':
         this.closeMenus();
         return;
@@ -948,13 +965,17 @@ class Reader {
         void this.toggleViewed(Number(action.dataset.doc));
         return;
       case 'smaller':
-        return this.update({ size: Math.max(0, this.settings.size - 1) });
+        this.update({ size: Math.max(0, this.settings.size - 1) });
+        return;
       case 'larger':
-        return this.update({ size: Math.min(TEXT_SIZES.length - 1, this.settings.size + 1) });
+        this.update({ size: Math.min(TEXT_SIZES.length - 1, this.settings.size + 1) });
+        return;
       case 'prev':
-        return this.step(-1);
+        this.step(-1);
+        return;
       case 'next':
-        return this.step(1);
+        this.step(1);
+        return;
       case 'doc':
         void this.show(Number(action.dataset.doc));
         return;
@@ -1049,7 +1070,7 @@ class Reader {
     const button = this.commentBtn;
     const hover = this.hover;
     const el = hover?.el;
-    button.hidden = !el || !el.isConnected || Boolean(el.closest('[hidden]')) || !el.getClientRects().length;
+    button.hidden = !el?.isConnected || Boolean(el.closest('[hidden]')) || !el.getClientRects().length;
     if (button.hidden || !hover || !el) return;
     const first = el.getClientRects()[0];
     const line = parseFloat(getComputedStyle(el).lineHeight) || first.height;
@@ -1119,7 +1140,10 @@ class Reader {
     if (this.submitting || node.closest('a, button, summary, input, .mr-thread') || !this.shadowSelection()?.isCollapsed) return;
     const hit = this.blockAt(node);
     const target = hit && paragraphTarget(hit.view.doc, hit.block, hit.side);
-    if (!hit || !target) return this.hideChip();
+    if (!hit || !target) {
+      this.hideChip();
+      return;
+    }
     this.showChip(new DOMRect(e.clientX, e.clientY, 0, 0), { target, elements: [hit.el] });
   }
 
@@ -1431,7 +1455,7 @@ class Reader {
     this.headings.forEach((hd, i) => {
       if (hd.el.getBoundingClientRect().top < 140) activeHeading = i;
     });
-    this.headings.forEach((hd, i) => hd.link.classList.toggle('is-active', i === activeHeading));
+    for (const [i, hd] of this.headings.entries()) hd.link.classList.toggle('is-active', i === activeHeading);
 
     const list = this.visibleChanges();
     if (!list.length) {

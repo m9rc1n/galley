@@ -1,0 +1,20 @@
+import { expect, it } from 'vitest';
+import { encodePath, isCodePath, isMarkdownPath, resolveHref } from './paths.ts';
+
+it('links and images resolve like on GitHub and GitLab', () => {
+  expect(resolveHref('docs/rfcs/a.md', 'img/x.png')).toStrictEqual({ type: 'repo', path: 'docs/rfcs/img/x.png', suffix: '' });
+  expect(resolveHref('docs/rfcs/a.md', '../adr/b.md#context')).toStrictEqual({ type: 'repo', path: 'docs/adr/b.md', suffix: '#context' });
+  expect(resolveHref('docs/a.md', '/README.md')).toStrictEqual({ type: 'repo', path: 'README.md', suffix: '' });
+  expect(resolveHref('README.md', './docs/My%20Doc.md?plain=1')).toStrictEqual({ type: 'repo', path: 'docs/My Doc.md', suffix: '?plain=1' });
+  expect(resolveHref('a.md', 'https://example.dev/y')).toStrictEqual({ type: 'external', href: 'https://example.dev/y' });
+  expect(resolveHref('a.md', 'mailto:team@example.dev')).toStrictEqual({ type: 'external', href: 'mailto:team@example.dev' });
+  expect(resolveHref('a.md', '#intro')).toStrictEqual({ type: 'anchor', hash: 'intro' });
+  expect(encodePath('docs/My Doc #1.md')).toBe('docs/My%20Doc%20%231.md');
+  expect(isMarkdownPath('docs/guide.MD')).toBe(true);
+  expect(isMarkdownPath('src/index.ts')).toBe(false);
+});
+
+it('only known source/configuration paths are offered as code files', () => {
+  for (const path of ['src/App.tsx', 'main.py', 'main.go', 'Dockerfile', '.env.local', '.gitignore', 'config.yaml', 'src/options.json']) expect(isCodePath(path), path).toBe(true);
+  for (const path of ['image.png', 'movie.mp4', 'archive.zip', 'font.woff', 'README.md', 'unknown.blob']) expect(isCodePath(path), path).toBe(false);
+});

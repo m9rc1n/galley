@@ -12,23 +12,52 @@ npm run dev        # dev build in dist/dev with live reload; load it once via ch
 npm run demo       # or: try the reader on a sample merge request, no extension needed
 ```
 
-Node 22.12 or newer is required (the tests run TypeScript directly). See "Develop in your own Chrome" in the [README](README.md#develop-in-your-own-chrome) for the dev loop.
+Node 22.12 or newer is required (22.12+, 24 or 26+). See "Develop in your own Chrome" in the [README](README.md#develop-in-your-own-chrome) for the dev loop.
 
 ## Before you open a pull request
 
 ```bash
-npm test           # unit tests
-npm run typecheck  # TypeScript
+npm run check      # typecheck, lint and unit tests
 npm run build      # both browser builds
+npm run test:e2e   # browser checks; needed for anything that changes how the reader looks or behaves
 ```
 
-CI runs the same three. Reader changes should also pass `node scripts/check-reader.mjs` with the demo running; set `CHROME_PATH` if Chrome is installed elsewhere. If you change what the reader looks like, include a screenshot; `npm run store-assets` redraws the store graphics from the real reader.
+CI runs all of these, on Node 22 and 24, and fails if test coverage drops. `test:e2e` needs Chrome; set `CHROME_PATH` if it is installed somewhere unusual. If you change what the reader looks like, include a screenshot; `npm run store-assets` redraws the store graphics from the real reader.
+
+## Tests and lint
+
+**Unit tests** use [Vitest](https://vitest.dev) and sit next to the code they cover: `src/core/markdown.ts` is tested by `src/core/markdown.test.ts`. Each folder is its own Vitest project (`core`, `platforms`, `background`, `ui`), so a layer can be run alone and the report is grouped by folder:
+
+```bash
+npm test                          # everything, once
+npm run test:watch                # re-run on every save
+npx vitest run --project core     # one folder
+npx vitest run src/ui/render      # files matching a name
+npm run test:coverage             # coverage report in coverage/, and the thresholds
+```
+
+- Tests in `core` and `platforms` run in Node. `ui` tests run in jsdom; any other file that needs a DOM starts with `// @vitest-environment jsdom`.
+- `src/testing/` holds what tests share: `renderMarkdown` (render two versions of a document), `mockFetch` and `jsonResponse`, and an in-memory IndexedDB for the GitHub token store. It is never part of a build.
+- `fetch`, globals and storage are restored after every test, so tests cannot leak into each other. Stub with `vi.stubGlobal` and `vi.spyOn`, or `mockFetch`; don't assign globals by hand.
+- Write the test for the behaviour a reviewer would notice, and say it in the title: *"raw HTML cannot borrow a block id to hide a real edit"*, not *"test sanitize"*. For a bug fix, write the test that fails first.
+- **Coverage thresholds** in `vitest.config.ts` are set just under today's numbers per folder, so coverage can rise but not slip. When you add tests, raise the numbers. `src/ui/reader.ts` is a 1,500-line DOM controller that is driven by `e2e/` rather than unit tests, which is why `ui` is lower.
+
+**Browser checks** (`e2e/reader.mjs`) drive the real reader in Chrome against the demo page: layout at several widths, selection, focus, the sticky bar, comments. `npm run test:e2e` builds the demo, serves it and runs them; screenshots land in `reports/e2e/`.
+
+**Lint** is [Biome](https://biomejs.dev) (`npm run lint`), configured in `biome.jsonc` with its recommended rules plus `noFloatingPromises`; formatting is deliberately not enforced. One rule is custom (`lint/no-unsanitized-html.grit`): writing a string as HTML (`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`) is an error, because this extension renders content from pull requests. Document text must go through the sanitiser in `src/ui/render.ts` or be built from DOM nodes. A static template is fine if you say why:
+
+```ts
+// biome-ignore lint/plugin: a bundled icon constant.
+button.innerHTML = icons.comment;
+```
+
+Suppressions need a reason after the colon, and a reviewer should be able to agree with it.
 
 ## Guidelines
 
 - **Keep it small and dependency-light.** The reader ships as one script with a separate lazy-loaded Mermaid engine; new runtime dependencies need a good reason, and their licence must be MIT-compatible (the build lists them in `THIRD_PARTY_NOTICES.txt`).
 - **Never trust document content.** Pull requests come from forks. Everything rendered goes through DOMPurify; don't add paths around it.
-- **Tests for logic, screenshots for looks.** Diffing, parsing and URL handling live in `src/core` and `src/platforms` and are unit-tested. UI changes are checked in the demo.
+- **Tests for logic, screenshots for looks.** Diffing, parsing, URL handling and the token worker live in `src/core`, `src/platforms` and `src/background` and are unit-tested. UI changes are checked in the demo and by `npm run test:e2e`.
 - **No tracking, no remote code.** Both are promises in the privacy policy and the store listing.
 - **Match the surrounding code.** TypeScript, no framework, plain DOM.
 

@@ -1,21 +1,53 @@
-// Exercise the actual shadow-DOM reader in Chrome. Start npm run demo first.
+// Browser-level checks: the real shadow-DOM reader, driven in Chrome against the demo page.
+//   npm run test:e2e                         builds the demo, serves it and runs the checks
+//   DEMO_URL=http://… node e2e/reader.mjs    use a demo server that is already running
+//   CHROME_PATH=/path/to/chrome              use a specific Chrome or Chromium
+//   SCREENSHOT_DIR=…                         where screenshots go (default: reports/e2e)
+// Unit tests sit next to the code (src/<folder>/*.test.ts); this covers what only a browser can: layout,
+// focus, selection and the sticky bar.
 import assert from 'node:assert/strict';
-import puppeteer from 'puppeteer-core';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import puppeteer from 'puppeteer-core';
+import { startDemoServer } from '../scripts/serve.mjs';
 
-const screenshots = process.env.SCREENSHOT_DIR ?? tmpdir();
+function findChrome() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const cache = join(homedir(), '.cache', 'puppeteer', 'chrome');
+  const testing = existsSync(cache)
+    ? readdirSync(cache).flatMap((version) => [
+        join(cache, version, 'chrome-mac-arm64', 'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing'),
+        join(cache, version, 'chrome-mac-x64', 'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing'),
+        join(cache, version, 'chrome-linux64', 'chrome'),
+      ])
+    : [];
+  const found = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    ...testing,
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ].find((path) => existsSync(path));
+  if (!found) throw new Error('No Chrome found. Install Chrome or set CHROME_PATH.');
+  return found;
+}
+
+const screenshots = process.env.SCREENSHOT_DIR ?? join('reports', 'e2e');
 await mkdir(screenshots, { recursive: true });
 
-const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: ['--no-sandbox'] });
+const server = process.env.DEMO_URL ? null : await startDemoServer(0);
+const demoUrl = process.env.DEMO_URL ?? `http://127.0.0.1:${server.address().port}`;
+const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox'] });
 try {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1440, height: 1000 });
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'light' }]);
-  await page.goto(process.env.DEMO_URL ?? 'http://localhost:4173', { waitUntil: 'networkidle0' });
+  await page.goto(demoUrl, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('.mr-content').length === 3);
   const inspect = (fn, ...args) => page.evaluate(fn, ...args);
   const initial = await inspect(() => {
@@ -69,7 +101,8 @@ try {
     const s = document.querySelector('#galley-reader').shadowRoot;
     const paragraph = [...s.querySelectorAll('.mr-content p')].find((el) => !el.closest('[hidden]') && el.textContent.includes('design'));
     const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
-    let text; while ((text = walker.nextNode())) if (text.textContent.includes('design')) break;
+    let text = walker.nextNode();
+    while (text && !text.textContent.includes('design')) text = walker.nextNode();
     const range = document.createRange(), start = text.textContent.indexOf('design');
     range.setStart(text, start); range.setEnd(text, start + 6);
     const sel = s.getSelection(); sel.removeAllRanges(); sel.addRange(range);
@@ -269,4 +302,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'false');
   assert.deepEqual(errors, []);
   console.log('Reader browser checks passed: continuous files, filtering, margin threads, selection chip, margin comment button, draft retargeting, posting, mobile composer, dark theme, current file in the sticky top bar, settings sheet focus, persisted Viewed progress, Mermaid versions, optional source files and line comments, Escape layers.');
-} finally { await browser.close(); }
+} finally {
+  await browser.close();
+  server?.close();
+}

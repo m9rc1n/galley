@@ -356,8 +356,13 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
     let added: HTMLElement[] = [];
     for (; i < parts.length && (parts[i].added || parts[i].removed); i++) {
       const n = parts[i].count ?? parts[i].value.length;
-      if (parts[i].removed) removed = removed.concat(baseRows.slice(bi, (bi += n)));
-      else added = added.concat(headRows.slice(hi, (hi += n)));
+      if (parts[i].removed) {
+        removed = removed.concat(baseRows.slice(bi, bi + n));
+        bi += n;
+      } else {
+        added = added.concat(headRows.slice(hi, hi + n));
+        hi += n;
+      }
     }
     i--;
     const anchor = headRows[hi];

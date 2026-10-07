@@ -4,13 +4,24 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly, so a newly published advisory shows up even when nobody is pushing.
+  schedule:
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# A new push to a pull request replaces its running checks; main always finishes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  check:
+  static:
+    name: Lint and types
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -19,10 +30,92 @@ jobs:
           cache: npm
       # Dependencies never run install scripts; esbuild ships its binary as a platform package.
       - run: npm ci --ignore-scripts
-      - run: npm run typecheck
-      - run: npm test
+      - name: Types
+        run: npm run typecheck
+      - name: Lint
+        run: npx biome lint . --reporter=github
+
+  test:
+    name: Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # With CI set, vitest annotates failures, writes reports/junit.xml and a summary, and fails the
+      # run if coverage drops under the thresholds in vitest.config.ts.
+      - name: Unit tests with coverage
+        run: npm run test:coverage
+      - name: Coverage per folder
+        if: ${{ !cancelled() && matrix.node == 22 }}
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-reports-node-${{ matrix.node }}
+          path: |
+            reports/junit.xml
+            coverage/lcov.info
+            coverage/coverage-summary.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # The build itself fails if GitHub token storage would end up in a bundle that runs inside a web page.
       - run: npm run build
       - name: Check that the release build contains no dev-only code
         run: '! grep -q "galley-launcher-dev" dist/chrome/content.js'
-      - name: Check that dependencies have no known vulnerabilities
+
+  e2e:
+    name: Browser checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # The runner image ships Google Chrome; e2e/reader.mjs finds it.
+      - name: Reader in a real browser
+        run: npm run test:e2e
+      - name: Keep the screenshots
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-screenshots
+          path: reports/e2e
+          if-no-files-found: ignore
+          retention-days: 14
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+      - name: Known vulnerabilities
         run: npm audit --audit-level=low

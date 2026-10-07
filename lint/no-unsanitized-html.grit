@@ -1,0 +1,20 @@
+language js(typescript);
+
+// Strings written as HTML are an XSS risk in an extension that renders pull request content.
+// Document text must reach the page through the sanitiser (src/ui/render.ts) or as text nodes.
+// A static template is fine, but say why: // biome-ignore lint/plugin: <reason>
+or {
+  `$target.innerHTML = $value`,
+  `$target.outerHTML = $value`,
+  `$target.insertAdjacentHTML($position, $html)`,
+  `document.write($html)`,
+  `document.writeln($html)`,
+} as $sink where {
+  // Tests build fixtures from literals; the rule is for code that ships.
+  $filename <: not r".*\.test\.ts$",
+  register_diagnostic(
+    span = $sink,
+    message = "Writing a string as HTML bypasses the sanitiser. Use text nodes or DOM methods, or sanitise first (src/ui/render.ts).",
+    severity = "error"
+  )
+}
