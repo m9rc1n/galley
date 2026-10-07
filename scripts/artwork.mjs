@@ -10,8 +10,16 @@ export const ARTWORK = [
   { template: 'promo-marquee.html', name: 'readme-hero-1600x640.png', width: 1600, height: 640, type: 'png' },
 ];
 
+const fonts = Promise.all([
+  ['Galley Newsreader', 'newsreader-latin.woff2', '400 600'],
+  ['Galley DM Sans', 'dm-sans-latin.woff2', '400 700'],
+].map(async ([family, file, weight]) => {
+  const bytes = await readFile(fileURLToPath(new URL(`../src/ui/fonts/${file}`, import.meta.url)));
+  return `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};src:url(data:font/woff2;base64,${bytes.toString('base64')}) format("woff2")}`;
+}));
+
 export async function artworkHtml(artwork) {
   const template = await readFile(fileURLToPath(new URL(`../store/templates/${artwork.template}`, import.meta.url)), 'utf8');
-  const canvas = `<style>:root{--artwork-width:${artwork.width}px;--artwork-height:${artwork.height}px;--artwork-scale:${artwork.width / 1400}}</style>`;
+  const canvas = `<style>${(await fonts).join('')}:root{--serif:"Galley Newsreader",Georgia,serif;--sans:"Galley DM Sans",Arial,sans-serif;--artwork-width:${artwork.width}px;--artwork-height:${artwork.height}px;--artwork-scale:${artwork.width / 1400}}</style>`;
   return template.replaceAll('{{ICON}}', iconSvg()).replace('</head>', `${canvas}</head>`);
 }
