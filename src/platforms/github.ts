@@ -5,7 +5,7 @@ import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitHubContext } from './detect.ts';
 import type { GitHubApi } from './github-api.ts';
 import { getText, HttpError } from './http.ts';
-import { ReaderError, type DocRef, type DocStatus, type ReviewSource } from './types.ts';
+import { ReaderError, type DocRef, type DocStatus, type ReviewSource, type Thread } from './types.ts';
 
 interface GitHubFile {
   filename: string;
@@ -100,6 +100,21 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
   const docs = all.filter((doc) => doc.kind !== 'code');
   const codeDocs = all.filter((doc) => doc.kind === 'code');
 
+  const replyFor = (id: number): Thread['reply'] => !Number.isSafeInteger(id) || id < 1 ? undefined : async (body) => {
+    requireBody(body);
+    if (!(await github.hasToken())) throw new ReaderError('Add a GitHub token to reply.', 'In the Galley popup, save a token with Pull requests: read and write. Your draft is kept.');
+    try {
+      // in_reply_to always refers to the root, including when the user replies after another reply.
+      const { data } = await github.request<{ html_url: string }>(`${repoApi}/pulls/${ctx.number}/comments`, { method: 'POST', body: { body: body.trim(), in_reply_to: id } });
+      return { url: data.html_url };
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 403) throw new ReaderError('GitHub did not allow this reply.', 'Check Pull requests: read and write access and repository permissions. Your draft is kept.');
+      if (err instanceof HttpError && (err.status === 404 || err.status === 422)) throw new ReaderError('GitHub could not find this conversation or accept the reply.', 'Check the thread on GitHub. Your draft is kept.');
+      if (err instanceof HttpError && err.status === 0) throw new ReaderError('Could not confirm whether GitHub posted your reply.', 'Check the platform before trying again to avoid a duplicate. Your draft is kept.');
+      throw explain(err, true);
+    }
+  };
+
   return {
     title: ctx.title,
     subtitle: `${ctx.owner}/${ctx.repo} · #${ctx.number}`,
@@ -128,7 +143,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
         comments.push(...data);
         if (data.length < 100) break;
       }
-      return githubThreads(all, comments);
+      return githubThreads(all, comments, replyFor);
     },
     async prepareComment(target) {
       validateTarget(all, target);
@@ -149,8 +164,8 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
             const payload = range
               ? { body: commentContext(target, body), path: target.doc.path, commit_id: headSha, line: target.endLine, side, ...(target.startLine < target.endLine ? { start_line: target.startLine, start_side: side } : {}) }
               : { body: commentContext(target, body), path: target.doc.path, commit_id: headSha, subject_type: 'file' };
-            const { data } = await github.request<{ html_url: string }>(`${repoApi}/pulls/${ctx.number}/comments`, { method: 'POST', body: payload });
-            return { url: data.html_url };
+            const { data } = await github.request<{ id: number; html_url: string }>(`${repoApi}/pulls/${ctx.number}/comments`, { method: 'POST', body: payload });
+            return { url: data.html_url, reply: replyFor(data.id) };
           } catch (err) {
             if (err instanceof HttpError && err.status === 403) throw new ReaderError('GitHub did not allow this comment.', 'Check Pull requests: read and write access, repository permissions and any SSO authorization. Your draft is kept.');
             if (err instanceof HttpError && err.status === 422) throw new ReaderError('GitHub could not attach this comment to the selected lines.', 'The diff may have changed. Copy your draft and reopen the reader.');

@@ -72,7 +72,7 @@ export interface GitHubReviewComment {
 }
 
 /** Group review comments into threads (replies follow their root) for the documents in view. */
-export function githubThreads(docs: DocRef[], comments: GitHubReviewComment[]): Thread[] {
+export function githubThreads(docs: DocRef[], comments: GitHubReviewComment[], replyFor?: (id: number) => Thread['reply']): Thread[] {
   const byId = new Map<number, Thread>();
   const threads: Thread[] = [];
   for (const c of [...comments].sort((a, b) => a.id - b.id)) {
@@ -93,6 +93,7 @@ export function githubThreads(docs: DocRef[], comments: GitHubReviewComment[]): 
       outdated: !file && c.line == null,
       url: c.html_url,
       comments: [entry],
+      ...(replyFor ? { reply: replyFor(c.id) } : {}),
     };
     threads.push(thread);
     byId.set(c.id, thread);
@@ -102,6 +103,7 @@ export function githubThreads(docs: DocRef[], comments: GitHubReviewComment[]): 
 
 /** Fields of GitLab's merge request discussions that the reader uses. */
 export interface GitLabDiscussion {
+  id?: string;
   notes: Array<{
     id: number;
     body: string;
@@ -114,7 +116,7 @@ export interface GitLabDiscussion {
 }
 
 /** Diff discussions become threads; general merge request discussions have no place in a document. */
-export function gitlabThreads(docs: DocRef[], discussions: GitLabDiscussion[], noteUrl: (id: number) => string): Thread[] {
+export function gitlabThreads(docs: DocRef[], discussions: GitLabDiscussion[], noteUrl: (id: number) => string, replyFor?: (id: string | undefined) => Thread['reply']): Thread[] {
   const threads: Thread[] = [];
   for (const discussion of discussions) {
     const notes = discussion.notes.filter((note) => !note.system);
@@ -131,6 +133,7 @@ export function gitlabThreads(docs: DocRef[], discussions: GitLabDiscussion[], n
       resolved: Boolean(first.resolved),
       url: noteUrl(first.id),
       comments: notes.map((note) => ({ author: note.author?.username ?? 'unknown', body: note.body, createdAt: note.created_at, url: noteUrl(note.id) })),
+      ...(replyFor ? { reply: replyFor(discussion.id) } : {}),
     });
   }
   return threads;

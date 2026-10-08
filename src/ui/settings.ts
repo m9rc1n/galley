@@ -1,4 +1,5 @@
-export const THEMES = ['paper', 'sage', 'sepia', 'slate'] as const;
+export const THEMES = ['paper', 'sage', 'sepia', 'slate', 'dusk', 'contrast'] as const;
+export const FONTS = ['serif', 'sans', 'georgia', 'system', 'mono'] as const;
 export const APPEARANCES = ['auto', 'light', 'dark'] as const;
 export type Theme = typeof THEMES[number];
 export type Appearance = typeof APPEARANCES[number];
@@ -6,7 +7,7 @@ export type Appearance = typeof APPEARANCES[number];
 export interface Settings {
   theme: Theme;
   appearance: Appearance;
-  font: 'serif' | 'sans';
+  font: typeof FONTS[number];
   /** Index into TEXT_SIZES. */
   size: number;
   mode: 'changes' | 'clean';
@@ -14,11 +15,13 @@ export interface Settings {
   codeFiles: boolean;
   /** External images in documents: wait for a click, or always load them. */
   images: 'ask' | 'load';
+  /** Comment cards: set apart by a shadow and their own tone, or by an outline. */
+  comments: 'shaded' | 'outlined';
 }
 
 export const TEXT_SIZES = [17, 18, 20, 22, 24];
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'sage', appearance: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false, images: 'ask' };
+export const DEFAULT_SETTINGS: Settings = { theme: 'sage', appearance: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false, images: 'ask', comments: 'shaded' };
 
 const SETTINGS_KEY = 'galley:settings';
 
@@ -58,7 +61,9 @@ export async function loadSettings(): Promise<Settings> {
   const theme = THEMES.find((theme) => theme === saved.theme) ?? DEFAULT_SETTINGS.theme;
   const legacyAppearance = saved.theme === 'dark' ? 'dark' : saved.theme === 'light' || saved.theme === 'sepia' ? 'light' : 'auto';
   const appearance = APPEARANCES.find((appearance) => appearance === saved.appearance) ?? legacyAppearance;
-  return { ...DEFAULT_SETTINGS, ...saved, theme, appearance };
+  const font = FONTS.find((font) => font === saved.font) ?? DEFAULT_SETTINGS.font;
+  const comments = saved.comments === 'outlined' ? 'outlined' : 'shaded';
+  return { ...DEFAULT_SETTINGS, ...saved, theme, appearance, font, comments };
 }
 
 export function saveSettings(settings: Settings): Promise<void> {

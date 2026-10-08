@@ -31,12 +31,12 @@ Reading fetches files and threads from your code host; posting sends your commen
 | --- | --- |
 | Understand the change | Read rendered documents in one continuous stream. Changed paragraphs appear first; reveal nearby unchanged content whenever you need it. |
 | See what matters | Edits appear in the text. Changed link and image destinations are called out; re-wrapped prose produces no noise. Tables are compared cell by cell. |
-| Discuss the idea | Existing threads appear beside their paragraphs. Select text or choose a paragraph to post a comment anchored to its source. |
+| Discuss the idea | Existing threads appear beside their paragraphs. Select text or point at a paragraph to write a comment right beside it, and reply to any comment in a thread. |
 | Finish the review | Render Mermaid diagrams, read syntax-coloured code, optionally include source files after documents, and track files you've viewed. |
 
 ![The real Galley reader: document changes and the team's review conversation in context.](store/assets/screenshot-1-changes.jpg)
 
-Newsreader brings the website’s reading typography into the extension, with DM Sans for the controls and soft sage and rose highlights for changes. Both fonts ship locally with Galley. Paper, Sage, Sepia and Slate palettes each offer light, dark or system appearance. Serif or sans text, adjustable type size and a clean reading mode let you make the reader comfortable for you.
+Newsreader brings the website’s reading typography into the extension, with DM Sans for the controls and sage and rose highlights for changes. Both fonts ship locally with Galley. Paper, Sage, Sepia, Slate, Dusk and Contrast palettes each offer light, dark or system appearance. Choose Newsreader, DM Sans, Georgia, your system font or monospace, adjust the text size, or use clean reading mode. Text and syntax colours are checked against their reading and diff backgrounds in the browser.
 
 ## Try it
 
@@ -66,20 +66,20 @@ npm run build
 
 ## Using it
 
-Open a pull or merge request and press **Read** in the bottom-right corner. The number counts changed Markdown documents, or supported source files when there are no documents. Documents appear first; **Reading settings → Code files** appends changed source and configuration files to the same stream. The option is off by default and remembered for future reviews. Code contents are fetched only when enabled, with old/new line numbers, additions and deletions, and controls to reveal unchanged lines. Binary files and unknown file types are excluded; source files over 500,000 characters show a link back to the platform diff.
+Open a pull or merge request and press **Read** in the bottom-right corner. The number counts changed Markdown documents, or supported source files when there are no documents. Documents appear first; **Reading settings → Review → Code files** appends changed source and configuration files to the same stream. The option is off by default and remembered for future reviews. Code contents are fetched only when enabled, with old/new line numbers, additions and deletions, and controls to reveal unchanged lines. Binary files and unknown file types are excluded; source files over 500,000 characters show a link back to the platform diff.
 
 | Key | Action |
 | --- | --- |
 | <kbd>J</kbd> / <kbd>K</kbd> | Next / previous change |
 | <kbd>]</kbd> / <kbd>[</kbd> | Next / previous document |
-| <kbd>R</kbd> | Comment on the paragraph in focus |
+| <kbd>R</kbd> | Comment on the selected text, or on the paragraph in focus |
 | <kbd>V</kbd> | Mark the current document as viewed |
 | <kbd>C</kbd> | Switch between Changes and Clean |
 | <kbd>+</kbd> / <kbd>−</kbd> | Text size |
-| <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Post the comment in the focused composer |
-| <kbd>Esc</kbd> | Close the innermost layer: menu, comment chip, empty composer, then the reader |
+| <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Post the comment or reply you are writing |
+| <kbd>Esc</kbd> | Close the innermost layer: enlarged diagram, menu, comment chip, an editor you have not written in, then the reader |
 
-The top bar stays quiet: the current document (a status dot, its name and position), change navigation, a **Viewed** toggle and **Reading settings**. The document menu lists every changed file with its folder, status and viewed progress, under the pull request title. Reading settings opens as a small sheet (a bottom sheet on phones) with Changes/Clean, the paragraph filter, code files, external images, a reading palette (Paper, Sage, Sepia, Slate), appearance (System, Light, Dark), serif or sans text and text size. Long documents get a contents rail on the right, with a dot next to every section that changed. A draft is never discarded by Esc; only **Cancel** discards it.
+The top bar holds the current document (a status dot, its name and position), change navigation, a **Viewed** toggle and **Reading settings**. The document menu lists every changed file with its folder, status and viewed progress, under the pull request title. Reading settings opens as a sheet (a bottom sheet on phones) with two tabs: **Reading** holds six palettes, System/Light/Dark appearance, a typeface picker and text size with a live preview; **Review** holds Changes/Clean, the paragraph filter, code files, external images and the look of comment cards (**Shaded**, with a soft shadow and tone, or **Outlined**). Wide screens are laid out from the left: a narrow contents column at the edge, the document beside it, and a comments column as wide as the window allows; only very wide windows centre the composition. Documents follow one another like chapters, separated by a dinkus, and a new or deleted file says so in its byline. Source files have no contents, so they take that column too and run to 120 characters where the window allows, keeping their native diff line numbers and signs; their comments sit in the column beside the code, as on documents. Only Markdown documents have the additional change bars in the margin. Each consecutive unchanged stretch has one fold, including stretches that cross lists or quotes.
 
 ### GitLab (gitlab.com and self-managed)
 
@@ -95,19 +95,23 @@ The token is kept in Galley's own extension storage, which web pages (including 
 
 ### Code
 
-Code blocks and source files are shown one line per block: long lines wrap under their own indentation instead of disappearing past the edge, so nothing needs sideways scrolling. Syntax colours come from highlight.js, bundled with the extension and loaded only when code is on screen in a sandboxed frame, so even a pathological file cannot freeze the page; both versions of a file are highlighted as a whole, so comments and strings that span lines colour correctly. Changed lines get a faint tint and a coloured edge rather than a full fill, and a file that is entirely new or deleted is announced once instead of tinting every line. Source files are titled by their path, with their language in the byline.
+Code blocks and source files are shown one line per block: long lines wrap under their own indentation instead of disappearing past the edge, so nothing needs sideways scrolling. Syntax colours come from highlight.js, bundled with the extension and loaded only when code is on screen in a sandboxed frame, so even a pathological file cannot freeze the page; both versions of a file are highlighted as a whole, so comments and strings that span lines colour correctly. Changed lines get a faint tint and a coloured edge rather than a full fill, and a file that is entirely new or deleted is announced once, in its byline, instead of tinting every line. Source files are titled by their path, with their language in the byline.
 
 ### Diagrams
 
-Fenced `mermaid` blocks render as diagrams using an engine bundled with the extension and loaded only when needed. Edited diagrams show **Before** and **After** versions; Clean mode shows the new version. **View source** reveals the original Mermaid code. Clicking either version targets the matching source fence for comments. Invalid or unsupported diagrams keep their readable source. Rendering happens locally, with no CDN or external diagram images/icon packs, inside a sandboxed frame that cannot reach the page, your session or the network. Diagrams are limited to 20,000 source characters and 300 edges.
+Fenced `mermaid` blocks render as diagrams using an engine bundled with the extension and loaded only when needed. Diagrams are drawn in the reading palette, light or dark: shapes are rounded cards on a soft canvas, lines are muted and group titles use the reader's small capitals. Each is shown at the size its text was laid out for, shrunk only to fit the column; choose one to see it enlarged. Edited diagrams show **Before** and **After** versions; Clean mode shows the new version. **View source** reveals the original Mermaid code. Pointing at either version offers a comment on the matching source fence. Invalid or unsupported diagrams keep their readable source. Rendering happens locally, with no CDN or external diagram images/icon packs, inside a sandboxed frame that cannot reach the page, your session or the network. Diagrams are limited to 20,000 source characters and 300 edges.
 
 ### Commenting
 
-Nothing follows your scrolling: you choose what to comment on. Select text and press the **Comment** chip that appears above it, use the comment button beside a paragraph in the left margin, or press <kbd>R</kbd>. On touch screens, tap a paragraph. The paragraph gets a neutral tint (a selection stays highlighted) and the composer opens with two columns: on the left the file, version, source lines and the exact quote that will be attached; on the right your comment. Selected text is quoted exactly; the anchor covers its containing Markdown paragraph(s), so rendering and line wrapping do not guess at sentence-level source positions. Removed paragraphs and old diagram versions target the old version. Source-file comments target the selected line or line range, preserving the quoted code. Selections crossing files or mixing old and new text are rejected. Choosing another paragraph while drafting keeps the draft.
+Nothing follows your scrolling: you choose what to comment on, and the comment is written where it will appear. Select text and choose the **Comment** chip above it, point at a paragraph and choose **Add a comment…** level with it in the comments column (or the small button beside the text when that column is busy there), or press <kbd>R</kbd>. On touch screens, tap a paragraph. The editor opens beside its text, which stays tinted (a selection stays highlighted, and is quoted above the editor); other cards move aside so it stays level. On narrow screens it opens below the paragraph instead. Pointing at a card, or at the comment control, tints the text it belongs to. Selected text is quoted exactly; the anchor covers its containing Markdown paragraph(s), so rendering and line wrapping do not guess at sentence-level source positions. Removed paragraphs and old diagram versions target the old version. Source-file comments target the selected line or line range, preserving the quoted code. Selections crossing files or mixing old and new text are rejected.
+
+Each editor keeps its own draft until you post it or choose **Cancel**: you can leave one, comment elsewhere, and come back. Choosing the same text again returns to its draft, and an editor you leave without writing in closes by itself. <kbd>Esc</kbd> leaves an editor and keeps what you wrote; the reader stays open while a comment is unsent.
+
+Every comment has a **Reply** action. The reply box opens under that comment, and replies hang under the first comment on a thread line. GitHub and GitLab threads are flat, so an answer to a reply goes to the same thread and starts by mentioning the person it answers. Replies work on comments you just posted, each thread keeps its own reply draft, and a failed reply keeps its text.
 
 Comments use the platform's own review APIs: [GitHub review comments](https://docs.github.com/en/rest/pulls/comments#create-a-review-comment-for-a-pull-request) and [GitLab discussions](https://docs.gitlab.com/api/discussions/#create-a-new-thread-in-the-merge-request-diff). Other reviewers see ordinary platform comments without Galley. Existing review threads load with the review and sit beside their paragraphs: authors, times and the comment text, rendered through the same sanitiser as documents. File comments and threads whose line is gone are listed under the document's byline. A posted comment joins the margin at once.
 
-GitLab uses your signed-in session and the page's CSRF token. GitHub requires a token with **Pull requests: read and write**. When the source range is outside the available diff (including omitted or truncated patches), the composer explicitly identifies a quoted GitHub file comment or a GitLab discussion instead of an inline comment. Posting checks the current review revision first. A failed post keeps the draft, and writes are never retried automatically; if a network failure leaves the result uncertain, check the platform before posting again.
+GitLab uses your signed-in session and the page's CSRF token. GitHub requires a token with **Pull requests: read and write**. When the source range is outside the available diff (including omitted or truncated patches), the editor explicitly identifies a quoted GitHub file comment or a GitLab discussion instead of an inline comment. Posting checks the current review revision first. A failed post keeps the draft, and writes are never retried automatically; if a network failure leaves the result uncertain, check the platform before posting again.
 
 Use **Mark viewed** in the top bar to track your review without collapsing the file. The Files menu shows viewed progress and a check beside completed files. With a GitHub token, Galley reads and updates GitHub's native [Viewed status](https://docs.github.com/en/graphql/reference/pulls#markfileasviewed), including unmarking. These requests check that the review revision is still current; failures leave the previous flag intact and show an error. Without a GitHub token, and on GitLab, progress stays in this browser. Local progress uses a fingerprint of that file's old and new contents, so it resets when the file changes while unrelated file updates preserve it. The button tooltip identifies where progress is saved.
 
@@ -150,7 +154,7 @@ The demo saves comments in browser session storage and Viewed progress locally, 
 
 ## Limitations
 
-- Comments anchor to containing source blocks. Existing threads are shown, but replying and resolving happen on the platform for now.
+- Comments anchor to containing source blocks. Threads are flat on GitHub and GitLab, so replies are one level deep; resolving happens on the platform for now.
 - Platform-specific syntax renders approximately: GitLab's `[[_TOC_]]`, math and PlantUML diagrams appear as text or code, and `#123` / `@user` references are not linked.
 - The whole pull/merge request is used; picking a commit range in the platform UI is not reflected.
 - Paragraphs rewritten by more than 60% are shown as the old version removed and the new one added, not as word edits.

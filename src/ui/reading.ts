@@ -33,7 +33,8 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
     if (!unchanged) { previous = undefined; continue; }
     const anchor = block.el.classList.contains('mr-tight') ? block.el.closest('li')! : block.el;
     const parent = anchor.parentElement!;
-    if (!previous || previous.parent !== parent) {
+    // A continuous stretch is one fold, even when it crosses lists or quotes.
+    if (!previous) {
       previous = { blocks: [], anchor, parent };
       gaps.push(previous);
     }

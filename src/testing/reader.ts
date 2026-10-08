@@ -26,7 +26,7 @@ export function readerHarness() {
     Object.defineProperty(media, 'matches', { value: false });
     vi.stubGlobal('matchMedia', (query: string) => query.includes('color-scheme') ? media : { matches: false });
     vi.stubGlobal('CSS', { highlights: new Map() });
-    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect = disconnect; });
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect = disconnect; });
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++nextFrame, callback); return nextFrame; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
     vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(800);
@@ -67,17 +67,24 @@ export function readerHarness() {
     return handle;
   }
   async function readyViewed() { await vi.waitFor(() => expect(q<HTMLButtonElement>('.mr-viewed').disabled).toBe(false)); }
-  function input(text: string) {
-    q<HTMLTextAreaElement>('#mr-comment').value = text;
-    q('#mr-comment').dispatchEvent(new Event('input', { bubbles: true }));
+  /** Types into an editor: the newest new-comment editor unless a selector names another. */
+  function input(text: string, selector?: string) {
+    const field = selector ? q<HTMLTextAreaElement>(selector) : [...shadow().querySelectorAll<HTMLTextAreaElement>('.mr-composer textarea')].at(-1)!;
+    field.value = text;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
   }
+  /** Points at a block, chooses the comment control beside it, and waits until its editor is ready. */
   async function commentOn(selector = '.mr-content [data-mr-change="modified"]') {
     q(selector).dispatchEvent(new Event('pointerover', { bubbles: true }));
     click('[data-act="comment-block"]');
-    await vi.waitFor(() => expect(q('.mr-comment-status').textContent).not.toBe('Preparing…'));
+    const composer = () => shadow().activeElement?.closest<HTMLFormElement>('.mr-composer');
+    await vi.waitFor(() => expect(composer()?.querySelector('.mr-comment-status')?.textContent).not.toBe('Preparing…'));
     flushFrame();
+    return composer()!;
   }
-  return { open, q, shadow, click, key, flushFrame, readyViewed, input, commentOn, media, scroll, disconnect,
+  /** Lets a deferred step run, such as removing an editor that was left empty. */
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+  return { open, q, shadow, click, key, flushFrame, readyViewed, input, commentOn, tick, media, scroll, disconnect,
     bounds: (el: Element, top: number, left = 360, height = 40) => bounds.set(el, new DOMRect(left, top, 600, height)),
     close: () => handle?.close(),
   };

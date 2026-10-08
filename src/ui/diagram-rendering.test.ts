@@ -145,3 +145,20 @@ it('skips detached diagrams, including those closed while rendering is pending',
   await vi.waitFor(() => expect(changed).toHaveBeenCalledOnce());
   expect(d.versions[0].view.querySelector('img')).toBeNull();
 });
+
+it('draws in the reader’s palette, redraws when the palette changes, and shows the drawing at its own size', async () => {
+  const { renderDiagrams } = await import('./diagrams.ts'); const d = await diagram();
+  const palette = { bg: '#fffefa', fg: '#202d25', muted: '#505c52', soft: '#f1f4e9', rule: '#d9dfd2', code: '#f6f7ef', accent: '#506b38' };
+  engine.render.mockResolvedValue({ svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 420.5 96"><path d="M0 0"/></svg>' });
+  renderDiagrams([d], false, vi.fn(), palette); await connect();
+  await vi.waitFor(() => expect(d.versions[0].view.dataset.state).toBe('ready'));
+  expect(engine.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: 'base', themeVariables: expect.objectContaining({ primaryColor: palette.bg }) }));
+  const zoom = d.versions[0].view.querySelector<HTMLButtonElement>('.mr-diagram-zoom')!;
+  expect(zoom.dataset.act).toBe('zoom-diagram');
+  expect(zoom.getAttribute('aria-label')).toBe('Enlarge the new version of the diagram');
+  expect([zoom.querySelector('img')!.width, zoom.querySelector('img')!.height]).toEqual([421, 96]);
+  renderDiagrams([d], false, vi.fn(), palette); await Promise.resolve();
+  expect(engine.render).toHaveBeenCalledOnce();
+  renderDiagrams([d], false, vi.fn(), { ...palette, accent: '#466b96' });
+  await vi.waitFor(() => expect(engine.render).toHaveBeenCalledTimes(2));
+});

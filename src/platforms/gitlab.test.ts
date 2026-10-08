@@ -29,6 +29,41 @@ interface GitLabWrite {
   };
 }
 
+it('GitLab replies within the existing discussion using a fresh session token, including newly created threads', async () => {
+  let csrf: string | null = 'session-csrf';
+  vi.stubGlobal('document', { querySelector: () => csrf ? { content: csrf } : null });
+  const writes: Array<{ url: string; body: unknown }> = [];
+  let failure = 0;
+  mockFetch(async (url, init) => {
+    if (init?.method === 'POST') {
+      expect(headersOf(init)['X-CSRF-Token']).toBe(csrf);
+      expect(init.credentials).toBe('same-origin');
+      writes.push({ url: String(url), body: JSON.parse(init.body as string) });
+      return response(String(url).endsWith('/notes') ? { id: 43 } : { id: 'new-thread', notes: [{ id: 42 }] }, failure || 201);
+    }
+    if (String(url).includes('/discussions?')) return response([{ id: 'existing/thread', notes: [{ id: 5, body: 'Question', created_at: '2026-10-01', position: { new_path: 'new.md', old_path: 'old.md', new_line: 2 } }] }]);
+    if (String(url).includes('/diffs?')) return response([{ new_path: 'new.md', old_path: 'old.md', renamed_file: true, diff: patch }]);
+    return response({ title: 'Docs', diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
+  });
+  const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '/gitlab', projectPath: 'a/b', projectId: '10', iid: 7 });
+  const [thread] = await source.loadThreads!();
+  await expect(thread.reply!('  Reply **here**  ')).resolves.toEqual({ url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7#note_43' });
+  expect(writes[0]).toEqual({ url: 'https://git.example.com/gitlab/api/v4/projects/10/merge_requests/7/discussions/existing%2Fthread/notes', body: { body: 'Reply **here**' } });
+  const posted = await (await source.prepareComment!({ ...target, doc: source.docs[0] })).post('New thread');
+  await posted.reply!('Follow-up');
+  expect(writes.at(-1)!.url).toContain('/discussions/new-thread/notes');
+  csrf = null;
+  await expect(thread.reply!('No session')).rejects.toThrow(/session token is missing/);
+  await expect(thread.reply!(' ')).rejects.toThrow(/Write a comment/);
+  expect(writes).toHaveLength(3);
+  csrf = 'fresh-session'; failure = 403;
+  await expect(thread.reply!('Denied')).rejects.toThrow(/did not allow this reply/);
+  expect(writes).toHaveLength(4);
+  failure = 404;
+  await expect(thread.reply!('Gone')).rejects.toThrow(/could not find this conversation/);
+  expect(writes).toHaveLength(5);
+});
+
 it('GitLab uses the native session, CSRF, shifted context and diff refs for inline comments', async () => {
   vi.stubGlobal('document', { querySelector: () => ({ content: 'session-csrf' }) });
   const writes: GitLabWrite[] = [];

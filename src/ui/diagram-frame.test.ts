@@ -60,3 +60,37 @@ it('serves any port the reader transfers when the frame loads', async () => {
   channel.port1.postMessage({ id: 7, code: 'flowchart LR', dark: false });
   await vi.waitFor(() => expect(replies).toEqual([{ id: 7, svg: '<svg/>' }]));
 });
+
+const palette = { bg: '#fffefa', fg: '#202d25', muted: '#505c52', soft: '#f1f4e9', rule: '#d9dfd2', code: '#f6f7ef', accent: '#506b38' };
+
+it('accepts only a complete palette of plain hex colours', async () => {
+  const { isRequest } = await import('./diagram-frame.ts');
+  expect(isRequest({ id: 1, code: 'flowchart LR', dark: false, palette })).toBe(true);
+  expect(isRequest({ id: 1, code: 'flowchart LR', dark: false, palette: { ...palette, bg: '#fff' } })).toBe(true);
+  for (const bad of [null, 'paper', { ...palette, extra: '#000000' }, { ...palette, bg: 'red' }, { ...palette, fg: 'url(https://x.example/a)' }, { ...palette, accent: '#12345' }, { ...palette, rule: undefined }]) {
+    expect(isRequest({ id: 1, code: 'flowchart LR', dark: false, palette: bad })).toBe(false);
+  }
+});
+
+it('draws diagrams in the reader’s palette: cards on a soft canvas, quiet lines and calm chart colours', async () => {
+  const { renderRequest, chartColours, mix } = await import('./diagram-frame.ts');
+  engine.render.mockResolvedValue({ svg: '<svg/>' });
+  await renderRequest(engine, { id: 1, code: 'flowchart LR', dark: false, palette });
+  const light = engine.initialize.mock.lastCall![0];
+  expect(light).toMatchObject({ theme: 'base', look: 'classic', themeVariables: { primaryColor: palette.bg, background: palette.code, textColor: palette.fg, darkMode: false } });
+  expect(light.secure).toEqual(expect.arrayContaining(['themeVariables', 'themeCSS', 'look', 'flowchart', 'sequence']));
+  expect(light.themeCSS).toContain(`fill: ${palette.bg}`);
+  expect(light.themeCSS).not.toMatch(/url\(|@import/);
+  await renderRequest(engine, { id: 2, code: 'flowchart LR', dark: true, palette });
+  expect(engine.initialize.mock.lastCall![0].themeVariables).toMatchObject({ primaryColor: palette.soft, darkMode: true });
+  await renderRequest(engine, { id: 3, code: 'flowchart LR', dark: true });
+  expect(engine.initialize.mock.lastCall![0]).toMatchObject({ theme: 'dark', look: 'classic' });
+  expect(engine.initialize.mock.lastCall![0].themeVariables).toBeUndefined();
+  expect(mix('#000000', '#ffffff', 0.5)).toBe('#808080');
+  expect(mix('#fff', '#000', 0)).toBe('#ffffff');
+  const colours = chartColours('#506b38', false);
+  expect(colours).toHaveLength(12);
+  expect(new Set(colours).size).toBe(12);
+  expect(colours.every((colour) => /^#[\da-f]{6}$/.test(colour))).toBe(true);
+  expect(chartColours('#808080', true, 3)).toHaveLength(3);
+});
