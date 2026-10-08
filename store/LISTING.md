@@ -45,7 +45,7 @@ WORKS WHERE YOU REVIEW
 • GitHub.com and GitHub Enterprise Server: public repositories work right away. For private repositories, add a fine-grained token in the popup. Galley keeps it in its own storage, away from web pages.
 
 BUILT IN THE OPEN
-• Free, MIT-licensed and open source. Inspect the code, permissions, data handling and known limitations at github.com/m9rc1n/galley.
+• Free, GPL-licensed and open source. Inspect the code, permissions, data handling and known limitations at github.com/m9rc1n/galley.
 • Comments stay in your existing GitHub or GitLab review, where teammates can read them without Galley.
 
 PRIVATE BY DEFAULT

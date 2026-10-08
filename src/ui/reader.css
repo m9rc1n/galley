@@ -14,20 +14,22 @@
   --rule: #d9dfd2;
   --code-bg: #f6f7ef;
   --accent: #506b38;
-  --add: #506b38;
-  --add-bg: #e1ebd0;
-  --add-wash: #f1f5e8;
-  --mod: #76520c;
-  --del: #754439;
-  --del-bg: #f5e9df;
-  --del-strike: #ac796d;
+  /* Change colours: clear green, amber and rose, so added, edited and removed never look alike. Every
+     light palette below re-tints them to sit on its own page tone. */
+  --add: #3b6a2b;
+  --add-bg: #d5ebcb;
+  --add-wash: #eef6e8;
+  --mod: #8f5d00;
+  --del: #9c3a35;
+  --del-bg: #f9e1dc;
+  --del-strike: #c0645c;
   /* Soft word highlights, with stronger margin markers for scanning changes. */
-  --ins-band: #e1ebd0;
-  --gutter-added: #527735;
-  --gutter-modified: #896215;
-  --gutter-removed: #925749;
-  --code-add: #f0f5e7;
-  --code-del: #f8efe8;
+  --ins-band: #d5ebcb;
+  --gutter-added: #4c8c3a;
+  --gutter-modified: #b27a0e;
+  --gutter-removed: #c0554c;
+  --code-add: #eaf4e3;
+  --code-del: #fbe9e5;
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
   /* Comment cards: a tone of their own and a soft shadow instead of an outline. */
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 6px 20px -10px rgba(0, 0, 0, 0.22);
@@ -89,6 +91,19 @@
   --soft: #f3f3ef;
   --rule: #deded8;
   --code-bg: #f6f6f3;
+  --add: #2f6f3e;
+  --add-bg: #d6efd9;
+  --add-wash: #eef7f0;
+  --mod: #8f5d00;
+  --del: #a13a38;
+  --del-bg: #fce4e3;
+  --del-strike: #c4635f;
+  --ins-band: #d6efd9;
+  --gutter-added: #3b8c4f;
+  --gutter-modified: #b27a0e;
+  --gutter-removed: #c4504d;
+  --code-add: #ebf6ed;
+  --code-del: #fdeded;
 }
 
 .mr-root[data-theme="slate"],
@@ -100,6 +115,20 @@
   --rule: #d3dfe9;
   --code-bg: #edf2f8;
   --accent: #466b96;
+  /* Teal and cool rose keep the highlights in the page's blue family. */
+  --add: #2a6b54;
+  --add-bg: #cfeade;
+  --add-wash: #e9f5ef;
+  --mod: #8a5f10;
+  --del: #a03850;
+  --del-bg: #f9e1e6;
+  --del-strike: #bd6579;
+  --ins-band: #cfeade;
+  --gutter-added: #3a8a6c;
+  --gutter-modified: #b0801f;
+  --gutter-removed: #bf4a63;
+  --code-add: #e4f3ec;
+  --code-del: #fae9ed;
 }
 
 .mr-root[data-theme="sepia"],
@@ -136,6 +165,19 @@
   --rule: #d8cde3;
   --code-bg: #f2ecf8;
   --accent: #684487;
+  --add: #2d6c4c;
+  --add-bg: #d3eddc;
+  --add-wash: #ebf5ef;
+  --mod: #8a5a10;
+  --del: #9d3454;
+  --del-bg: #fae0e9;
+  --del-strike: #bb6382;
+  --ins-band: #d3eddc;
+  --gutter-added: #3d8b62;
+  --gutter-modified: #b0801f;
+  --gutter-removed: #bd4966;
+  --code-add: #e7f4ec;
+  --code-del: #fbeaf0;
 }
 
 .mr-root[data-theme="contrast"],
@@ -147,6 +189,20 @@
   --rule: #888d98;
   --code-bg: #f3f4f8;
   --accent: #174ea6;
+  /* Crisper ink: the same hues, with stronger bands and markers. */
+  --add: #14692c;
+  --add-bg: #c4ebcd;
+  --add-wash: #e1f4e6;
+  --mod: #7f5200;
+  --del: #a31f1f;
+  --del-bg: #f9d5d5;
+  --del-strike: #b02a2a;
+  --ins-band: #c4ebcd;
+  --gutter-added: #1a7f37;
+  --gutter-modified: #9a6200;
+  --gutter-removed: #c0302a;
+  --code-add: #dff3e4;
+  --code-del: #fbdfdf;
 }
 
 .mr-root.is-dark,
@@ -552,7 +608,7 @@
 
 .mr-content blockquote {
   padding-left: 1.15em;
-  border-left: 2px solid var(--gutter-added);
+  border-left: 2px solid color-mix(in srgb, var(--muted) 55%, var(--bg));
   font-style: italic;
 }
 
@@ -1275,7 +1331,16 @@
 
 /* Optional source files follow the document stream. Source is always plain text. */
 .mr-empty-reader { padding: 24px 0; }
-.mr-code-lines { box-sizing: border-box; width: 100%; overflow: auto; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 0; background: var(--code-bg); }
+.mr-code-lines { box-sizing: border-box; width: 100%; overflow: auto; border-radius: 6px; background: var(--code-bg); }
+/* The space above and below the lines is a strip of its own, so a changed first or last line can carry its
+   colour and margin bar through it instead of ending in a band of neutral shade. */
+.mr-code-lines::before, .mr-code-lines::after { content: ""; display: block; height: 12px; }
+.mr-code-lines::before { background: var(--lead-bg, transparent); box-shadow: var(--lead-bar, none); }
+.mr-code-lines::after { background: var(--tail-bg, transparent); box-shadow: var(--tail-bar, none); }
+.mode-changes .mr-document:not(.doc-added, .doc-removed) .mr-code-lines:has(> :first-child[data-mr-change="added"]) { --lead-bg: var(--code-add); --lead-bar: inset 3px 0 0 var(--gutter-added); }
+.mode-changes .mr-document:not(.doc-added, .doc-removed) .mr-code-lines:has(> :first-child[data-mr-change="removed"]) { --lead-bg: var(--code-del); --lead-bar: inset 3px 0 0 var(--gutter-removed); }
+.mode-changes .mr-document:not(.doc-added, .doc-removed) .mr-code-lines:has(> :last-child[data-mr-change="added"]) { --tail-bg: var(--code-add); --tail-bar: inset 3px 0 0 var(--gutter-added); }
+.mode-changes .mr-document:not(.doc-added, .doc-removed) .mr-code-lines:has(> :last-child[data-mr-change="removed"]) { --tail-bg: var(--code-del); --tail-bar: inset 3px 0 0 var(--gutter-removed); }
 .mr-code-line { display: grid; grid-template-columns: 42px 42px 20px minmax(0, 1fr); width: 100%; box-sizing: border-box; min-height: 24px; padding-right: 16px; font: var(--code-size)/1.8 var(--mono); white-space: pre-wrap; }
 .mr-code-text { --hang: calc(var(--indent, 0ch) + 2ch); padding-left: var(--hang); text-indent: calc(-1 * var(--hang)); overflow-wrap: anywhere; }
 .mr-code-number { color: var(--muted); text-align: right; padding-right: 10px; user-select: none; }

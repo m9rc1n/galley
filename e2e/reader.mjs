@@ -73,7 +73,7 @@ try {
   });
   assert.match(typography.family, /Galley Newsreader/);
   assert.equal(typography.weight, '400');
-  assert.equal(typography.insertion, 'rgb(225, 235, 208)');
+  assert.equal(typography.insertion, 'rgb(213, 235, 203)');
   assert.ok(typography.replacementGap >= 3, 'Adjacent old and new words need a visible gap');
   const initial = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;

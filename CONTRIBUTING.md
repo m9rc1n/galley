@@ -81,7 +81,7 @@ Suppressions need a reason after the colon, and a reviewer should be able to agr
 
 ## Guidelines
 
-- **Keep it small and dependency-light.** The reader ships as one script with a separate lazy-loaded Mermaid engine; new runtime dependencies need a good reason, and their licence must be MIT-compatible (the build lists them in `THIRD_PARTY_NOTICES.txt`).
+- **Keep it small and dependency-light.** The reader ships as one script with a separate lazy-loaded Mermaid engine; new runtime dependencies need a good reason, and their licence must be permissive (MIT, BSD, ISC, Apache-2.0). That keeps them compatible with the GPL and leaves room for the commercial licence described under [Licence](#licence). The build lists them in `THIRD_PARTY_NOTICES.txt`.
 - **Never trust document content.** Pull requests come from forks. Everything rendered goes through DOMPurify; don't add paths around it.
 - **Tests for logic, screenshots for looks.** Diffing, parsing, URL handling and the token worker live in `src/core`, `src/platforms` and `src/background` and are unit-tested. UI changes are checked in the demo and by `npm run test:e2e`.
 - **No tracking, no remote code.** Both are promises in the privacy policy and the store listing.
@@ -99,4 +99,9 @@ For security problems, see [SECURITY.md](SECURITY.md).
 
 ## Licence
 
-By contributing you agree that your contribution is licensed under the [MIT licence](LICENSE).
+Galley is licensed under the [GNU General Public License, version 3 or later](LICENSE), and Marcin Urbanski also offers it under a commercial licence (see the README). By contributing you agree that:
+
+- your contribution is licensed under the GPL, version 3 or later; and
+- you grant the maintainer a perpetual, worldwide, non-exclusive, royalty-free, irrevocable licence to use, modify, sublicense and relicense your contribution, including under commercial terms. You keep your copyright. This clause exists so the commercial licence can cover the whole project, and for no other purpose.
+
+Only contribute code you wrote or have the right to submit on these terms.
