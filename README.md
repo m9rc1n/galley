@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/m9rc1n/galley/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/m9rc1n/galley/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/m9rc1n/galley/branch/main/graph/badge.svg)](https://codecov.io/gh/m9rc1n/galley)
-[![License: MIT](https://img.shields.io/github/license/m9rc1n/galley)](LICENSE)
+[![License: GPL-3.0-or-later](https://img.shields.io/github/license/m9rc1n/galley)](LICENSE)
 
 **Make room for better reviews.**
 
@@ -18,7 +18,7 @@ A good review starts with understanding. RFCs, decisions and runbooks ask people
 
 ## What you can count on
 
-- **Built in the open.** Galley is [MIT-licensed](LICENSE). Its source, [permissions and data handling](PRIVACY.md), and [known limitations](#limitations) are available to inspect. Questions and improvements belong in the open, too.
+- **Built in the open.** Galley is [GPL-licensed](LICENSE). Its source, [permissions and data handling](PRIVACY.md), and [known limitations](#limitations) are available to inspect. Questions and improvements belong in the open, too.
 - **Private by default.** Documents and diagrams render in your browser. Galley has no backend, analytics, advertising or telemetry. Images from other websites wait for your permission to load.
 - **Your existing workflow.** Comments are ordinary GitHub or GitLab review comments. Teammates can read them without installing Galley, and your review stays with the repository.
 - **Care for the reviewer.** Comfortable type, quiet change markers, nearby context and keyboard controls help you keep your attention on the ideas. You choose when to comment and what to share.
@@ -225,4 +225,8 @@ Tell us what makes reviews harder for you: a long document, missing context, an 
 
 ## License
 
-[MIT](LICENSE) © Marcin Urbanski. The licences of the bundled libraries are listed in `THIRD_PARTY_NOTICES.txt` inside every build.
+Galley is free software under the [GNU General Public License, version 3 or later](LICENSE) © Marcin Urbanski. You can use, study, change and share it. If you distribute a modified version, you must publish its source under the same license. The licences of the bundled libraries are listed in `THIRD_PARTY_NOTICES.txt` inside every build.
+
+Releases up to and including 0.4.1 were published under the MIT license, and they stay available under it.
+
+**Commercial license.** Want to build Galley into a closed-source product, or ship a modified version without publishing its source? A separate commercial license is available. [Open an issue](https://github.com/m9rc1n/galley/issues/new/choose) titled "Commercial license" and leave your contact details out; you will get a reply with a private way to talk.

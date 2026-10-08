@@ -58,7 +58,7 @@ const server = createServer(async (req, res) => {
 <img class="hero" src="/store/assets/readme-hero-1600x640.png" alt="Galley's mission, illustrated by a readable change and a thoughtful review conversation">
 <p class="label">README hero · A typeset illustration of the review we want to make easier.</p>
 <div class="grid"><div><img src="/store/assets/promo-small-440x280.jpg" alt="Galley small promotional tile"><p class="label">Store tile · 440 × 280</p></div>
-<div><h2>Clearer, calmer, more considerate.</h2><p>Reviews take attention. Galley makes space to understand a change and discuss it with the team.</p><p><strong>Built in the open.</strong> MIT-licensed, with source and limitations you can inspect.</p><p><strong>Private by default.</strong> Local rendering, no analytics and no Galley backend.</p><p><strong>Part of your workflow.</strong> Ordinary GitHub and GitLab review conversations.</p></div></div>
+<div><h2>Clearer, calmer, more considerate.</h2><p>Reviews take attention. Galley makes space to understand a change and discuss it with the team.</p><p><strong>Built in the open.</strong> GPL-licensed, with source and limitations you can inspect.</p><p><strong>Private by default.</strong> Local rendering, no analytics and no Galley backend.</p><p><strong>Part of your workflow.</strong> Ordinary GitHub and GitLab review conversations.</p></div></div>
 <h2>The real reader</h2><img src="/store/assets/screenshot-1-changes.jpg" alt="The real Galley reader with document changes and review threads"><p class="label">Product screenshot · separate from the mission illustration.</p>
 </main>`));
   } catch (err) {

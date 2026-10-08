@@ -36,7 +36,7 @@ The validator turns two things into errors, and the Firefox build now fails if e
 | Summary (250 characters) | `Make room for better reviews. A free, open-source browser extension that turns Markdown changes in GitHub pull requests and GitLab merge requests into clear, typeset articles you can discuss in place.` |
 | Description | The **Description** block in [`LISTING.md`](LISTING.md), pasted as is |
 | Categories | Web Development (check the names offered in the form) |
-| License | MIT License |
+| License | GNU General Public License v3.0 |
 | Homepage | `https://m9rc1n.github.io/galley/` |
 | Support site | `https://github.com/m9rc1n/galley/issues` |
 | Support email | **You** (shown publicly) |
@@ -51,7 +51,7 @@ The summary is the same wording as the GitHub project description, the website a
 ## Notes to reviewer
 
 ```
-Galley is a reader for markdown changes in GitHub pull requests and GitLab merge requests. It is open source (MIT): https://github.com/m9rc1n/galley
+Galley is a reader for markdown changes in GitHub pull requests and GitLab merge requests. It is open source (GPL-3.0-or-later): https://github.com/m9rc1n/galley
 
 BUILD. The package is bundled with esbuild from TypeScript. Galley's own code is not minified, so content.js, highlight-frame.js, popup.js and background.js can be read as written. Only the bundled third-party diagram engine is minified: Mermaid (diagram-frame.js, about 3.6 MB) and its layout engine elkjs (elk.js, about 1.4 MB), which is a separate file because addons.mozilla.org does not scan a file over 5 MB. elk.js is loaded by a script element, from the same sandboxed frame, the first time a diagram is laid out (src/ui/elk-shim.ts).
 The source package contains everything needed:
