@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/m9rc1n/galley/compare/v0.4.1...v0.5.0) (2026-10-08)
+
+
+### Features
+
+* comment beside the text, reply to any comment, and read in roomier columns ([87ae28b](https://github.com/m9rc1n/galley/commit/87ae28b445eccafc2e1ad730288b7343878efdc2))
+* comment beside the text, reply to any comment, and read in roomier columns ([3251a8a](https://github.com/m9rc1n/galley/commit/3251a8a1e7afe7cb678ab7038d9d56e58feffdcc))
+
 ## [0.4.1](https://github.com/m9rc1n/galley/compare/v0.4.0...v0.4.1) (2026-10-07)
 
 
