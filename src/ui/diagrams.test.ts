@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { expect, it } from 'vitest';
 import { renderMarkdown } from '../testing/render.ts';
-import { diagramCode, diagramImage } from './diagrams.ts';
+import { diagramCode, diagramImage, diagramSize } from './diagrams.ts';
 import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
 
 const fence = (code: string) => `\`\`\`mermaid\n${code}\n\`\`\``;
@@ -59,4 +59,10 @@ it('SVG output becomes an inert image with scripts, HTML and external resource r
   expect(image).toMatch(/^data:image\/svg\+xml/);
   expect(svg).not.toMatch(/script|foreignObject|<image|onclick|https:\/\/evil/);
   expect(svg).toMatch(/url\(#arrow\)/);
+});
+
+it('diagrams are shown at the size they were laid out for, read from the drawing itself', () => {
+  expect(diagramSize('<svg id="d1" width="100%" viewBox="4 4 408.2 858.75" role="graphics-document">')).toEqual({ width: 409, height: 859 });
+  expect(diagramSize('<svg viewBox="-50 -10 747 543">')).toEqual({ width: 747, height: 543 });
+  for (const svg of ['<svg width="100%">', '<svg viewBox="0 0 0 10">', '<svg viewBox="0 0 90000 10">', '<g viewBox="0 0 10 10"><svg>', 'not svg']) expect(diagramSize(svg)).toBeNull();
 });

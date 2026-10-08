@@ -2,7 +2,7 @@ import { commentContext, diffRange, gitlabThreads, requireBody, validateTarget, 
 import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitLabContext } from './detect.ts';
 import { getJson, getText, HttpError } from './http.ts';
-import { ReaderError, type DocRef, type DocStatus, type ReviewSource } from './types.ts';
+import { ReaderError, type DocRef, type DocStatus, type ReviewSource, type Thread } from './types.ts';
 
 interface MergeRequest {
   title: string;
@@ -78,6 +78,21 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
   const docs = all.filter((doc) => doc.kind !== 'code');
   const codeDocs = all.filter((doc) => doc.kind === 'code');
 
+  const replyFor = (id: string | undefined): Thread['reply'] => !id ? undefined : async (body) => {
+    requireBody(body);
+    const csrf = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+    if (!csrf) throw new ReaderError('GitLab’s session token is missing.', 'Copy your draft, reload the merge request, and try again.');
+    try {
+      const { data } = await getJson<{ id: number }>(`${api}/merge_requests/${ctx.iid}/discussions/${encodeURIComponent(id)}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify({ body: body.trim() }) });
+      return { url: `${webBase}/-/merge_requests/${ctx.iid}#note_${data.id}` };
+    } catch (err) {
+      if (err instanceof HttpError && (err.status === 401 || err.status === 403)) throw new ReaderError('GitLab did not allow this reply.', 'Make sure you are signed in and have permission to comment. Your draft is kept.');
+      if (err instanceof HttpError && (err.status === 400 || err.status === 404)) throw new ReaderError('GitLab could not find this conversation or accept the reply.', 'Check the thread on GitLab. Your draft is kept.');
+      if (err instanceof HttpError && err.status === 0) throw new ReaderError('Could not confirm whether GitLab posted your reply.', 'Check the platform before trying again to avoid a duplicate. Your draft is kept.');
+      throw explain(err);
+    }
+  };
+
   return {
     title: mr.title,
     subtitle: `${ctx.projectPath} · !${ctx.iid}`,
@@ -99,7 +114,7 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
         discussions.push(...data);
         if (data.length < 100) break;
       }
-      return gitlabThreads(all, discussions, (id) => `${webBase}/-/merge_requests/${ctx.iid}#note_${id}`);
+      return gitlabThreads(all, discussions, (id) => `${webBase}/-/merge_requests/${ctx.iid}#note_${id}`, replyFor);
     },
     async prepareComment(target) {
       validateTarget(all, target);
@@ -129,8 +144,8 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
           const { data: latest } = await json<MergeRequest>(`${api}/merge_requests/${ctx.iid}`);
           if (latest.diff_refs?.head_sha !== refs.head_sha || latest.diff_refs?.base_sha !== refs.base_sha || latest.diff_refs?.start_sha !== refs.start_sha) throw new ReaderError('This merge request changed while you were reading.', 'Copy your draft and reopen the reader to comment on the latest version.');
           try {
-            const { data } = await getJson<{ notes: Array<{ id: number }> }>(`${api}/merge_requests/${ctx.iid}/discussions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify({ body: commentContext(target, body), ...(position ? { position } : {}) }) });
-            return { url: `${webBase}/-/merge_requests/${ctx.iid}#note_${data.notes[0].id}` };
+            const { data } = await getJson<{ id: string; notes: Array<{ id: number }> }>(`${api}/merge_requests/${ctx.iid}/discussions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify({ body: commentContext(target, body), ...(position ? { position } : {}) }) });
+            return { url: `${webBase}/-/merge_requests/${ctx.iid}#note_${data.notes[0].id}`, reply: replyFor(data.id) };
           } catch (err) {
             if (err instanceof HttpError && (err.status === 401 || err.status === 403)) throw new ReaderError('GitLab did not allow this comment.', 'Make sure you are still signed in and have permission to comment. Your draft is kept.');
             if (err instanceof HttpError && err.status === 0) throw new ReaderError('Could not confirm whether GitLab posted your comment.', 'Check the platform before trying again to avoid a duplicate. Your draft is kept.');

@@ -42,13 +42,15 @@ export interface Thread {
   resolved?: boolean;
   url: string;
   comments: ThreadComment[];
+  /** Continues this exact platform conversation. Never automatically retries a write. */
+  reply?(body: string): Promise<{ url: string }>;
 }
 
 export interface CommentPlan {
   kind: 'inline' | 'file' | 'discussion';
   label: string;
   /** Posts an ordinary platform comment. Never automatically retries a write. */
-  post(body: string): Promise<{ url: string }>;
+  post(body: string): Promise<{ url: string; reply?: Thread['reply'] }>;
 }
 
 /** Everything the reader needs about one pull/merge request. */

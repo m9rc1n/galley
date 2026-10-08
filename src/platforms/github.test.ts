@@ -68,6 +68,44 @@ it('GitHub preserves permission failures and never retries a rejected write as a
   await expect(source.prepareComment!(target)).rejects.toThrow(/Select a paragraph/);
 });
 
+it('GitHub replies to the original conversation and allows immediate replies to a newly posted comment', async () => {
+  await setToken('https://github.com', 'write-token');
+  const writes: Array<Record<string, unknown>> = [];
+  let failure = 0;
+  mockFetch(async (url, init) => {
+    if (init?.method === 'POST') {
+      writes.push(JSON.parse(init.body as string));
+      expect(String(url)).toBe('https://api.github.com/repos/a/b/pulls/1/comments');
+      return response({ id: 90, html_url: 'https://github.com/a/b/pull/1#r90' }, failure || 201);
+    }
+    if (String(url).includes('/comments?')) return response([
+      { id: 12, path: 'new.md', line: 2, side: 'RIGHT', body: 'Question', created_at: '2026-10-01', html_url: '#r12' },
+      { id: 18, in_reply_to_id: 12, path: 'new.md', body: 'First reply', created_at: '2026-10-01', html_url: '#r18' },
+    ]);
+    if (String(url).includes('/files?')) return response([{ filename: 'new.md', status: 'modified', changes: 2, patch, raw_url: '' }]);
+    return response({ head: { sha: 'h' }, base: { sha: 'b' } });
+  });
+  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, directApi('https://github.com', getToken));
+  const [thread] = await source.loadThreads!();
+  expect(thread.comments).toHaveLength(2);
+  await expect(thread.reply!('  A direct **reply**  ')).resolves.toEqual({ url: 'https://github.com/a/b/pull/1#r90' });
+  expect(writes[0]).toEqual({ body: 'A direct **reply**', in_reply_to: 12 });
+  const posted = await (await source.prepareComment!({ ...target, doc: source.docs[0] })).post('New thread');
+  await posted.reply!('Follow-up');
+  expect(writes.at(-1)).toEqual({ body: 'Follow-up', in_reply_to: 90 });
+  await expect(thread.reply!(' ')).rejects.toThrow(/Write a comment/);
+  expect(writes).toHaveLength(3);
+  failure = 403;
+  await expect(thread.reply!('Denied')).rejects.toThrow(/did not allow this reply/);
+  expect(writes).toHaveLength(4);
+  failure = 422;
+  await expect(thread.reply!('Removed thread')).rejects.toThrow(/could not find this conversation/);
+  expect(writes).toHaveLength(5);
+  await setToken('https://github.com', null);
+  await expect(thread.reply!('No token')).rejects.toThrow(/Add a GitHub token to reply/);
+  expect(writes).toHaveLength(5);
+});
+
 it('GitHub offers source files after docs without fetching them until requested, and posts native code comments', async () => {
   await setToken('https://github.com', 'write-token');
   const codePatch = '@@ -1 +1 @@\n-const value = 1;\n+const value = 2;';

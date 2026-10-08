@@ -2,7 +2,7 @@
 // The page itself imitates a merge request: the raw diff reviewers read today, and the Read button.
 //   ?closed  start closed   ?doc=N  start at file N   ?code-only / ?diagram-error  exercise fallbacks
 import { structuredPatch } from 'diff';
-import type { DocRef, ReviewSource } from '../src/platforms/types.ts';
+import type { DocRef, ReviewSource, Thread } from '../src/platforms/types.ts';
 import { Launcher } from '../src/ui/launcher.ts';
 import { openReader } from '../src/ui/reader.ts';
 
@@ -48,7 +48,7 @@ const source: ReviewSource = {
         const comments = JSON.parse(sessionStorage.getItem('galley:demo-comments') ?? '[]');
         comments.push({ ...target, body });
         sessionStorage.setItem('galley:demo-comments', JSON.stringify(comments));
-        return { url: '#demo-comment' };
+        return { url: '#demo-comment', reply: demoReply('#demo-comment') };
       },
     };
   },
@@ -56,7 +56,7 @@ const source: ReviewSource = {
     if (!source.docs.length) return [];
     const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
     const [rfc, readme] = docs;
-    return [
+    const threads: Thread[] = [
       {
         doc: rfc, side: 'head', line: 13, url: '#thread-1',
         comments: [
@@ -73,9 +73,24 @@ const source: ReviewSource = {
         comments: [{ author: 'kim', body: 'The install section reads much better now.', createdAt: ago(50), url: '#thread-3' }],
       },
     ];
+    const replies: Array<{ thread: string; body: string; createdAt: string }> = JSON.parse(sessionStorage.getItem('galley:demo-replies') ?? '[]');
+    for (const thread of threads) {
+      thread.reply = demoReply(thread.url);
+      thread.comments.push(...replies.filter((reply) => reply.thread === thread.url).map((reply) => ({ author: 'You', body: reply.body, createdAt: reply.createdAt, url: thread.url })));
+    }
+    return threads;
   },
   links: () => ({ raw: (path) => `samples/head/${path}`, blob: (path) => `samples/head/${path}` }),
 };
+
+function demoReply(thread: string): NonNullable<Thread['reply']> {
+  return async (body) => {
+    const replies = JSON.parse(sessionStorage.getItem('galley:demo-replies') ?? '[]');
+    replies.push({ thread, body: body.trim(), createdAt: new Date().toISOString() });
+    sessionStorage.setItem('galley:demo-replies', JSON.stringify(replies));
+    return { url: thread };
+  };
+}
 
 function cell(tr: HTMLTableRowElement, value: string | number, className = ''): void {
   const td = tr.insertCell();

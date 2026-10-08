@@ -95,3 +95,24 @@ it('each hidden stretch can reveal and collapse context independently, retaining
   expect(r.content.querySelector('.mr-context-gap')).toBe(null);
   expect(before.hidden).toBe(false); expect(after.hidden).toBe(false);
 });
+
+it('one consecutive unchanged stretch spans lists, quotes and prose under one fold', () => {
+  const base = '# Guide\n\nFirst value 10.\n\n- Stable first\n- Stable second\n\n> Stable quote.\n\nStable prose.\n\nLast value 10.\n';
+  const r = render(base, base.replaceAll('value 10', 'value 20'));
+  document.body.append(r.content);
+  filterDocument(r, true);
+  const stable = r.blocks.filter((block) => block.el.textContent?.includes('Stable'));
+  expect(stable).toHaveLength(4);
+  expect(stable.every((block) => block.el.hidden)).toBe(true);
+  expect(r.content.querySelectorAll('.mr-context-toggle')).toHaveLength(1);
+  const toggle = () => r.content.querySelector<HTMLButtonElement>('.mr-context-toggle')!;
+  expect(toggle().getAttribute('aria-label')).toBe('Expand 4 unchanged blocks');
+  toggle().click();
+  expect(stable.every((block) => !block.el.hidden && !block.el.closest('[hidden]'))).toBe(true);
+  expect(toggle().getAttribute('aria-expanded')).toBe('true');
+  expect(document.activeElement).toBe(toggle());
+  toggle().click();
+  expect(stable.every((block) => block.el.hidden)).toBe(true);
+  expect(r.content.querySelectorAll('.mr-context-toggle')).toHaveLength(1);
+  r.content.remove();
+});

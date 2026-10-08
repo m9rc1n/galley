@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { APPEARANCES, DEFAULT_SETTINGS, THEMES, loadSettings, saveSettings } from './settings.ts';
+import { APPEARANCES, DEFAULT_SETTINGS, FONTS, THEMES, loadSettings, saveSettings } from './settings.ts';
 
 afterEach(() => localStorage.clear());
 
@@ -31,8 +31,21 @@ it.each(THEMES.flatMap((theme) => APPEARANCES.map((appearance) => ({ theme, appe
 );
 
 it('falls back to valid palette and appearance defaults for unknown saved choices', async () => {
-  localStorage.setItem('galley:settings', JSON.stringify({ theme: 'unknown', appearance: 'unknown' }));
+  localStorage.setItem('galley:settings', JSON.stringify({ theme: 'unknown', appearance: 'unknown', font: 'unknown' }));
   expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
+});
+
+it('remembers how comment cards look, and shades them unless outlines were chosen', async () => {
+  expect(DEFAULT_SETTINGS.comments).toBe('shaded');
+  await saveSettings({ ...DEFAULT_SETTINGS, comments: 'outlined' });
+  expect((await loadSettings()).comments).toBe('outlined');
+  localStorage.setItem('galley:settings', JSON.stringify({ comments: 'boxed' }));
+  expect((await loadSettings()).comments).toBe('shaded');
+});
+
+it.each(FONTS)('remembers the %s typeface', async (font) => {
+  await saveSettings({ ...DEFAULT_SETTINGS, font });
+  expect((await loadSettings()).font).toBe(font);
 });
 
 it('uses extension-local storage instead of the host page storage', async () => {

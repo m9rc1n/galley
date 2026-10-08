@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify';
 import type { Unit } from '../core/markdown.ts';
+import type { DiagramPalette } from './diagram-palette.ts';
 import type { RenderedBlock } from './render.ts';
 import { hostFor, sandbox } from './sandbox.ts';
 
@@ -90,37 +91,61 @@ export function diagramImage(doc: Document, svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(local)}`;
 }
 
+/** The size the drawing was laid out at, from its viewBox, so its text is shown at its own size. */
+export function diagramSize(svg: string): { width: number; height: number } | null {
+  const box = /^\s*<svg\b[^>]*?\sviewBox="\s*-?[\d.]+[\s,]+-?[\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"/.exec(svg);
+  const width = Math.ceil(Number(box?.[1])), height = Math.ceil(Number(box?.[2]));
+  return width > 0 && height > 0 && width <= 20_000 && height <= 20_000 ? { width, height } : null;
+}
+
 /** Mermaid runs in its sandboxed frame (diagram-frame.ts); the first request also loads the engine. */
 const engine = sandbox('diagram-frame.html', 20_000);
 const MAX_SVG_CHARS = 2_000_000;
 let queue: Promise<void> = Promise.resolve();
-const rendered = new WeakMap<Diagram, { dark: boolean; token: number }>();
+const rendered = new WeakMap<Diagram, { theme: string; token: number }>();
 
 /** The reply is untrusted: it must be a bounded string, and diagramImage sanitises it. */
-async function requestSvg(el: Element, code: string, dark: boolean): Promise<string> {
-  const { svg } = await engine.request(hostFor(el), { code, dark });
+async function requestSvg(el: Element, code: string, dark: boolean, palette?: DiagramPalette): Promise<string> {
+  const { svg } = await engine.request(hostFor(el), { code, dark, ...(palette ? { palette } : {}) });
   if (typeof svg !== 'string' || svg.length > MAX_SVG_CHARS) throw new Error('Mermaid could not render this diagram.');
   return svg;
 }
 
-/** Sequential jobs, so a result for an old theme or a closed document is never shown. */
-export function renderDiagrams(diagrams: Diagram[], dark: boolean, changed: () => void): void {
+/**
+ * Sequential jobs, so a result for an old theme or a closed document is never shown. Given the
+ * reader's palette, diagrams take its colours; otherwise Mermaid's own light or dark theme.
+ */
+export function renderDiagrams(diagrams: Diagram[], dark: boolean, changed: () => void, palette?: DiagramPalette): void {
+  const theme = `${dark} ${palette ? Object.values(palette).join() : ''}`;
   for (const diagram of diagrams) {
     const previous = rendered.get(diagram);
-    if (previous?.dark === dark) continue;
-    const state = { dark, token: (previous?.token ?? 0) + 1 };
+    if (previous?.theme === theme) continue;
+    const state = { theme, token: (previous?.token ?? 0) + 1 };
     rendered.set(diagram, state);
     for (const version of diagram.versions) {
       queue = queue.then(async () => {
         if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
         const doc = diagram.el.ownerDocument;
         try {
-          const svg = await requestSvg(diagram.el, diagramCode(version.source), dark);
+          const svg = await requestSvg(diagram.el, diagramCode(version.source), dark, palette);
           if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
           const image = doc.createElement('img');
           image.alt = `${version.side === 'base' ? 'Old' : 'New'} version of Mermaid diagram. View source below.`;
           image.src = diagramImage(doc, svg);
-          version.view.replaceChildren(image);
+          const size = diagramSize(svg);
+          if (size) {
+            image.width = size.width;
+            image.height = size.height;
+          }
+          // A diagram fits the column; choosing it shows it at full size.
+          const zoom = doc.createElement('button');
+          zoom.type = 'button';
+          zoom.className = 'mr-diagram-zoom';
+          zoom.dataset.act = 'zoom-diagram';
+          zoom.title = 'Enlarge diagram';
+          zoom.setAttribute('aria-label', `Enlarge the ${version.side === 'base' ? 'old' : 'new'} version of the diagram`);
+          zoom.append(image);
+          version.view.replaceChildren(zoom);
           version.view.dataset.state = 'ready';
           image.addEventListener('load', changed, { once: true });
         } catch (err) {
