@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/m9rc1n/galley/compare/v0.5.0...v0.5.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **reader:** re-tint change colors per light theme and drop the code-file border ([60f2890](https://github.com/m9rc1n/galley/commit/60f2890f581111b71d7a4f5b36f72d94628464ef))
+* relicense under GPL-3.0-or-later and refresh the reader's change colors ([42ef3f2](https://github.com/m9rc1n/galley/commit/42ef3f254eac9fe94f6a20d5a13d0be99136a563))
+
 ## [0.5.0](https://github.com/m9rc1n/galley/compare/v0.4.1...v0.5.0) (2026-10-08)
 
 
