@@ -37,5 +37,7 @@ export function renderCodeFile(doc: Document, ref: DocRef, contents: DocContents
       inChange = kind !== 'same';
     }
   }
+  // The line number columns are as wide as the longest number in this file (reader.css).
+  code.style.setProperty('--digits', String(Math.max(2, String(Math.max(baseLine, headLine)).length)));
   return { content: root, blocks, changes, stats, diagrams: [], isCode: true, lead: null, title: ref.path.split('/').pop() ?? ref.path, description: null, words: 0, heldImages: 0, hiddenLines: 0 };
 }

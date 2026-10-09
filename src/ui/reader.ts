@@ -1,4 +1,4 @@
-import { ReaderError, type DocContents, type DocRef, type DocStatus, type ReviewSource, type CommentTarget, type CommentPlan, type Thread } from '../platforms/types.ts';
+import { ReaderError, type DocContents, type DocRef, type DocStatus, type ReviewOverview, type ReviewSource, type CommentTarget, type CommentPlan, type Thread } from '../platforms/types.ts';
 import { highlightCode, languageName, languageOf } from './code.ts';
 import { renderCodeFile } from './code-files.ts';
 import { isPalette, PALETTE_KEYS, type DiagramPalette } from './diagram-palette.ts';
@@ -9,26 +9,97 @@ import css from './reader.css';
 import { loadReaderFonts } from './fonts.ts';
 import { loadImage, platformLink, renderDocument, renderSnippet, type RenderedBlock, type RenderedDoc } from './render.ts';
 import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
-import { DEFAULT_SETTINGS, TEXT_SIZES, loadSettings, saveSettings, type Settings } from './settings.ts';
+import { DEFAULT_SETTINGS, LAYOUTS, TEXT_SIZES, loadSettings, saveSettings, type Layout, type Settings, type Theme } from './settings.ts';
 
 const STATUS_LABEL: Record<DocStatus, string> = { added: 'New', removed: 'Deleted', modified: 'Edited', renamed: 'Renamed' };
 const WORDS_PER_MINUTE = 230;
 /** Changes are brought to this fraction of the viewport height when navigating. */
 const FOCUS_LINE = 0.3;
 
-const PALETTE_OPTIONS = [
+/** Palettes chosen for reading: neutral, warm, then cool. The settings show them six to a page. */
+const PALETTES: Array<[Theme, string, string]> = [
   ['paper', 'Paper', 'Neutral'],
-  ['sage', 'Sage', 'Soft green'],
+  ['eink', 'E-ink', 'Paper grey'],
+  ['cream', 'Cream', 'Gentle cream'],
   ['sepia', 'Sepia', 'Warm paper'],
+  ['night', 'Night', 'Evening amber'],
+  ['blush', 'Blush', 'Warm pastel'],
+  ['sage', 'Sage', 'Soft green'],
+  ['seafoam', 'Seafoam', 'Cool green'],
   ['slate', 'Slate', 'Cool blue'],
+  ['nord', 'Nord', 'Arctic blue'],
   ['dusk', 'Dusk', 'Soft violet'],
   ['contrast', 'Contrast', 'Crisp ink'],
-].map(([value, name, caption]) => `
+];
+const PALETTES_PER_PAGE = 6;
+const paletteButton = ([value, name, caption]: [Theme, string, string]) => `
   <button data-value="${value}" aria-label="${name}">
     <span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span class="mr-theme-lines"><i></i><i></i><i></i></span></span>
     <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
     <span class="mr-theme-caption">${caption}</span>
+  </button>`;
+const PALETTE_PAGES = Array.from({ length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) }, (_, page) =>
+  `<div class="mr-palette-page">${PALETTES.slice(page * PALETTES_PER_PAGE, (page + 1) * PALETTES_PER_PAGE).map(paletteButton).join('')}</div>`).join('');
+const PALETTE_DOTS = Array.from({ length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) }, (_, page) =>
+  `<button class="mr-carousel-dot" data-act="palette-page" data-page="${page}" aria-label="Palettes, page ${page + 1}"></button>`).join('');
+
+/**
+ * Each layout is drawn as a page: a contents column (c), the text (t, with lines) and the comments
+ * column (m) in the proportions that layout gives them on a wide screen.
+ */
+const LAYOUT_CHOICES: Array<[Layout, string, string]> = [
+  ['balanced', 'Balanced', 'Contents, text and comments side by side'],
+  ['review', 'Review', 'Room for the conversation'],
+  ['wide', 'Wide text', 'For tables, code and diagrams'],
+  ['focus', 'Focus', 'The text alone; comments below it'],
+  ['fit', 'Fit to screen', 'Everything grows with the window'],
+];
+const LAYOUT_NAMES = Object.fromEntries(LAYOUT_CHOICES.map(([value, name]) => [value, name])) as Record<Layout, string>;
+const LAYOUT_OPTIONS = LAYOUT_CHOICES.map(([value, name, caption]) => `
+  <button data-value="${value}" aria-label="${name}: ${caption}">
+    <span class="mr-layout-preview" aria-hidden="true"><i class="c"></i><i class="t"><b></b><b></b><b></b><b></b></i><i class="m"><b></b><b></b></i></span>
+    <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
+    <span class="mr-theme-caption">${caption}</span>
   </button>`).join('');
+
+/** Settings tabs, in order: arrow keys move through them. */
+const SETTINGS_TABS = ['reading', 'layout', 'review', 'keys'] as const;
+type SettingsTab = typeof SETTINGS_TABS[number];
+/** Every shortcut, grouped the way a review goes; the Keys tab lists them and onKey handles them. */
+const SHORTCUTS: Array<[string, Array<[string[], string]>]> = [
+  ['Move through the review', [
+    [['J', 'K'], 'Next / previous change'],
+    [['N', 'P'], 'Next / previous conversation'],
+    [[']', '['], 'Next / previous file'],
+    [['F'], 'Go to a file'],
+  ]],
+  ['Comment', [
+    [['R'], 'Comment on the selection or the paragraph in focus'],
+    [['⌘/Ctrl', 'Enter'], 'Post the comment or reply'],
+    [['Esc'], 'Leave the editor; your draft is kept'],
+    [['V'], 'Mark the file viewed'],
+  ]],
+  ['Change the view', [
+    [['C'], 'Change marks on / off'],
+    [['A'], 'Changed parts / whole files'],
+    [['L'], 'Next layout'],
+    [['D'], 'Comfortable / compact'],
+    [['+', '−'], 'Larger / smaller text'],
+    [['0'], 'Default text size'],
+  ]],
+  ['Settings', [
+    [[','], 'Open settings'],
+    [['?'], 'Show these shortcuts'],
+    [['Esc'], 'Close settings, then the reader'],
+  ]],
+];
+const KEY_GROUPS = SHORTCUTS.map(([title, keys]) => `
+  <section class="mr-settings-section mr-keys-group" aria-label="${title}"><h3 class="mr-keys-title">${title}</h3><dl class="mr-keys">${
+    keys.map(([combo, description]) => `<dt>${combo.map((key) => `<kbd>${key}</kbd>`).join(' ')}</dt><dd>${description}</dd>`).join('')
+  }</dl></section>`).join('');
+
+/** Settings chosen from a group of buttons in the settings sheet (data-setting / data-value). */
+type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'comments' | 'layout' | 'density';
 
 const TEMPLATE = `
 <div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley reader">
@@ -56,20 +127,38 @@ const TEMPLATE = `
       <header class="mr-settings-heading"><div><h2 id="mr-settings-title">Reading settings</h2><p>Make yourself comfortable.</p></div><button class="mr-btn mr-icon-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
       <div class="mr-settings-tabs" role="tablist" aria-label="Settings category">
         <button id="mr-reading-tab" role="tab" data-settings-tab="reading" aria-selected="true" aria-controls="mr-reading-panel" tabindex="0">${icons.book}Reading</button>
+        <button id="mr-layout-tab" role="tab" data-settings-tab="layout" aria-selected="false" aria-controls="mr-layout-panel" tabindex="-1">${icons.layout}Layout</button>
         <button id="mr-review-tab" role="tab" data-settings-tab="review" aria-selected="false" aria-controls="mr-review-panel" tabindex="-1">${icons.check}Review</button>
+        <button id="mr-keys-tab" role="tab" data-settings-tab="keys" aria-selected="false" aria-controls="mr-keys-panel" tabindex="-1">${icons.keyboard}Keys</button>
       </div>
       <div class="mr-settings-body">
       <div id="mr-reading-panel" role="tabpanel" aria-labelledby="mr-reading-tab">
       <section class="mr-settings-section" aria-label="Page appearance">
         <div class="mr-set-row"><span>Appearance</span><div class="mr-seg mr-appearance" data-setting="appearance" role="group" aria-label="Appearance"><button data-value="auto">System</button><button data-value="light">Light</button><button data-value="dark">Dark</button></div></div>
         <div class="mr-set-row mr-theme-row"><span>Palette<small>Previewed in your current appearance</small></span>
-          <div class="mr-theme-options" data-setting="theme" role="group" aria-label="Palette">${PALETTE_OPTIONS}</div>
+          <div class="mr-palette-carousel">
+            <div class="mr-theme-options mr-palette-track" data-setting="theme" role="group" aria-label="Palette">${PALETTE_PAGES}</div>
+            <div class="mr-carousel-nav">
+              <button class="mr-btn mr-icon-btn" data-act="palette-prev" aria-label="Previous palettes">${icons.chevronLeft}</button>
+              <span class="mr-carousel-dots">${PALETTE_DOTS}</span>
+              <button class="mr-btn mr-icon-btn" data-act="palette-next" aria-label="More palettes">${icons.chevronRight}</button>
+            </div>
+          </div>
         </div>
       </section>
       <section class="mr-settings-section" aria-label="Typography">
-        <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
+        <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="galley">Galley</option><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
         <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite">20 px</output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
         <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>A little room to read.</p><span>Follow the idea. Notice what changed.</span></div>
+      </section>
+      <p class="mr-settings-note">Your document updates as you choose.</p>
+      </div>
+      <div id="mr-layout-panel" role="tabpanel" aria-labelledby="mr-layout-tab" hidden>
+      <section class="mr-settings-section" aria-label="Layout">
+        <div class="mr-set-row mr-theme-row"><span>Layout<small>How a wide window is shared. Narrow windows read in one column.</small></span>
+          <div class="mr-theme-options mr-layout-options" data-setting="layout" role="group" aria-label="Layout">${LAYOUT_OPTIONS}</div>
+        </div>
+        <div class="mr-set-row"><span>Density<small>Compact fits more on the screen</small></span><div class="mr-seg" data-setting="density" role="group" aria-label="Density"><button data-value="comfortable">Comfortable</button><button data-value="compact">Compact</button></div></div>
       </section>
       <p class="mr-settings-note">Your document updates as you choose.</p>
       </div>
@@ -77,21 +166,16 @@ const TEMPLATE = `
       <section class="mr-settings-section" aria-label="Review">
         <div class="mr-set-row"><span>Change marks<small>Highlight inserted and removed text</small></span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Marked</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
         <div class="mr-set-row"><span>Context<small>Keep the focus on edits or read everything</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
+        <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Read the request's own title and description first</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
         <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
         <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
         <div class="mr-set-row"><span>Comment cards<small>A soft shadow and tone, or an outline</small></span><div class="mr-seg" data-setting="comments" role="group" aria-label="Comment cards"><button data-value="shaded">Shaded</button><button data-value="outlined">Outlined</button></div></div>
       </section>
       <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>
       </div>
-      <details class="mr-settings-section mr-keys-section"><summary>Keyboard shortcuts</summary><dl class="mr-keys">
-        <dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Next / previous change</dd>
-        <dt><kbd>]</kbd> <kbd>[</kbd></dt><dd>Next / previous document</dd>
-        <dt><kbd>R</kbd></dt><dd>Comment on the selection or the paragraph in focus</dd>
-        <dt><kbd>V</kbd></dt><dd>Mark document as viewed</dd>
-        <dt><kbd>C</kbd></dt><dd>Changes on / off</dd>
-        <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Text size</dd>
-        <dt><kbd>Esc</kbd></dt><dd>Close settings / reader</dd>
-      </dl></details>
+      <div id="mr-keys-panel" role="tabpanel" aria-labelledby="mr-keys-tab" hidden>${KEY_GROUPS}
+      <p class="mr-settings-note">Shortcuts work while the reader has focus and no text field is active. Press ? at any time to come back here.</p>
+      </div>
       </div>
     </aside>
   </div>
@@ -291,6 +375,8 @@ class Reader {
   private rendered: RenderedDoc | null = null;
   private headings: Array<{ el: HTMLElement; link: HTMLElement }> = [];
   private markTargets: HTMLElement[] = [];
+  /** The pull or merge request's description, the first document when the reader asks for it. */
+  private overview: HTMLElement | null = null;
   private lastStep: { el: HTMLElement; at: number } | null = null;
   private views: View[] = [];
   private readonly viewed = new Map<DocRef, { value: boolean; ready: boolean; busy: boolean; key?: string; error?: string }>();
@@ -379,6 +465,7 @@ class Reader {
     this.root.focus({ preventScroll: true });
 
     this.root.addEventListener('click', (e) => this.onClick(e));
+    this.paletteTrack().addEventListener('scroll', () => this.updatePaletteNav(), { passive: true });
     this.shadow.querySelector<HTMLSelectElement>('#mr-typeface')!.addEventListener('change', (e) => {
       this.update({ font: (e.target as HTMLSelectElement).value as Settings['font'] });
     });
@@ -419,7 +506,8 @@ class Reader {
     });
     for (const doc of all) this.viewed.set(doc, { value: false, ready: false, busy: false });
     if (source.viewed) void this.initNativeViewed();
-    this.el.doc.replaceChildren(...this.views.map((view) => view.section));
+    this.overview = source.overview ? this.renderOverview(source.overview) : null;
+    this.el.doc.replaceChildren(...(this.overview ? [this.overview] : []), ...this.views.map((view) => view.section));
     this.updateFileButton();
     void this.loadAll(this.index);
     void this.loadThreads();
@@ -738,7 +826,7 @@ class Reader {
     return wasOpen;
   }
 
-  private selectSettingsTab(name: 'reading' | 'review', focus = false): void {
+  private selectSettingsTab(name: SettingsTab, focus = false): void {
     for (const tab of this.el.settings.querySelectorAll<HTMLElement>('[data-settings-tab]')) {
       const active = tab.dataset.settingsTab === name;
       tab.setAttribute('aria-selected', String(active));
@@ -847,6 +935,10 @@ class Reader {
     const r = this.root;
     for (const view of this.views) if (view.rendered) filterDocument(view.rendered, s.scope === 'changed');
     if (this.rendered) this.buildToc(this.rendered);
+    const overviewToggle = this.shadow.querySelector<HTMLElement>('[data-act="overview"]')!;
+    overviewToggle.setAttribute('aria-checked', String(s.overview));
+    overviewToggle.closest<HTMLElement>('.mr-set-row')!.hidden = Boolean(this.source) && !this.source?.overview;
+    if (this.overview) this.overview.hidden = !s.overview;
     const codeToggle = this.shadow.querySelector<HTMLElement>('[data-act="code-files"]')!;
     codeToggle.setAttribute('aria-checked', String(s.codeFiles));
     codeToggle.title = `${this.source?.codeDocs?.length ?? 0} supported code files`;
@@ -863,20 +955,36 @@ class Reader {
     r.dataset.font = s.font;
     r.dataset.theme = s.theme;
     r.dataset.comments = s.comments;
+    r.dataset.layout = s.layout;
+    r.dataset.density = s.density;
     r.classList.toggle('is-dark', s.appearance === 'dark' || (s.appearance === 'auto' && this.dark.matches));
-    r.style.setProperty('--body-size', `${TEXT_SIZES[s.size] ?? 20}px`);
+    this.applyFit();
     this.shadow.querySelector<HTMLSelectElement>('#mr-typeface')!.value = s.font;
     this.shadow.querySelector<HTMLOutputElement>('.mr-text-size')!.textContent = `${TEXT_SIZES[s.size] ?? 20} px`;
     (this.shadow.querySelector('[data-act="smaller"]') as HTMLButtonElement).disabled = s.size <= 0;
     (this.shadow.querySelector('[data-act="larger"]') as HTMLButtonElement).disabled = s.size >= TEXT_SIZES.length - 1;
     for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === s.mode));
     for (const group of this.shadow.querySelectorAll<HTMLElement>('[data-setting]')) {
-      const value = s[group.dataset.setting as 'theme' | 'appearance' | 'font' | 'images' | 'comments'];
+      const value = s[group.dataset.setting as SettingKey];
       for (const b of group.querySelectorAll<HTMLElement>('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === value));
     }
     const palette = this.palette();
     for (const view of this.views) if (view.rendered) renderDiagrams(view.rendered.diagrams, r.classList.contains('is-dark'), () => this.schedule(true), palette);
     this.schedule(true);
+  }
+
+  /**
+   * Text size for the whole reading surface, and for Fit to screen the scale of the whole composition:
+   * the balanced layout as drawn for a 1440px window, grown with wider windows up to one and a half times.
+   */
+  private applyFit(): void {
+    const { layout, size } = this.settings;
+    const fit = layout === 'fit' ? Math.round(Math.min(1.5, Math.max(1, this.root.clientWidth / 1440)) * 100) / 100 : 1;
+    const text = TEXT_SIZES[size] ?? 20;
+    this.root.style.setProperty('--fit', String(fit));
+    // The chosen size against the default: titles, bylines, contents and comments grow with the text.
+    this.root.style.setProperty('--text-scale', String(Math.round((text / TEXT_SIZES[DEFAULT_SETTINGS.size]) * 1000) / 1000));
+    this.root.style.setProperty('--body-size', `${Math.round(text * fit * 10) / 10}px`);
   }
 
   private readonly onSchemeChange = () => this.applySettings();
@@ -931,8 +1039,38 @@ class Reader {
   }
 
   private step(direction: 1 | -1): void {
-    const list = this.visibleChanges();
-    if (!list.length) return;
+    const target = this.nextOf(this.visibleChanges(), direction);
+    if (target) this.scrollToEl(target);
+  }
+
+  /** Conversations in reading order, by the text they discuss. */
+  private visibleThreads(): Array<{ anchor: HTMLElement; card: HTMLElement }> {
+    return this.threadEls
+      .filter(({ card, anchor }) => !card.hidden && anchor.getClientRects().length > 0)
+      .map(({ card, anchor }) => ({ card, anchor, top: anchor.getBoundingClientRect().top }))
+      .sort((a, b) => a.top - b.top)
+      .map(({ card, anchor }) => ({ card, anchor }));
+  }
+
+  /** N and P: bring the next or previous conversation level with the focus line, and point it out. */
+  private stepThread(direction: 1 | -1): void {
+    const threads = this.visibleThreads();
+    if (!threads.length) { this.toast('No conversations in this review yet'); return; }
+    // Several conversations can share one paragraph, so the list holds cards, positioned by their text.
+    const cards = threads.map((thread) => thread.card);
+    const tops = new Map(threads.map((thread) => [thread.card, thread.anchor.getBoundingClientRect().top]));
+    const card = this.nextOf(cards, direction, (el) => tops.get(el) ?? 0);
+    if (!card) { this.toast(direction === 1 ? 'No more conversations below' : 'No more conversations above'); return; }
+    this.scrollToEl(threads.find((thread) => thread.card === card)!.anchor, FOCUS_LINE, false);
+    card.classList.remove('mr-flash');
+    void card.offsetWidth;
+    card.classList.add('mr-flash');
+    setTimeout(() => card.classList.remove('mr-flash'), 1700);
+  }
+
+  /** The next element in reading order after the focus line, or the one before it. */
+  private nextOf(list: HTMLElement[], direction: 1 | -1, topOf = (el: HTMLElement) => el.getBoundingClientRect().top): HTMLElement | undefined {
+    if (!list.length) return undefined;
     let index: number;
     const recent = this.lastStep && performance.now() - this.lastStep.at < 900 ? list.indexOf(this.lastStep.el) : -1;
     if (recent !== -1) {
@@ -940,13 +1078,73 @@ class Reader {
       index = recent + direction;
     } else {
       const line = this.root.clientHeight * FOCUS_LINE;
-      const tops = list.map((el) => el.getBoundingClientRect().top);
+      const tops = list.map(topOf);
       index = direction === 1 ? tops.findIndex((t) => t > line + 8) : tops.findLastIndex((t) => t < line - 8);
     }
     const target = list[index];
-    if (!target) return;
-    this.lastStep = { el: target, at: performance.now() };
-    this.scrollToEl(target);
+    if (target) this.lastStep = { el: target, at: performance.now() };
+    return target;
+  }
+
+  /** The settings sheet, open at one of its tabs. */
+  private openSettings(tab: SettingsTab): void {
+    this.selectSettingsTab(tab);
+    if (this.el.settings.hidden) this.toggleMenu(this.el.settings, this.shadow.querySelector<HTMLElement>('[data-act="settings"]'));
+    this.revealPalette();
+  }
+
+  /** A first document of the request's own title, author and description, folded under its title on demand. */
+  private renderOverview(overview: ReviewOverview): HTMLElement {
+    const section = h('section', 'mr-document mr-overview');
+    section.setAttribute('aria-label', `${overview.kind} description`);
+    section.hidden = !this.settings.overview;
+    const byline = h('div', 'mr-byline');
+    if (overview.author) byline.append(h('span', 'mr-overview-author', `Opened by ${overview.author}`));
+    const href = platformLink(overview.url, location.origin);
+    if (href) {
+      const link = h('a', 'mr-overview-link', `Open on ${new URL(href).host}`);
+      link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      byline.append(link);
+    }
+    const body = h('details', 'mr-overview-body');
+    body.open = true;
+    const content = h('div', 'mr-content');
+    if (overview.description.trim()) content.append(renderSnippet(document, overview.description, location.origin, this.settings.images));
+    else content.append(h('p', 'mr-overview-empty', 'No description.'));
+    body.append(h('summary', '', 'Description'), content);
+    section.append(h('p', 'mr-overview-kind', overview.kind), h('h1', 'mr-title', overview.title), byline, body);
+    return section;
+  }
+
+  private paletteTrack(): HTMLElement {
+    return this.shadow.querySelector<HTMLElement>('.mr-palette-track')!;
+  }
+
+  /** The palette page in view; pages are as wide as the track. */
+  private paletteAt(): number {
+    const track = this.paletteTrack();
+    return track.clientWidth ? Math.round(track.scrollLeft / track.clientWidth) : 0;
+  }
+
+  private turnPalettes(page: number, smooth = true): void {
+    const track = this.paletteTrack();
+    const target = Math.max(0, Math.min(track.children.length - 1, page));
+    track.scrollTo({ left: target * track.clientWidth, behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto' });
+    this.updatePaletteNav(target);
+  }
+
+  private updatePaletteNav(page = this.paletteAt()): void {
+    const last = this.paletteTrack().children.length - 1;
+    this.shadow.querySelector<HTMLButtonElement>('[data-act="palette-prev"]')!.disabled = page <= 0;
+    this.shadow.querySelector<HTMLButtonElement>('[data-act="palette-next"]')!.disabled = page >= last;
+    for (const [i, dot] of this.shadow.querySelectorAll<HTMLElement>('.mr-carousel-dot').entries()) dot.setAttribute('aria-current', String(i === page));
+  }
+
+  /** The settings open on the page that holds the chosen palette. */
+  private revealPalette(): void {
+    const track = this.paletteTrack();
+    const page = track.querySelector(`[data-value="${this.settings.theme}"]`)?.closest('.mr-palette-page');
+    this.turnPalettes(page ? [...track.children].indexOf(page) : 0, false);
   }
 
   private stepDoc(direction: 1 | -1): void {
@@ -1009,8 +1207,10 @@ class Reader {
     const target = e.composedPath()[0];
     if (target instanceof HTMLElement && target.matches('[data-settings-tab]') && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
       e.preventDefault();
-      const next = e.key === 'Home' ? 'reading' : e.key === 'End' ? 'review' : target.dataset.settingsTab === 'reading' ? 'review' : 'reading';
-      this.selectSettingsTab(next, true);
+      const at = SETTINGS_TABS.indexOf(target.dataset.settingsTab as SettingsTab);
+      const step = e.key === 'ArrowRight' ? 1 : -1;
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? SETTINGS_TABS.length - 1 : (at + step + SETTINGS_TABS.length) % SETTINGS_TABS.length;
+      this.selectSettingsTab(SETTINGS_TABS[next], true);
       return;
     }
     if (e.key === 'Tab') {
@@ -1030,12 +1230,44 @@ class Reader {
         if (!this.closeMenus()) this.close();
         break;
       case 'j':
-      case 'n':
         this.step(1);
         break;
       case 'k':
-      case 'p':
         this.step(-1);
+        break;
+      case 'n':
+        this.stepThread(1);
+        break;
+      case 'p':
+        this.stepThread(-1);
+        break;
+      case 'f': {
+        const button = this.shadow.querySelector<HTMLElement>('[data-act="files"]');
+        if (button && !button.hidden && this.views.some((view) => !view.section.hidden)) this.toggleMenu(this.el.files, button);
+        break;
+      }
+      case 'a':
+        this.update({ scope: this.settings.scope === 'changed' ? 'all' : 'changed' });
+        this.toast(this.settings.scope === 'all' ? 'Whole files' : 'Changed parts');
+        break;
+      case 'l': {
+        const layout = LAYOUTS[(LAYOUTS.indexOf(this.settings.layout) + 1) % LAYOUTS.length];
+        this.update({ layout });
+        this.toast(`Layout: ${LAYOUT_NAMES[layout]}`);
+        break;
+      }
+      case 'd':
+        this.update({ density: this.settings.density === 'compact' ? 'comfortable' : 'compact' });
+        this.toast(this.settings.density === 'compact' ? 'Compact' : 'Comfortable');
+        break;
+      case '0':
+        this.update({ size: DEFAULT_SETTINGS.size });
+        break;
+      case ',':
+        this.openSettings('reading');
+        break;
+      case '?':
+        this.openSettings('keys');
         break;
       case ']':
         this.stepDoc(1);
@@ -1072,7 +1304,7 @@ class Reader {
 
     const settingsTab = target.closest<HTMLElement>('[data-settings-tab]');
     if (settingsTab) {
-      this.selectSettingsTab(settingsTab.dataset.settingsTab as 'reading' | 'review');
+      this.selectSettingsTab(settingsTab.dataset.settingsTab as SettingsTab);
       return;
     }
 
@@ -1099,7 +1331,7 @@ class Reader {
     }
     const setting = target.closest<HTMLElement>('[data-setting] [data-value]');
     if (setting) {
-      const key = setting.parentElement!.dataset.setting as 'theme' | 'appearance' | 'font' | 'images' | 'comments';
+      const key = setting.closest<HTMLElement>('[data-setting]')!.dataset.setting as SettingKey;
       this.update({ [key]: setting.dataset.value } as Partial<Settings>);
       return;
     }
@@ -1116,6 +1348,21 @@ class Reader {
       case 'settings':
         if (this.source && !this.views.some((view) => !view.section.hidden)) this.selectSettingsTab('review');
         this.toggleMenu(this.el.settings, action);
+        if (!this.el.settings.hidden) this.revealPalette();
+        return;
+      case 'palette-prev':
+        this.turnPalettes(this.paletteAt() - 1);
+        return;
+      case 'palette-next':
+        this.turnPalettes(this.paletteAt() + 1);
+        return;
+      case 'palette-page':
+        this.turnPalettes(Number(action.dataset.page));
+        return;
+      case 'overview':
+        if (!this.source?.overview) return;
+        this.update({ overview: !this.settings.overview });
+        if (this.settings.overview) this.root.scrollTo({ top: 0 });
         return;
       case 'code-files':
         if (!this.settings.codeFiles && !this.source?.codeDocs?.length) return;
@@ -1224,6 +1471,17 @@ class Reader {
     if (!hit || (hit.el === this.hover?.el && hit.side === this.hover.side)) return;
     this.hover = hit;
     this.placeCommentButton();
+    this.heatMark(hit.el);
+  }
+
+  /** The change marker beside the text being pointed at comes to full strength. */
+  private heatMark(block: HTMLElement | null): void {
+    const origin = this.el.article.getBoundingClientRect().top;
+    const box = block ? surfaceOf(block).getBoundingClientRect() : null;
+    for (const mark of this.el.gutter.children as HTMLCollectionOf<HTMLElement>) {
+      const top = parseFloat(mark.style.top), bottom = top + parseFloat(mark.style.height);
+      mark.classList.toggle('is-hot', Boolean(box && box.top - origin < bottom && box.bottom - origin > top));
+    }
   }
 
   /** The control stays while the pointer crosses the margin towards it, and goes anywhere else. */
@@ -1241,6 +1499,7 @@ class Reader {
     if (!this.hover) return;
     this.hover = null;
     this.commentBtn.hidden = true;
+    this.heatMark(null);
   }
 
   /** Pointing at a card, or at the comment control, marks the text it belongs to. */
@@ -1640,7 +1899,10 @@ class Reader {
     if (!card || !comment || !thread.reply) return;
     const editor = this.replyEditor(thread);
     const author = comment.author;
-    const mention = index > 0 && author !== 'You' && author !== thread.comments[0]?.author ? `@${author} ` : '';
+    // Mentions use the username; a display name with spaces would mention nobody.
+    const handle = comment.handle ?? author;
+    const starter = thread.comments[0];
+    const mention = index > 0 && author !== 'You' && handle !== (starter?.handle ?? starter?.author) && /^[\w.-]+$/.test(handle) ? `@${handle} ` : '';
     if (!hasDraft(editor)) editor.textarea.value = mention;
     editor.prefill = mention;
     editor.to = index;
@@ -1777,7 +2039,10 @@ class Reader {
     thread.comments.forEach((comment, i) => {
       const item = h('div', `mr-thread-comment${i ? ' is-reply' : ''}${fold && i > 0 && i < thread.comments.length - 1 ? ' is-folded' : ''}`);
       const meta = h('div', 'mr-thread-meta');
-      meta.append(h('span', 'mr-avatar', comment.author.slice(0, 1).toUpperCase()), h('span', 'mr-thread-author', comment.author));
+      // A long name is cut short with an ellipsis; the whole name and username stay in its tooltip.
+      const name = h('span', 'mr-thread-author', comment.author);
+      name.title = comment.handle && comment.handle !== comment.author ? `${comment.author} (@${comment.handle})` : comment.author;
+      meta.append(h('span', 'mr-avatar', comment.author.slice(0, 1).toUpperCase()), name);
       const time = h('time', 'mr-thread-time', relativeTime(comment.createdAt));
       time.dateTime = comment.createdAt;
       time.title = new Date(comment.createdAt).toLocaleString();
@@ -1822,7 +2087,8 @@ class Reader {
    */
   private layoutThreads(): void {
     const article = this.el.article.getBoundingClientRect();
-    const wide = this.root.clientWidth >= 1280 && this.root.clientWidth - article.right >= RAIL_SPACE;
+    // Focus keeps every conversation below its text, whatever the width.
+    const wide = this.settings.layout !== 'focus' && this.root.clientWidth >= 1280 && this.root.clientWidth - article.right >= RAIL_SPACE;
     this.root.classList.toggle('has-rail', wide);
     const entries = [
       ...this.threadEls.map(({ view, card, anchor }) => ({ card, anchor, code: view.doc.kind === 'code' })),
@@ -1869,6 +2135,7 @@ class Reader {
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
       if (this.needLayout) {
+        if (this.settings.layout === 'fit') this.applyFit();
         this.layoutGutter();
         this.layoutThreads();
         // The comment control is positioned within the article, so only layout can move it.
@@ -1888,10 +2155,15 @@ class Reader {
     const contents = this.el.toc.firstElementChild;
     if (contents) {
       const box = contents.getBoundingClientRect();
+      const beneath = (rect: DOMRect) => rect.top < box.bottom + 32 && rect.bottom > box.top - 32;
       this.el.toc.classList.toggle('is-covered', this.views.some((view) => {
-        if (view.doc.kind !== 'code' || view.section.hidden) return false;
-        const rect = view.section.getBoundingClientRect();
-        return rect.top < box.bottom + 32 && rect.bottom > box.top - 32;
+        if (view.section.hidden) return false;
+        if (view.doc.kind === 'code') return beneath(view.section.getBoundingClientRect());
+        // So do code blocks that run wider than the text, into the contents column.
+        return [...view.section.querySelectorAll<HTMLElement>('.mr-content > pre')].some((pre) => {
+          const rect = pre.getBoundingClientRect();
+          return rect.left < box.right + 16 && beneath(rect);
+        });
       }));
     }
     this.el.topbar.classList.toggle('is-scrolled', top > 2);
@@ -1937,7 +2209,8 @@ class Reader {
     const spans: Array<{ top: number; bottom: number; kind: string; target: HTMLElement; point: boolean }> = [];
     for (const el of this.el.doc.querySelectorAll<HTMLElement>('[data-mr-change]')) {
       const content = el.closest('.mr-content')!;
-      if (el.closest('[hidden], .is-code')) continue;
+      // Code shows its changes line by line, in the block itself, so it needs no bar beside it.
+      if (el.closest('[hidden], .is-code') || el.matches('pre')) continue;
       const kind = el.dataset.mrChange!;
       let point = false;
       let rect = el.getBoundingClientRect();
@@ -1961,7 +2234,7 @@ class Reader {
       const mark = h('div', `mr-mark is-${s.kind}${s.point ? ' is-point' : ''}`);
       mark.style.top = `${s.top}px`;
       mark.style.height = `${Math.max(4, s.bottom - s.top)}px`;
-      mark.title = label[s.kind] ?? '';
+      mark.dataset.label = label[s.kind] ?? '';
       mark.dataset.act = 'mark';
       mark.dataset.i = String(i);
       this.markTargets.push(s.point ? (nextVisible(s.target, s.target.closest('.mr-content')!) as HTMLElement) ?? s.target : s.target);

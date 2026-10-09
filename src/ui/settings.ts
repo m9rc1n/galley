@@ -1,8 +1,23 @@
-export const THEMES = ['paper', 'sage', 'sepia', 'slate', 'dusk', 'contrast'] as const;
-export const FONTS = ['serif', 'sans', 'georgia', 'system', 'mono'] as const;
+/** Reading palettes, from neutral through warm to cool; each has a light and a dark version (reader.css). */
+export const THEMES = ['paper', 'eink', 'cream', 'sepia', 'night', 'blush', 'sage', 'seafoam', 'slate', 'nord', 'dusk', 'contrast'] as const;
+/** galley pairs Newsreader headings with DM Sans text (reader.css); the others use one face throughout. */
+export const FONTS = ['galley', 'serif', 'sans', 'georgia', 'system', 'mono'] as const;
 export const APPEARANCES = ['auto', 'light', 'dark'] as const;
+/**
+ * How the window is shared on wide screens (1280px and up). Narrower windows always read in one column.
+ * - balanced: contents, text and a comments column, with the text kept to a comfortable measure.
+ * - review: the conversation gets the room: a wide comments column with larger comment text.
+ * - wide: a wider text column, for documents full of tables, code and diagrams.
+ * - focus: the text alone, centred; comments sit below the paragraphs they discuss.
+ * - fit: the balanced composition scaled to the window, so large screens get larger text.
+ */
+export const LAYOUTS = ['balanced', 'review', 'wide', 'focus', 'fit'] as const;
+/** Compact tightens line height and the space between blocks, files and comments. */
+export const DENSITIES = ['comfortable', 'compact'] as const;
 export type Theme = typeof THEMES[number];
 export type Appearance = typeof APPEARANCES[number];
+export type Layout = typeof LAYOUTS[number];
+export type Density = typeof DENSITIES[number];
 
 export interface Settings {
   theme: Theme;
@@ -17,11 +32,15 @@ export interface Settings {
   images: 'ask' | 'load';
   /** Comment cards: set apart by a shadow and their own tone, or by an outline. */
   comments: 'shaded' | 'outlined';
+  layout: Layout;
+  density: Density;
+  /** Show the pull or merge request's own title and description as the first document. */
+  overview: boolean;
 }
 
 export const TEXT_SIZES = [17, 18, 20, 22, 24];
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'sage', appearance: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false, images: 'ask', comments: 'shaded' };
+export const DEFAULT_SETTINGS: Settings = { theme: 'sage', appearance: 'auto', font: 'serif', size: 2, mode: 'changes', scope: 'changed', codeFiles: false, images: 'ask', comments: 'shaded', layout: 'balanced', density: 'comfortable', overview: false };
 
 const SETTINGS_KEY = 'galley:settings';
 
@@ -63,7 +82,9 @@ export async function loadSettings(): Promise<Settings> {
   const appearance = APPEARANCES.find((appearance) => appearance === saved.appearance) ?? legacyAppearance;
   const font = FONTS.find((font) => font === saved.font) ?? DEFAULT_SETTINGS.font;
   const comments = saved.comments === 'outlined' ? 'outlined' : 'shaded';
-  return { ...DEFAULT_SETTINGS, ...saved, theme, appearance, font, comments };
+  const layout = LAYOUTS.find((layout) => layout === saved.layout) ?? DEFAULT_SETTINGS.layout;
+  const density = DENSITIES.find((density) => density === saved.density) ?? DEFAULT_SETTINGS.density;
+  return { ...DEFAULT_SETTINGS, ...saved, theme, appearance, font, comments, layout, density, overview: saved.overview === true };
 }
 
 export function saveSettings(settings: Settings): Promise<void> {

@@ -625,7 +625,12 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
     stats[removedDoc ? 'removed' : 'added'] = blocks.length;
   }
   const { replacements, held } = decorate(doc, root, input);
-  for (const pre of root.querySelectorAll<HTMLElement>('pre')) lineify(doc, pre);
+  for (const pre of root.querySelectorAll<HTMLElement>('pre')) {
+    lineify(doc, pre);
+    // Wide screens give a code block the room its longest line needs, up to 120 characters (reader.css).
+    const longest = Math.max(0, ...[...pre.querySelectorAll('.mr-cl, .mr-line')].map((line) => (line.textContent ?? '').replace(/\t/g, '    ').length));
+    pre.style.setProperty('--chars', String(longest));
+  }
   for (const block of blocks) block.el = replacements.get(block.el) ?? block.el;
   changes = changes.map((el) => replacements.get(el) ?? el);
   // One pass for document order: compareDocumentPosition walks siblings, so sorting with it is quadratic.

@@ -18,9 +18,19 @@ it('source files preserve text, diff sides and exact line numbers without parsin
   const same = r.blocks.find((block) => block.kind === 'same')!;
   expect(paragraphTarget(ref, same)!.quote).toBe('  return value;');
   expect(paragraphTarget(ref, same)!.startLine).toBe(2);
-  filterDocument(r, true); expect(same.el.hidden).toBe(true);
-  expect(r.content.querySelector('.mr-context-toggle')!.textContent!).toMatch(/unchanged line/);
+  // A line next to a change is context, so it stays in view with the changes.
+  filterDocument(r, true); expect(same.el.hidden).toBe(false);
   filterDocument(r, false); expect(same.el.hidden).toBe(false);
+});
+
+it('keeps two unchanged lines on each side of a change in view, and folds the rest', () => {
+  const lines = Array.from({ length: 12 }, (_, i) => `line ${i + 1}`);
+  const head = lines.map((line, i) => (i === 6 ? 'line 7 changed' : line));
+  const r = renderCodeFile(document, ref, { base: `${lines.join('\n')}\n`, head: `${head.join('\n')}\n` });
+  filterDocument(r, true);
+  const shown = r.blocks.filter((block) => !block.el.hidden).map((block) => block.el.querySelector('.mr-code-text')!.textContent);
+  expect(shown).toEqual(['line 5', 'line 6', 'line 7', 'line 7 changed', 'line 8', 'line 9']);
+  expect([...r.content.querySelectorAll('.mr-context-toggle')].map((button) => button.textContent)).toEqual(['4 unchanged lines', '3 unchanged lines']);
 });
 
 it('removed source files keep their last version, and binary/huge sources fail safely', () => {

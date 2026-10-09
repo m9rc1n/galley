@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { APPEARANCES, DEFAULT_SETTINGS, FONTS, THEMES, loadSettings, saveSettings } from './settings.ts';
+import { APPEARANCES, DEFAULT_SETTINGS, DENSITIES, FONTS, LAYOUTS, THEMES, loadSettings, saveSettings } from './settings.ts';
 
 afterEach(() => localStorage.clear());
 
@@ -33,6 +33,18 @@ it.each(THEMES.flatMap((theme) => APPEARANCES.map((appearance) => ({ theme, appe
 it('falls back to valid palette and appearance defaults for unknown saved choices', async () => {
   localStorage.setItem('galley:settings', JSON.stringify({ theme: 'unknown', appearance: 'unknown', font: 'unknown' }));
   expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
+});
+
+it.each(LAYOUTS.flatMap((layout) => DENSITIES.map((density) => ({ layout, density }))))(
+  'remembers the $layout layout and $density density', async ({ layout, density }) => {
+    await saveSettings({ ...DEFAULT_SETTINGS, layout, density });
+    expect(await loadSettings()).toEqual({ ...DEFAULT_SETTINGS, layout, density });
+  },
+);
+
+it('falls back to the balanced, comfortable layout for unknown saved choices', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ layout: 'sidebar', density: 'tiny' }));
+  expect(await loadSettings()).toMatchObject({ layout: 'balanced', density: 'comfortable' });
 });
 
 it('remembers how comment cards look, and shades them unless outlines were chosen', async () => {

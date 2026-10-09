@@ -69,7 +69,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
     }
   };
 
-  const { data: pr } = await api<{ base: { sha: string }; head: { sha: string } }>(`/pulls/${ctx.number}`);
+  const { data: pr } = await api<{ base: { sha: string }; head: { sha: string }; title?: string; body?: string | null; user?: { login: string } | null }>(`/pulls/${ctx.number}`);
 
   const files: GitHubFile[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -118,6 +118,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
   return {
     title: ctx.title,
     subtitle: `${ctx.owner}/${ctx.repo} · #${ctx.number}`,
+    overview: { kind: 'Pull request', title: pr.title ?? ctx.title, description: pr.body ?? '', author: pr.user?.login ?? '', url: `${repoUrl}/pull/${ctx.number}` },
     diffUrl: `${repoUrl}/pull/${ctx.number}/files`,
     docs,
     codeDocs,

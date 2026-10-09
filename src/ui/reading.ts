@@ -2,6 +2,8 @@ import type { CommentTarget, DocRef } from '../platforms/types.ts';
 import type { RenderedBlock, RenderedDoc } from './render.ts';
 
 const revealed = new WeakMap<RenderedDoc, Set<HTMLElement>>();
+/** Source files keep this many unchanged lines on each side of a change in view, as a diff does. */
+export const CODE_CONTEXT = 2;
 
 /** Hide unchanged blocks, retain relevant headings, and let every gap reveal its own context. */
 export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
@@ -24,6 +26,12 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
     if (block.kind !== 'same') for (const heading of headings) context.add(heading.el);
   }
   if (r.lead) context.add(r.lead);
+  if (r.isCode) {
+    r.blocks.forEach((block, i) => {
+      if (block.kind === 'same') return;
+      for (let j = Math.max(0, i - CODE_CONTEXT); j <= Math.min(r.blocks.length - 1, i + CODE_CONTEXT); j++) context.add(r.blocks[j].el);
+    });
+  }
   const gaps: Array<{ blocks: RenderedBlock[]; anchor: HTMLElement; parent: HTMLElement }> = [];
   let previous: typeof gaps[number] | undefined;
   for (const block of r.blocks) {

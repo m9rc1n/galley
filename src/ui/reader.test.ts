@@ -141,7 +141,8 @@ it('traps focus in settings, persists appearance, and uses Escape to close the d
   expect(ui.q('.mr-main').inert).toBe(true);
   expect(ui.shadow().activeElement).toBe(ui.q('button[data-act="close-settings"]'));
   ui.key('Tab', { shiftKey: true });
-  expect(ui.shadow().activeElement?.tagName).toBe('SUMMARY');
+  // Focus wraps to the last control of the open tab: the shortcuts have a tab of their own now.
+  expect(ui.shadow().activeElement).toBe(ui.q('[data-act="larger"]'));
   ui.key('Tab');
   expect(ui.shadow().activeElement).toBe(ui.q('button[data-act="close-settings"]'));
   ui.click('[data-value="dark"]');
@@ -162,16 +163,25 @@ it('traps focus in settings, persists appearance, and uses Escape to close the d
   expect(document.querySelector('#galley-reader')).toBeNull();
 });
 
-it('groups reading and review settings into keyboard-accessible tabs without exposing hidden controls', async () => {
+it('groups reading, layout and review settings into keyboard-accessible tabs without exposing hidden controls', async () => {
   await ui.open(review());
   ui.click('[data-act="settings"]');
   expect(ui.q('#mr-reading-panel').hidden).toBe(false);
+  expect(ui.q('#mr-layout-panel').hidden).toBe(true);
   expect(ui.q('#mr-review-panel').hidden).toBe(true);
   const reviewTab = ui.q('[data-settings-tab="review"]');
   reviewTab.focus(); ui.key('ArrowLeft');
+  expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="layout"]'));
+  expect(ui.q('#mr-layout-panel').hidden).toBe(false);
+  ui.key('ArrowLeft');
   expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="reading"]'));
+  // The arrows wrap around, as in any tab list; the shortcuts are the last tab.
+  ui.key('ArrowLeft');
+  expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="keys"]'));
+  expect(ui.q('#mr-keys-panel').hidden).toBe(false);
+  ui.key('Home');
   expect(reviewTab.tabIndex).toBe(-1);
-  ui.key('End');
+  ui.key('End'); ui.key('ArrowLeft');
   expect(reviewTab.getAttribute('aria-selected')).toBe('true');
   expect(ui.q('#mr-reading-panel').hidden).toBe(true);
   expect(ui.q('#mr-review-panel').hidden).toBe(false);
@@ -190,6 +200,167 @@ it('opens the review tab directly when a code-only review needs code files enabl
   ui.click('.mr-empty-reader [data-act="settings"]');
   expect(ui.q('#mr-review-panel').hidden).toBe(false);
   expect(ui.q('[data-settings-tab="review"]').getAttribute('aria-selected')).toBe('true');
+});
+
+it('lets the reader choose a layout and density, remembers both, and keeps comments below their text in Focus', async () => {
+  const thread: Thread = { doc: guide, side: 'head', line: 5, url: '#thread', comments: [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }] };
+  await ui.open(review({ loadThreads: async () => [thread] }));
+  ui.flushFrame();
+  const root = ui.q('.mr-root');
+  expect([root.dataset.layout, root.dataset.density]).toEqual(['balanced', 'comfortable']);
+  expect(root.classList).toContain('has-rail');
+  expect(ui.q('.mr-threads .mr-thread')).not.toBeNull();
+  ui.click('[data-act="settings"]'); ui.click('[data-settings-tab="layout"]');
+  ui.click('[data-setting="layout"] [data-value="focus"]');
+  ui.click('[data-setting="density"] [data-value="compact"]');
+  ui.flushFrame();
+  expect([root.dataset.layout, root.dataset.density]).toEqual(['focus', 'compact']);
+  expect(ui.q('[data-setting="layout"] [data-value="focus"]').getAttribute('aria-pressed')).toBe('true');
+  // Focus is wide enough for a comments column, but keeps the conversation under its paragraph.
+  expect(root.classList).not.toContain('has-rail');
+  expect(ui.q('.mr-threads .mr-thread')).toBeNull();
+  expect(ui.q('.mr-content .mr-thread')).not.toBeNull();
+  ui.close();
+  await ui.open(review({ loadThreads: async () => [thread] }));
+  expect([ui.q('.mr-root').dataset.layout, ui.q('.mr-root').dataset.density]).toEqual(['focus', 'compact']);
+});
+
+it('moves between conversations and changes the view from the keyboard, and lists every shortcut in its own tab', async () => {
+  const at = new Date().toISOString();
+  const threads: Thread[] = [5, 3].map((line) => ({ doc: guide, side: 'head', line, url: `#t${line}`, comments: [{ author: 'Dana', body: `On line ${line}`, createdAt: at, url: `#t${line}` }] }));
+  await ui.open(review({ loadThreads: async () => threads }));
+  ui.flushFrame();
+  const root = ui.q('.mr-root');
+  // N points out the next conversation below the focus line, P the one before; the text scrolls to it.
+  ui.key('n');
+  const flashed = () => [...ui.shadow().querySelectorAll('.mr-thread.mr-flash')];
+  expect(flashed()).toHaveLength(1);
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenCalled();
+  ui.key('a');
+  expect(ui.q('[data-scope="all"]').getAttribute('aria-pressed')).toBe('true');
+  expect(ui.q('.mr-toast').textContent).toContain('Whole files');
+  ui.key('l');
+  expect(root.dataset.layout).toBe('review');
+  expect(ui.q('.mr-toast').textContent).toContain('Layout: Review');
+  ui.key('d');
+  expect(root.dataset.density).toBe('compact');
+  ui.key('+'); ui.key('+');
+  expect(ui.q('.mr-text-size').textContent).toBe('24 px');
+  // Titles, bylines, contents and comments scale with the text, not the body alone.
+  expect(root.style.getPropertyValue('--text-scale')).toBe('1.2');
+  ui.key('0');
+  expect(ui.q('.mr-text-size').textContent).toBe('20 px');
+  ui.key('?');
+  expect(ui.q('.mr-settings').hidden).toBe(false);
+  expect(ui.q('#mr-keys-panel').hidden).toBe(false);
+  const listed = [...ui.shadow().querySelectorAll('#mr-keys-panel dt')].map((dt) => dt.textContent);
+  expect(listed).toEqual(expect.arrayContaining(['J K', 'N P', '] [', 'F', 'R', 'A', 'L', 'D', '0', ',', '?']));
+  ui.key('Escape');
+  expect(ui.q('.mr-settings').hidden).toBe(true);
+  ui.key(',');
+  expect(ui.q('#mr-reading-panel').hidden).toBe(false);
+});
+
+it('grows the text with the window in Fit to screen, up to one and a half times', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ layout: 'fit' }));
+  await ui.open(review());
+  const root = ui.q('.mr-root');
+  // 1280px is narrower than the 1440px the composition is drawn for, so nothing is scaled down.
+  expect([root.style.getPropertyValue('--fit'), root.style.getPropertyValue('--body-size')]).toEqual(['1', '20px']);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1800);
+  root.dispatchEvent(new Event('galley:context')); ui.flushFrame();
+  expect([root.style.getPropertyValue('--fit'), root.style.getPropertyValue('--body-size')]).toEqual(['1.25', '25px']);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(3840);
+  root.dispatchEvent(new Event('galley:context')); ui.flushFrame();
+  expect([root.style.getPropertyValue('--fit'), root.style.getPropertyValue('--body-size')]).toEqual(['1.5', '30px']);
+  // The chosen text size is still the one the settings show.
+  ui.click('[data-act="settings"]');
+  expect(ui.q('.mr-text-size').textContent).toBe('20 px');
+});
+
+it('shows people by their name and mentions them by username, never by a name with spaces', async () => {
+  const at = new Date().toISOString();
+  const thread: Thread = { doc: guide, side: 'head', line: 5, url: '#thread', reply: vi.fn(), comments: [
+    { author: 'Dana Whitfield', handle: 'dana', body: 'Question?', createdAt: at, url: '#thread' },
+    { author: 'Lee Okafor', handle: 'lee', body: 'Agreed.', createdAt: at, url: '#thread' },
+    { author: 'Sam Reyes', body: 'Name only.', createdAt: at, url: '#thread' },
+  ] };
+  await ui.open(review({ loadThreads: async () => [thread] }));
+  const names = [...ui.shadow().querySelectorAll<HTMLElement>('.mr-thread-author')];
+  expect(names.map((name) => name.textContent)).toEqual(['Dana Whitfield', 'Lee Okafor', 'Sam Reyes']);
+  expect(names.map((name) => name.title)).toEqual(['Dana Whitfield (@dana)', 'Lee Okafor (@lee)', 'Sam Reyes']);
+  const answer = (index: number) => ui.shadow().querySelectorAll<HTMLElement>('.mr-reply-to')[index];
+  answer(1).click();
+  const box = ui.q<HTMLFormElement>('.mr-thread .mr-reply');
+  expect(box.querySelector('textarea')!.value).toBe('@lee ');
+  expect(box.querySelector('.mr-reply-context')!.textContent).toBe('Replying to Lee Okafor');
+  ui.key('Escape');
+  answer(2).click();
+  expect(box.querySelector('textarea')!.value).toBe('');
+  expect(box.querySelector('.mr-reply-context')!.textContent).toBe('Replying to Sam Reyes');
+});
+
+it('shows the palettes six to a page, turns the pages, and opens on the page of the chosen palette', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ theme: 'nord' }));
+  await ui.open(review());
+  ui.click('[data-act="settings"]');
+  const pages = [...ui.shadow().querySelectorAll('.mr-palette-page')];
+  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6]);
+  // Nord is on the second page, so the settings open there.
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'auto' });
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
+  expect(ui.q('.mr-carousel-dot[data-page="1"]').getAttribute('aria-current')).toBe('true');
+  ui.click('[data-act="palette-prev"]');
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 0, behavior: 'smooth' });
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-prev"]').disabled).toBe(true);
+  ui.click('.mr-carousel-dot[data-page="1"]');
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'smooth' });
+  // A palette inside a page is chosen like any other setting.
+  ui.click('[data-setting="theme"] [data-value="night"]');
+  expect(ui.q('.mr-root').dataset.theme).toBe('night');
+  expect(ui.q('[data-setting="theme"] [data-value="night"]').getAttribute('aria-pressed')).toBe('true');
+});
+
+it('keeps change markers quiet until the text beside one is pointed at', async () => {
+  await ui.open(review());
+  ui.flushFrame();
+  const marks = [...ui.shadow().querySelectorAll<HTMLElement>('.mr-mark')];
+  expect(marks.length).toBeGreaterThan(0);
+  expect(marks.some((mark) => mark.classList.contains('is-hot'))).toBe(false);
+  expect(marks.map((mark) => mark.dataset.label)).toContain('Edited');
+  ui.q('[data-mr-change="modified"]').dispatchEvent(new Event('pointerover', { bubbles: true }));
+  expect(ui.shadow().querySelectorAll('.mr-mark.is-hot')).toHaveLength(1);
+  ui.q('.mr-root').dispatchEvent(new Event('pointerleave'));
+  expect(ui.shadow().querySelector('.mr-mark.is-hot')).toBeNull();
+});
+
+it('offers the request\'s own title and description as a first document, sanitised and foldable', async () => {
+  const overview = { kind: 'Merge request' as const, title: 'Docs: reading-first reviews', description: 'Adds **RFC 42**.<script>bad()</script>\n\n- Look at the goals', author: 'Dana Whitfield', url: `${location.origin}/mr/128` };
+  await ui.open(review({ overview }));
+  const section = ui.q('.mr-overview');
+  // Off until the reader asks for it, and placed before the first document.
+  expect(section.hidden).toBe(true);
+  expect(section.nextElementSibling?.matches('.mr-document[data-document="0"]')).toBe(true);
+  ui.click('[data-act="settings"]'); ui.click('[data-settings-tab="review"]');
+  ui.click('[data-act="overview"]');
+  expect(section.hidden).toBe(false);
+  expect(ui.q('[data-act="overview"]').getAttribute('aria-checked')).toBe('true');
+  expect(section.querySelector('.mr-title')!.textContent).toBe('Docs: reading-first reviews');
+  expect(section.querySelector('.mr-byline')!.textContent).toContain('Opened by Dana Whitfield');
+  expect(section.querySelector<HTMLAnchorElement>('.mr-overview-link')!.href).toBe(`${location.origin}/mr/128`);
+  expect(section.querySelector('.mr-content strong')!.textContent).toBe('RFC 42');
+  expect(section.querySelector('script')).toBeNull();
+  expect(section.querySelector<HTMLDetailsElement>('details')!.open).toBe(true);
+  ui.close();
+  await ui.open(review({ overview: { ...overview, description: '  ' } }));
+  expect(ui.q('.mr-overview').hidden).toBe(false);
+  expect(ui.q('.mr-overview-empty').textContent).toBe('No description.');
+});
+
+it('hides the description switch when the platform has no description to show', async () => {
+  await ui.open(review());
+  expect(ui.q('[data-act="overview"]').closest<HTMLElement>('.mr-set-row')!.hidden).toBe(true);
+  expect(ui.q('.mr-overview')).toBeNull();
 });
 
 it('lets the reader choose shaded or outlined comment cards, and remembers the choice', async () => {

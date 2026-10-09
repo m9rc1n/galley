@@ -1,6 +1,7 @@
 // Background worker: the only place that reads GitHub tokens and sends them to GitHub.
 // Content scripts ask for specific API calls; the token never enters the page's renderer.
 import { allowedRequest, fetchGitHub, FORWARDED_HEADERS, type ApiMessage, type ApiReply } from '../platforms/github-api.ts';
+import { restoreSites } from '../platforms/sites.ts';
 import { getToken, migrateTokens } from '../platforms/tokens.ts';
 
 async function handle(message: ApiMessage, sender: chrome.runtime.MessageSender): Promise<ApiReply | { has: boolean }> {
@@ -28,6 +29,15 @@ chrome.runtime.onMessage.addListener((message: ApiMessage, sender, reply) => {
   handle(message, sender).then(reply, (err) => reply({ error: err instanceof Error ? err.message : String(err) }));
   return true;
 });
+
+// Sites enabled from the popup lose their content script when the extension updates: restore them.
+const restore = () => {
+  restoreSites().catch(() => {
+    // A site the browser cannot register for stays listed as off in the popup, where it can be enabled again.
+  });
+};
+chrome.runtime.onInstalled.addListener(restore);
+chrome.runtime.onStartup.addListener(restore);
 
 migrateTokens().catch(() => {
   // Tokens stay where they were and are migrated on the next start.

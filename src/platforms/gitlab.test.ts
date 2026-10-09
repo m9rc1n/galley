@@ -43,9 +43,10 @@ it('GitLab replies within the existing discussion using a fresh session token, i
     }
     if (String(url).includes('/discussions?')) return response([{ id: 'existing/thread', notes: [{ id: 5, body: 'Question', created_at: '2026-10-01', position: { new_path: 'new.md', old_path: 'old.md', new_line: 2 } }] }]);
     if (String(url).includes('/diffs?')) return response([{ new_path: 'new.md', old_path: 'old.md', renamed_file: true, diff: patch }]);
-    return response({ title: 'Docs', diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
+    return response({ title: 'Docs', description: 'Closes #3.', author: { username: 'dana', name: 'Dana Whitfield' }, diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
   });
   const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '/gitlab', projectPath: 'a/b', projectId: '10', iid: 7 });
+  expect(source.overview).toEqual({ kind: 'Merge request', title: 'Docs', description: 'Closes #3.', author: 'Dana Whitfield', url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7' });
   const [thread] = await source.loadThreads!();
   await expect(thread.reply!('  Reply **here**  ')).resolves.toEqual({ url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7#note_43' });
   expect(writes[0]).toEqual({ url: 'https://git.example.com/gitlab/api/v4/projects/10/merge_requests/7/discussions/existing%2Fthread/notes', body: { body: 'Reply **here**' } });

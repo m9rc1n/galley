@@ -76,7 +76,7 @@ export function githubThreads(docs: DocRef[], comments: GitHubReviewComment[], r
   const byId = new Map<number, Thread>();
   const threads: Thread[] = [];
   for (const c of [...comments].sort((a, b) => a.id - b.id)) {
-    const entry = { author: c.user?.login ?? 'ghost', body: c.body ?? '', createdAt: c.created_at, url: c.html_url };
+    const entry = { author: c.user?.login ?? 'ghost', ...(c.user?.login ? { handle: c.user.login } : {}), body: c.body ?? '', createdAt: c.created_at, url: c.html_url };
     const root = c.in_reply_to_id === undefined ? undefined : byId.get(c.in_reply_to_id);
     if (root) {
       root.comments.push(entry);
@@ -110,7 +110,7 @@ export interface GitLabDiscussion {
     system?: boolean;
     resolved?: boolean;
     created_at: string;
-    author?: { username: string } | null;
+    author?: { username: string; name?: string | null } | null;
     position?: { new_path?: string; old_path?: string; new_line?: number | null; old_line?: number | null } | null;
   }>;
 }
@@ -132,7 +132,12 @@ export function gitlabThreads(docs: DocRef[], discussions: GitLabDiscussion[], n
       line: (head ? position.new_line : position.old_line) ?? null,
       resolved: Boolean(first.resolved),
       url: noteUrl(first.id),
-      comments: notes.map((note) => ({ author: note.author?.username ?? 'unknown', body: note.body, createdAt: note.created_at, url: noteUrl(note.id) })),
+      // People are shown by their display name, as GitLab does; the username is kept for @mentions.
+      comments: notes.map((note) => ({
+        author: note.author?.name?.trim() || note.author?.username || 'unknown',
+        ...(note.author?.username ? { handle: note.author.username } : {}),
+        body: note.body, createdAt: note.created_at, url: noteUrl(note.id),
+      })),
       ...(replyFor ? { reply: replyFor(discussion.id) } : {}),
     });
   }

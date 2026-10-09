@@ -89,6 +89,22 @@ it('requests permission only on a click, registers the exact host, and removes a
   expect(api.permissions.remove).toHaveBeenCalledWith({ origins: ['https://git.example/*'] });
 });
 
+it('stays usable when the browser refuses to register, inject or unregister the script', async () => {
+  api.scripting.registerContentScripts.mockRejectedValueOnce(new Error('duplicate id'));
+  api.scripting.executeScript.mockRejectedValueOnce(new Error('tab closed'));
+  await open('https://git.example/team/repo/-/merge_requests/7');
+  q('#site button').click();
+  await vi.waitFor(() => expect(api.scripting.executeScript).toHaveBeenCalledOnce());
+  // Nothing was registered, so the site is offered again instead of claiming to be on.
+  await vi.waitFor(() => expect(q('#site button').textContent).toBe('Enable on git.example'));
+  q('#site button').click();
+  await vi.waitFor(() => expect(q('#site').textContent).toContain('Enabled on git.example'));
+  api.scripting.unregisterContentScripts.mockRejectedValueOnce(new Error('already gone'));
+  q('#site button').click();
+  await vi.waitFor(() => expect(q('#site button').textContent).toBe('Enable on git.example'));
+  expect(api.permissions.remove).toHaveBeenCalledWith({ origins: ['https://git.example/*'] });
+});
+
 it('leaves a site disabled when the browser declines permission', async () => {
   api.permissions.request.mockResolvedValue(false);
   await open('https://git.example/team/repo/pull/7'); q('#site button').click();

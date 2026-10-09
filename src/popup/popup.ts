@@ -1,12 +1,7 @@
+import { BUILT_IN_ORIGINS, siteScript, siteScriptId } from '../platforms/sites.ts';
 import { getToken, migrateTokens, setToken } from '../platforms/tokens.ts';
 
-const BUILT_IN = new Set(['https://github.com', 'https://gitlab.com']);
-
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
-
-function scriptId(origin: string): string {
-  return `galley-${origin.replace(/[^a-z0-9]+/gi, '-')}`;
-}
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -24,7 +19,7 @@ function statusLine(on: boolean, text: string): HTMLElement {
 async function isEnabled(origin: string): Promise<boolean> {
   const [granted, scripts] = await Promise.all([
     chrome.permissions.contains({ origins: [`${origin}/*`] }),
-    chrome.scripting.getRegisteredContentScripts({ ids: [scriptId(origin)] }),
+    chrome.scripting.getRegisteredContentScripts({ ids: [siteScriptId(origin)] }),
   ]);
   return granted && scripts.length > 0;
 }
@@ -38,14 +33,14 @@ async function renderSite(origin: string | null, tabId: number | undefined): Pro
     return;
   }
   const host = new URL(origin).host;
-  if (BUILT_IN.has(origin)) {
+  if (BUILT_IN_ORIGINS.has(origin)) {
     section.append(statusLine(true, `Works on ${host} out of the box.`));
     return;
   }
   if (await isEnabled(origin)) {
     const off = el('button', 'Disable', 'secondary');
     off.addEventListener('click', async () => {
-      await chrome.scripting.unregisterContentScripts({ ids: [scriptId(origin)] }).catch(() => {});
+      await chrome.scripting.unregisterContentScripts({ ids: [siteScriptId(origin)] }).catch(() => {});
       await chrome.permissions.remove({ origins: [`${origin}/*`] });
       await renderSite(origin, tabId);
     });
@@ -58,7 +53,7 @@ async function renderSite(origin: string | null, tabId: number | undefined): Pro
     const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
     if (!granted) return;
     await chrome.scripting
-      .registerContentScripts([{ id: scriptId(origin), matches: [`${origin}/*`], js: ['content.js'], runAt: 'document_idle', persistAcrossSessions: true }])
+      .registerContentScripts([siteScript(origin)])
       .catch(() => {});
     if (tabId !== undefined) await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }).catch(() => {});
     await renderSite(origin, tabId);
@@ -138,7 +133,7 @@ async function main(): Promise<void> {
   const origin = url && /^https?:$/.test(url.protocol) ? url.origin : null;
   await renderSite(origin, tab?.id);
   // A token only matters for GitHub: github.com, or the current site if it is GitHub Enterprise.
-  const enterprise = origin && !BUILT_IN.has(origin) && url && /\/pull\/\d+/.test(url.pathname);
+  const enterprise = origin && !BUILT_IN_ORIGINS.has(origin) && url && /\/pull\/\d+/.test(url.pathname);
   if (origin !== 'https://gitlab.com') await renderToken(enterprise ? origin! : 'https://github.com');
 }
 

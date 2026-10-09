@@ -172,7 +172,7 @@ try {
   await page.setViewport({ width: 1440, height: 1000 });
   await page.goto(`${origin}/galley/demo/`, { waitUntil: 'networkidle0' });
   await page.waitForFunction(
-    () => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('.mr-content').length === 3,
+    () => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('[data-document] .mr-content').length === 3,
   );
   assert.ok(await page.$('a.logo[href="../"]'), 'Demo should have a route home');
   await page.evaluate(() => {

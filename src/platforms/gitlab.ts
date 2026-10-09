@@ -6,6 +6,8 @@ import { ReaderError, type DocRef, type DocStatus, type ReviewSource, type Threa
 
 interface MergeRequest {
   title: string;
+  description?: string | null;
+  author?: { username: string; name?: string | null } | null;
   diff_refs: { base_sha: string; head_sha: string; start_sha: string } | null;
 }
 
@@ -96,6 +98,7 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
   return {
     title: mr.title,
     subtitle: `${ctx.projectPath} · !${ctx.iid}`,
+    overview: { kind: 'Merge request', title: mr.title, description: mr.description ?? '', author: mr.author?.name?.trim() || mr.author?.username || '', url: `${webBase}/-/merge_requests/${ctx.iid}` },
     diffUrl: `${webBase}/-/merge_requests/${ctx.iid}/diffs`,
     docs,
     codeDocs,
