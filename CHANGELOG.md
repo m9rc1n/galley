@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/m9rc1n/galley/compare/v0.5.1...v0.6.0) (2026-10-09)
+
+
+### Features
+
+* **reader:** layouts, reading palettes, 120-character code and review shortcuts ([b3a0262](https://github.com/m9rc1n/galley/commit/b3a02623480789f8291e474b07380cbfc5ebfaa8))
+* **reader:** layouts, reading palettes, 120-character code and review shortcuts ([0d0d334](https://github.com/m9rc1n/galley/commit/0d0d3346520e3cd175aa1af13c6182c96eca83ab))
+
 ## [0.5.1](https://github.com/m9rc1n/galley/compare/v0.5.0...v0.5.1) (2026-10-08)
 
 
