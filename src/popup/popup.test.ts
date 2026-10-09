@@ -143,3 +143,13 @@ it('disables token saving over HTTP', async () => {
   expect(q<HTMLInputElement>('#token-input').disabled).toBe(true);
   expect(q<HTMLButtonElement>('#token-form button').disabled).toBe(true);
 });
+
+it('offers guidance when there is no current tab and can enable a site without an injectable tab id', async () => {
+  api.tabs.query.mockResolvedValue([]); await open();
+  expect(q('#site').textContent).toContain('Open a GitHub or GitLab page');
+  vi.resetModules(); document.documentElement.innerHTML = html;
+  api.tabs.query.mockResolvedValue([{ url: 'https://git.example/team/repo/pull/7' }]);
+  await open(); q('#site button').click();
+  await vi.waitFor(() => expect(q('#site').textContent).toContain('Enabled on git.example'));
+  expect(api.scripting.executeScript).not.toHaveBeenCalled();
+});

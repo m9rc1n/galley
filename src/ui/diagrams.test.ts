@@ -51,6 +51,7 @@ it('diagram rendering locks configuration and rejects external assets or excessi
   expect(() => diagramCode('flowchart LR\n classDef a fill:url(https://evil.example/image)')).toThrow(/not supported/);
   expect(() => diagramCode('A'.repeat(20_001))).toThrow(/too large/);
   expect(diagramCode('flowchart LR\n A --> B\n classDef a fill:#fff,stroke:#111')).toMatch(/classDef/);
+  expect(diagramCode('flowchart LR\n A@{ shape: rect } --> B')).toContain('shape: rect');
 });
 
 it('SVG output becomes an inert image with scripts, HTML and external resource references removed', () => {
@@ -59,6 +60,9 @@ it('SVG output becomes an inert image with scripts, HTML and external resource r
   expect(image).toMatch(/^data:image\/svg\+xml/);
   expect(svg).not.toMatch(/script|foreignObject|<image|onclick|https:\/\/evil/);
   expect(svg).toMatch(/url\(#arrow\)/);
+  const refs = decodeURIComponent(diagramImage(document, '<svg xmlns="http://www.w3.org/2000/svg"><linearGradient id="local"/><use href="#local"/><use href="https://external.example/s.svg#x"/><path fill="url(#local)"/></svg>').split(',')[1]);
+  expect(refs).not.toContain('external.example');
+  expect(refs).toContain('url(#local)');
 });
 
 it('diagrams are shown at the size they were laid out for, read from the drawing itself', () => {

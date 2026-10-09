@@ -77,11 +77,20 @@ it('a reply can only add token colours: markup is dropped and different text is 
   expect(other.textContent).toBe('let b = 2;'); expect(other.querySelector('span span')).toBeNull();
 });
 
-it('ignores malformed replies', async () => {
+it.each([42, null, 'x'.repeat(10_000_001)])('keeps code plain for malformed or oversized highlighting replies, case %#', async (html) => {
   const { highlightCode } = await import('./code.ts');
   const odd = await codeBlock('ts', 'const odd = 1;');
-  const done = highlightCode(document.body); await fakeFrame({ html: 42 }); await done;
+  const done = highlightCode(document.body); await fakeFrame({ html }); await done;
   expect(odd.textContent).toBe('const odd = 1;'); expect(odd.querySelector('[data-line] span')).toBeNull();
+});
+
+it('keeps code with an unsupported language plain without loading the highlighter', async () => {
+  const { highlightCode } = await import('./code.ts');
+  const pre = await codeBlock('unknown-language', 'readable text');
+  await highlightCode(document.body);
+  expect(pre.textContent).toBe('readable text');
+  expect(pre.dataset.mrCode).toBe('');
+  expect(document.querySelector('iframe')).toBeNull();
 });
 
 it('stays plain, and stops for this document, when the highlighter stops answering', async () => {

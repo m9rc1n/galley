@@ -1,11 +1,18 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { headersOf, mockFetch } from '../testing/http.ts';
-import { allowedRequest, fetchGitHub } from './github-api.ts';
+import { allowedRequest, backgroundApi, directApi, fetchGitHub } from './github-api.ts';
+import { HttpError } from './http.ts';
 import { MARK_VIEWED, VIEWED_FILES_QUERY } from './github-queries.ts';
 
 const page = 'https://github.com/acme/docs/pull/12/files';
 const api = 'https://api.github.com/repos/acme/docs';
 const graphql = (query: string, variables: Record<string, unknown> = { owner: 'acme', repo: 'docs', number: 12 }) => JSON.stringify({ query, variables });
+
+it('the direct API refuses an unsupported endpoint before reading a token or making a request', async () => {
+  const tokenFor = vi.fn(), fetch = mockFetch(() => new Response('{}'));
+  await expect(directApi('https://github.com', tokenFor).request('https://api.github.com/user')).rejects.toThrow('Galley does not make this request');
+  expect(tokenFor).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+});
 
 it('the background worker allows exactly the GitHub calls the reader makes', () => {
   const ok = (url: string, method = 'GET', body?: string) => allowedRequest('https://github.com', page, url, method, body);
@@ -52,4 +59,41 @@ it('tokens are only attached to https requests', async () => {
   expect(seen[0].Authorization).toBeUndefined();
   expect(seen[1].Authorization).toBe('Bearer secret');
   expect(seen[2].Authorization).toBeUndefined();
+});
+
+it('refuses malformed requests: an unparsable URL, a GraphQL body that is not JSON, a bare repository and a badly encoded owner', () => {
+  const allowed = (url: string, method = 'GET', body?: string) => allowedRequest('https://github.com', page, url, method, body);
+  expect(allowed('not a url')).toBe(false);
+  expect(allowed('https://api.github.com/graphql', 'POST', '{not json')).toBe(false);
+  expect(allowed('https://api.github.com/repos/acme', 'GET')).toBe(false);
+  expect(allowed('https://api.github.com/repos/%E0%A4%A/docs/pulls/12')).toBe(false);
+  // A known query without variables cannot point at another repository.
+  expect(allowed('https://api.github.com/graphql', 'POST', JSON.stringify({ query: VIEWED_FILES_QUERY }))).toBe(true);
+});
+
+it('content scripts reach GitHub only through the background worker, which answers with status, body and headers', async () => {
+  const sendMessage = vi.fn();
+  vi.stubGlobal('chrome', { runtime: { sendMessage } });
+  const worker = backgroundApi();
+  sendMessage.mockResolvedValueOnce({ has: true });
+  expect(await worker.hasToken()).toBe(true);
+  expect(sendMessage).toHaveBeenLastCalledWith({ type: 'galley:has-token' });
+  sendMessage.mockResolvedValueOnce({ status: 201, body: '{"id":5}', headers: { 'x-ratelimit-remaining': '42' } });
+  const posted = await worker.request<{ id: number }>(`${api}/pulls/12/comments`, { method: 'POST', body: { body: 'Hi' } });
+  expect(posted.data).toEqual({ id: 5 });
+  expect(posted.headers.get('x-ratelimit-remaining')).toBe('42');
+  expect(sendMessage).toHaveBeenLastCalledWith({ type: 'galley:github', url: `${api}/pulls/12/comments`, method: 'POST', body: '{"body":"Hi"}' });
+  sendMessage.mockResolvedValueOnce({ status: 404, body: '{}', headers: {} });
+  await expect(worker.request(`${api}/pulls/12`)).rejects.toMatchObject({ status: 404 });
+});
+
+it('treats a refusal or a missing background worker as GitHub being unreachable', async () => {
+  const sendMessage = vi.fn();
+  vi.stubGlobal('chrome', { runtime: { sendMessage } });
+  const worker = backgroundApi();
+  sendMessage.mockResolvedValueOnce({ error: 'Galley does not make this request.' });
+  await expect(worker.request(`${api}/contents/secret.md`)).rejects.toEqual(new HttpError(0, `${api}/contents/secret.md`, null));
+  sendMessage.mockRejectedValue(new Error('Extension context invalidated.'));
+  expect(await worker.hasToken()).toBe(false);
+  await expect(worker.request(`${api}/pulls/12`)).rejects.toMatchObject({ status: 0 });
 });

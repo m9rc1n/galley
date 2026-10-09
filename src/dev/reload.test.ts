@@ -68,3 +68,11 @@ it('reports registration and rebuild failures without leaving unhandled rejectio
   expect(console.error).toHaveBeenCalledWith('Galley dev: update failed', expect.any(Error));
   expect(api.tabs.reload).not.toHaveBeenCalled();
 });
+
+it('reloads a single active tab and tolerates registrations without URL matches', async () => {
+  scripts = [{ id: 'galley-dev-main', matches: ['https://github.com/*'], js: ['content.js'] }, { id: 'custom', js: ['content.js'] }];
+  api.tabs.query.mockResolvedValue([{ id: 7 }]);
+  await start(); sockets[0].onmessage!({ data: 'content' }); await vi.advanceTimersByTimeAsync(0);
+  expect(api.tabs.query).toHaveBeenCalledWith({ active: true, url: ['https://github.com/*'] });
+  expect(console.log).toHaveBeenCalledWith('Galley dev: content script updated, refreshed 1 tab');
+});

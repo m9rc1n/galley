@@ -73,6 +73,16 @@ it('discards a stale theme result and rerenders with the latest theme', async ()
   expect(d.versions[0].view.querySelector('img')!.src).not.toContain('old-theme');
 });
 
+it('ignores a stale failed render after a newer palette was requested', async () => {
+  const { renderDiagrams } = await import('./diagrams.ts'); const d = await diagram();
+  const pending = deferred<{ svg: string }>(); engine.render.mockReturnValueOnce(pending.promise);
+  renderDiagrams([d], false, vi.fn()); await connect();
+  await vi.waitFor(() => expect(engine.render).toHaveBeenCalledOnce());
+  renderDiagrams([d], true, vi.fn()); pending.reject(new Error('Old theme failed'));
+  await vi.waitFor(() => expect(d.versions[0].view.dataset.state).toBe('ready'));
+  expect(d.versions[0].sourceDetails.open).toBe(false);
+});
+
 it('keeps source available when parsing fails and rejects external assets before invoking Mermaid', async () => {
   const { renderDiagrams } = await import('./diagrams.ts'); const d = await diagram();
   engine.render.mockRejectedValueOnce(new Error('Invalid syntax'));

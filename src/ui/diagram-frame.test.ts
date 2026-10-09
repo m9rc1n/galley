@@ -63,6 +63,14 @@ it('serves any port the reader transfers when the frame loads', async () => {
 
 const palette = { bg: '#fffefa', fg: '#202d25', muted: '#505c52', soft: '#f1f4e9', rule: '#d9dfd2', code: '#f6f7ef', accent: '#506b38' };
 
+it('gives a neutral accent a deterministic chart palette even though it has no hue', async () => {
+  const { chartColours } = await import('./diagram-frame.ts');
+  const colours = chartColours('#888', false, 3);
+  expect(colours).toHaveLength(3);
+  expect(new Set(colours).size).toBe(3);
+  expect(colours[0]).toBe('#c07272');
+});
+
 it('accepts only a complete palette of plain hex colours', async () => {
   const { isRequest } = await import('./diagram-frame.ts');
   expect(isRequest({ id: 1, code: 'flowchart LR', dark: false, palette })).toBe(true);
