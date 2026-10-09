@@ -12,13 +12,15 @@ export const ARTWORK = [
   { template: 'avatar.html', name: 'galley-avatar-1024.png', width: 1024, height: 1024, type: 'png' },
 ];
 
-const fonts = Promise.all([
-  ['Galley Newsreader', 'newsreader-latin.woff2', '400 600'],
-  ['Galley DM Sans', 'dm-sans-latin.woff2', '400 700'],
-].map(async ([family, file, weight]) => {
-  const bytes = await readFile(fileURLToPath(new URL(`../src/ui/fonts/${file}`, import.meta.url)));
-  return `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};src:url(data:font/woff2;base64,${bytes.toString('base64')}) format("woff2")}`;
-}));
+const fonts = Promise.all(
+  [
+    ['Galley Newsreader', 'newsreader-latin.woff2', '400 600'],
+    ['Galley DM Sans', 'dm-sans-latin.woff2', '400 700'],
+  ].map(async ([family, file, weight]) => {
+    const bytes = await readFile(fileURLToPath(new URL(`../src/ui/fonts/${file}`, import.meta.url)));
+    return `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};src:url(data:font/woff2;base64,${bytes.toString('base64')}) format("woff2")}`;
+  }),
+);
 
 export async function artworkHtml(artwork) {
   const template = await readFile(fileURLToPath(new URL(`../store/templates/${artwork.template}`, import.meta.url)), 'utf8');

@@ -57,9 +57,7 @@ export class Launcher {
     const launch = shadow.querySelector<HTMLButtonElement>('.launch')!;
     shadow.querySelector('.count')!.textContent = error ? '!' : String(count);
     launch.classList.toggle('is-error', error);
-    launch.title = error
-      ? 'Galley could not load the documents. Click for details.'
-      : `Read ${count} changed text file${count === 1 ? '' : 's'} as articles`;
+    launch.title = error ? 'Galley could not load the documents. Click for details.' : `Read ${count} changed text file${count === 1 ? '' : 's'} as articles`;
     launch.addEventListener('click', onOpen);
     shadow.querySelector('.dismiss')!.addEventListener('click', () => {
       this.dismissed.add(key);

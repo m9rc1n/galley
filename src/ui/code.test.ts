@@ -26,7 +26,8 @@ it('caps indentation, aligns tabs to four columns, and does not lineify a block 
   expect(row.style.getPropertyValue('--indent')).toBe('6ch');
   setIndent(row, `${' '.repeat(80)}code`);
   expect(row.style.getPropertyValue('--indent')).toBe('40ch');
-  const pre = document.createElement('pre'); pre.textContent = 'one\ntwo\n';
+  const pre = document.createElement('pre');
+  pre.textContent = 'one\ntwo\n';
   lineify(document, pre);
   const first = pre.firstChild;
   lineify(document, pre);
@@ -36,7 +37,10 @@ it('caps indentation, aligns tabs to four columns, and does not lineify a block 
 });
 
 it('splits highlighted code per line, re-opening tokens that span lines and dropping foreign markup', () => {
-  const lines = splitHighlighted(document, '<span class="hljs-keyword">const</span> a = 1; <span class="hljs-comment">/* one\ntwo */</span><img src=x onerror=alert(1)><b class="evil">b</b>');
+  const lines = splitHighlighted(
+    document,
+    '<span class="hljs-keyword">const</span> a = 1; <span class="hljs-comment">/* one\ntwo */</span><img src=x onerror=alert(1)><b class="evil">b</b>',
+  );
   expect(lines).toHaveLength(2);
   expect(lines[0].textContent).toBe('const a = 1; /* one');
   expect(lines[1].textContent).toBe('two */b');

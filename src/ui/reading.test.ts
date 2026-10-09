@@ -27,7 +27,10 @@ it('changed paragraphs are the default, preserving only relevant headings and li
 });
 
 it('comment targets retain source offsets after front matter, rewrapping and deleted blocks', () => {
-  const r = render('---\ntitle: Guide\n---\n\n# Guide\n\nKeep old\nwording.\n\nRemoved paragraph.\n', '---\ntitle: Guide\n---\n\n# Guide\n\nKeep new wording.\n');
+  const r = render(
+    '---\ntitle: Guide\n---\n\n# Guide\n\nKeep old\nwording.\n\nRemoved paragraph.\n',
+    '---\ntitle: Guide\n---\n\n# Guide\n\nKeep new wording.\n',
+  );
   const modified = r.blocks.find((b) => b.kind === 'modified')!;
   expect(paragraphTarget(doc, modified)).toStrictEqual({ doc, side: 'head', startLine: 7, endLine: 7, quote: 'Keep new wording.' });
   expect(paragraphTarget(doc, modified, 'base')).toStrictEqual({ doc, side: 'base', startLine: 7, endLine: 8, quote: 'Keep old wording.' });
@@ -41,7 +44,8 @@ it('selections quote exact rendered text with the containing paragraph range', (
   const block = r.blocks[1];
   const text = block.el.querySelector('strong')!.firstChild!;
   const range = document.createRange();
-  range.setStart(text, 0); range.setEnd(text, 8);
+  range.setStart(text, 0);
+  range.setEnd(text, 8);
   expect(selectionTarget(doc, r.blocks, range)).toStrictEqual({ doc, side: 'head', startLine: 3, endLine: 3, quote: 'selected' });
 });
 
@@ -81,19 +85,23 @@ it('each hidden stretch can reveal and collapse context independently, retaining
   filterDocument(r, true);
   const before = r.blocks.find((block) => block.el.textContent === 'Kept before.')!.el;
   const after = r.blocks.find((block) => block.el.textContent === 'Kept after.')!.el;
-  expect(before.hidden).toBe(true); expect(after.hidden).toBe(true);
+  expect(before.hidden).toBe(true);
+  expect(after.hidden).toBe(true);
   expect(r.content.querySelector('.mr-context-toggle')!.getAttribute('aria-label')).toBe('Expand 1 unchanged block');
   (r.content.querySelector('.mr-context-toggle') as HTMLButtonElement).click();
   expect(r.content.querySelector('.mr-context-toggle')!.getAttribute('aria-label')).toBe('Collapse 1 unchanged block');
-  expect(before.hidden).toBe(false); expect(after.hidden).toBe(true);
+  expect(before.hidden).toBe(false);
+  expect(after.hidden).toBe(true);
   filterDocument(r, true);
   expect(before.hidden).toBe(false);
   expect(r.content.querySelector('.mr-context-toggle')!.getAttribute('aria-expanded')).toBe('true');
   (r.content.querySelector('.mr-context-toggle') as HTMLButtonElement).click();
-  expect(before.hidden).toBe(true); expect(after.hidden).toBe(true);
+  expect(before.hidden).toBe(true);
+  expect(after.hidden).toBe(true);
   filterDocument(r, false);
   expect(r.content.querySelector('.mr-context-gap')).toBe(null);
-  expect(before.hidden).toBe(false); expect(after.hidden).toBe(false);
+  expect(before.hidden).toBe(false);
+  expect(after.hidden).toBe(false);
 });
 
 it('one consecutive unchanged stretch spans lists, quotes and prose under one fold', () => {

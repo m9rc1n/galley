@@ -24,7 +24,8 @@ it.each([
 });
 
 it.each(THEMES.flatMap((theme) => APPEARANCES.map((appearance) => ({ theme, appearance }))))(
-  'remembers $theme and $appearance independently', async ({ theme, appearance }) => {
+  'remembers $theme and $appearance independently',
+  async ({ theme, appearance }) => {
     await saveSettings({ ...DEFAULT_SETTINGS, theme, appearance });
     expect(await loadSettings()).toEqual({ ...DEFAULT_SETTINGS, theme, appearance });
   },
@@ -36,7 +37,8 @@ it('falls back to valid palette and appearance defaults for unknown saved choice
 });
 
 it.each(LAYOUTS.flatMap((layout) => DENSITIES.map((density) => ({ layout, density }))))(
-  'remembers the $layout layout and $density density', async ({ layout, density }) => {
+  'remembers the $layout layout and $density density',
+  async ({ layout, density }) => {
     await saveSettings({ ...DEFAULT_SETTINGS, layout, density });
     expect(await loadSettings()).toEqual({ ...DEFAULT_SETTINGS, layout, density });
   },
@@ -73,10 +75,23 @@ it('uses extension-local storage instead of the host page storage', async () => 
 it('falls back to defaults after malformed data or denied reads, and tolerates denied writes', async () => {
   localStorage.setItem('galley:settings', '{bad');
   expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
-  vi.stubGlobal('chrome', { storage: { local: { get: async () => { throw new Error('Denied'); }, set: async () => { throw new Error('Denied'); } } } });
+  vi.stubGlobal('chrome', {
+    storage: {
+      local: {
+        get: async () => {
+          throw new Error('Denied');
+        },
+        set: async () => {
+          throw new Error('Denied');
+        },
+      },
+    },
+  });
   expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
   await expect(saveSettings(DEFAULT_SETTINGS)).resolves.toBeUndefined();
   vi.stubGlobal('chrome', undefined);
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Denied'); });
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('Denied');
+  });
   await expect(saveSettings(DEFAULT_SETTINGS)).resolves.toBeUndefined();
 });

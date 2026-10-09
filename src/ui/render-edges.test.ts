@@ -16,9 +16,11 @@ it.each([
 
 it('loads images idempotently, with or without a consent placeholder', () => {
   const image = document.createElement('img');
-  loadImage(image); expect(image.hasAttribute('src')).toBe(false);
+  loadImage(image);
+  expect(image.hasAttribute('src')).toBe(false);
   image.dataset.mrSrc = 'https://images.example/a.png';
-  loadImage(image); loadImage(image);
+  loadImage(image);
+  loadImage(image);
   expect(image.src).toBe('https://images.example/a.png');
   expect(image.dataset.mrSrc).toBeUndefined();
   const r = renderMarkdown('', '![](https://images.example/a.png)\n', 'added');
@@ -28,7 +30,10 @@ it('loads images idempotently, with or without a consent placeholder', () => {
 });
 
 it('sanitises resource-bearing MathML and SVG while keeping local SVG references', () => {
-  const frag = sanitize(document, '<math><mglyph src="https://evil.example/a"></mglyph></math><svg><use href="https://evil.example/a#x"></use><use href="#local"></use><a href="https://example.com">link</a></svg>');
+  const frag = sanitize(
+    document,
+    '<math><mglyph src="https://evil.example/a"></mglyph></math><svg><use href="https://evil.example/a#x"></use><use href="#local"></use><a href="https://example.com">link</a></svg>',
+  );
   expect(frag.querySelector('mglyph')!.hasAttribute('src')).toBe(false);
   const uses = frag.querySelectorAll('use');
   // DOMPurify may drop use altogether; no external resource reference may survive.
@@ -37,7 +42,10 @@ it('sanitises resource-bearing MathML and SVG while keeping local SVG references
 });
 
 it('keeps removed loose and nested list items within valid document structure', () => {
-  const r = renderMarkdown('Old introduction.\n\n- Parent\n  - Nested stable\n\n- Removed **loose** item\n\n- Kept item\n', '- Parent\n  - Nested stable\n\n- Kept item\n');
+  const r = renderMarkdown(
+    'Old introduction.\n\n- Parent\n  - Nested stable\n\n- Removed **loose** item\n\n- Kept item\n',
+    '- Parent\n  - Nested stable\n\n- Kept item\n',
+  );
   expect(r.content.firstElementChild!.classList).toContain('mr-ghost');
   expect(r.content.firstElementChild!.textContent).toContain('Old introduction.');
   const removed = [...r.content.querySelectorAll('.mr-ghost')].find((e) => e.textContent?.includes('Removed'))!;
@@ -61,8 +69,15 @@ it('shows table rows inserted before a paired edit and added cells without losin
 it('keeps deleted table rows before surviving rows and appends trailing deletions within the table', () => {
   const header = '| Name | Value |\n|---|---|\n';
   const r = renderMarkdown(`${header}| First removed | 11 |\n| Kept | 22 |\n| Last removed | 33 |\n`, `${header}| Kept | 22 |\n`);
-  expect([...r.content.querySelectorAll('tbody tr')].map((row) => [[...row.querySelectorAll('td')].map((cell) => cell.textContent), row.classList.contains('mr-ghost-row')])).toEqual([
-    [['First removed', '11'], true], [['Kept', '22'], false], [['Last removed', '33'], true],
+  expect(
+    [...r.content.querySelectorAll('tbody tr')].map((row) => [
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent),
+      row.classList.contains('mr-ghost-row'),
+    ]),
+  ).toEqual([
+    [['First removed', '11'], true],
+    [['Kept', '22'], false],
+    [['Last removed', '33'], true],
   ]);
   expect(r.content.querySelector('tr:not(.mr-ghost-row) del, tr:not(.mr-ghost-row) ins')).toBeNull();
 });
@@ -73,7 +88,9 @@ it('reports formatting-only code edits and empty documents without invented word
   expect(r.content.querySelector('pre')!.textContent).toBe('const a = 1;');
   for (const status of ['added', 'removed', 'modified'] as const) {
     const empty = renderMarkdown('', '', status);
-    expect(empty.words).toBe(0); expect(empty.blocks).toEqual([]); expect(empty.changes).toEqual([]);
+    expect(empty.words).toBe(0);
+    expect(empty.blocks).toEqual([]);
+    expect(empty.changes).toEqual([]);
   }
 });
 

@@ -92,7 +92,11 @@ function unquote(value: string): string {
 
 /** GitHub-style heading slug: lowercase, punctuation dropped, spaces become hyphens. */
 export function slugify(text: string): string {
-  return text.trim().toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+    .replace(/\s/g, '-');
 }
 
 export function normalize(text: string): string {
@@ -244,7 +248,10 @@ function annotateUnits(state: StateCore): void {
       case 'table_open': {
         const src = t.map ? env.lines.slice(t.map[0], t.map[1]).join('\n') : '';
         // Strip blockquote markers and indentation so the table renders on its own.
-        const standalone = src.split('\n').map((l) => l.replace(/^\s*(?:>\s?)*\s*/, '')).join('\n');
+        const standalone = src
+          .split('\n')
+          .map((l) => l.replace(/^\s*(?:>\s?)*\s*/, ''))
+          .join('\n');
         let close = i;
         while (close < tokens.length && tokens[close].type !== 'table_close') close++;
         addUnit(env, t, 'table', src, 0, standalone, linkTargets(tokens, i, close));
@@ -312,8 +319,7 @@ function createMarkdown() {
   // Tight list items have hidden paragraphs; render them as spans so each item still maps to a unit.
   rules.paragraph_open = (tokens, idx, options, _env, self) =>
     tokens[idx].hidden ? `<span class="mr-tight"${unitAttr(tokens[idx])}>` : self.renderToken(tokens, idx, options);
-  rules.paragraph_close = (tokens, idx, options, _env, self) =>
-    tokens[idx].hidden ? '</span>' : self.renderToken(tokens, idx, options);
+  rules.paragraph_close = (tokens, idx, options, _env, self) => (tokens[idx].hidden ? '</span>' : self.renderToken(tokens, idx, options));
   rules.fence = (tokens, idx) => {
     const t = tokens[idx];
     const lang = t.info.trim().split(/\s+/)[0] ?? '';
@@ -333,9 +339,7 @@ function createMarkdown() {
 const md = createMarkdown();
 
 export function renderFrontMatter(fm: FrontMatter, unitId: string | null): string {
-  const rows = fm.fields
-    .map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt> <dd>${escapeHtml(v)}</dd></div>\n`)
-    .join('');
+  const rows = fm.fields.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt> <dd>${escapeHtml(v)}</dd></div>\n`).join('');
   const body = rows ? `<dl>\n${rows}</dl>` : `<pre><code>${escapeHtml(fm.raw)}</code></pre>`;
   const attr = unitId === null ? '' : ` data-mr-u="${unitId}"`;
   return `<details class="mr-meta"${attr}><summary>Front matter</summary>\n${body}</details>\n`;
@@ -356,13 +360,26 @@ export function parseDocument(src: string): ParsedDoc {
   }
   const tokens = md.parse(body, env);
   const html = md.renderer.render(tokens, md.options, env);
-  return { html: (frontmatter ? renderFrontMatter(frontmatter, `${nonce}:0`) : '') + html, units: env.units, frontmatter, nonce, references: env.references ?? {} };
+  return {
+    html: (frontmatter ? renderFrontMatter(frontmatter, `${nonce}:0`) : '') + html,
+    units: env.units,
+    frontmatter,
+    nonce,
+    references: env.references ?? {},
+  };
 }
 
 /** HTML for a single unit rendered on its own (no `data-mr-u` attributes). */
 export function renderUnit(unit: Unit, doc: ParsedDoc): string {
   if (unit.kind === 'frontmatter') return doc.frontmatter ? renderFrontMatter(doc.frontmatter, null) : '';
   return md
-    .render(unit.source, { nonce: '', units: [], lines: unit.source.split('\n'), slugs: new Map(), listDepth: 0, references: { ...doc.references } } satisfies RenderEnv)
+    .render(unit.source, {
+      nonce: '',
+      units: [],
+      lines: unit.source.split('\n'),
+      slugs: new Map(),
+      listDepth: 0,
+      references: { ...doc.references },
+    } satisfies RenderEnv)
     .replace(/ data-mr-u="[^"]*"/g, '');
 }

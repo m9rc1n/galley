@@ -58,7 +58,14 @@ export function allowedRequest(origin: string, page: string | null, url: string,
     }
     if (!GRAPHQL_OPERATIONS.includes(payload.query as string)) return false;
     const vars = payload.variables ?? {};
-    if (pull && 'owner' in vars && (String(vars.owner).toLowerCase() !== pull[1].toLowerCase() || String(vars.repo).toLowerCase() !== pull[2].toLowerCase() || String(vars.number) !== pull[3])) return false;
+    if (
+      pull &&
+      'owner' in vars &&
+      (String(vars.owner).toLowerCase() !== pull[1].toLowerCase() ||
+        String(vars.repo).toLowerCase() !== pull[2].toLowerCase() ||
+        String(vars.number) !== pull[3])
+    )
+      return false;
     return true;
   }
   const base = new URL(rest);
@@ -103,7 +110,12 @@ export function backgroundApi(): GitHubApi {
       return Boolean(reply?.has);
     },
     async request<T>(url: string, init: { method?: 'GET' | 'POST'; body?: unknown } = {}) {
-      const reply = (await send({ type: 'galley:github', url, method: init.method ?? 'GET', ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }) })) as ApiReply | undefined;
+      const reply = (await send({
+        type: 'galley:github',
+        url,
+        method: init.method ?? 'GET',
+        ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      })) as ApiReply | undefined;
       if (!reply || 'error' in reply) throw new HttpError(0, url, null);
       return parse<T>(url, reply.status, reply.body, new Headers(reply.headers));
     },

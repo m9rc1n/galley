@@ -36,12 +36,20 @@ const bundles = [
   // scan a file over 5 MB. Minified it is still 5.2 MB, so its layout engine, elkjs, is a script of its
   // own that src/ui/elk-shim.ts loads on first use. Our own bundles stay readable.
   {
-    name: 'diagram-frame', entryPoints: ['src/ui/diagram-frame.ts'], outfile: 'dist/.build/diagram-frame.js', shipped: true,
-    minify: true, alias: { 'elkjs/lib/elk.bundled.js': './src/ui/elk-shim.ts' },
+    name: 'diagram-frame',
+    entryPoints: ['src/ui/diagram-frame.ts'],
+    outfile: 'dist/.build/diagram-frame.js',
+    shipped: true,
+    minify: true,
+    alias: { 'elkjs/lib/elk.bundled.js': './src/ui/elk-shim.ts' },
   },
   {
-    name: 'elk', entryPoints: ['node_modules/elkjs/lib/elk.bundled.js'], outfile: 'dist/.build/elk.js', shipped: true,
-    minify: true, globalName: '__galleyELK',
+    name: 'elk',
+    entryPoints: ['node_modules/elkjs/lib/elk.bundled.js'],
+    outfile: 'dist/.build/elk.js',
+    shipped: true,
+    minify: true,
+    globalName: '__galleyELK',
   },
   { name: 'highlight-frame', entryPoints: ['src/ui/highlight-frame.ts'], outfile: 'dist/.build/highlight-frame.js', shipped: true },
   { name: 'demo', entryPoints: ['demo/main.ts'], outfile: 'demo/build/demo.js', shipped: false },
@@ -158,8 +166,6 @@ if (watch) {
   for (const { name, shipped, ...b } of bundles) await (await esbuild.context({ ...common, ...b, plugins: [track(name)] })).watch();
   console.log('watching for changes…');
 } else {
-  await Promise.all(
-    bundles.map(async ({ name, shipped, ...b }) => metafiles.set(name, (await esbuild.build({ ...common, ...b })).metafile)),
-  );
+  await Promise.all(bundles.map(async ({ name, shipped, ...b }) => metafiles.set(name, (await esbuild.build({ ...common, ...b })).metafile)));
   await assemble();
 }

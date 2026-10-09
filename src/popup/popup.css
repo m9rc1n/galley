@@ -29,7 +29,12 @@ body {
   padding: 16px 18px 14px;
   background: var(--bg);
   color: var(--fg);
-  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font:
+    13px / 1.5 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
 }
 
 header {
@@ -120,7 +125,12 @@ input {
   border-radius: 8px;
   background: var(--soft);
   color: var(--fg);
-  font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
 }
 
 input:focus-visible,
@@ -148,7 +158,12 @@ kbd {
   border: 1px solid var(--rule);
   border-bottom-width: 2px;
   border-radius: 4px;
-  font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font:
+    11px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
 }
 
 .dev {
@@ -157,7 +172,9 @@ kbd {
   border-radius: 999px;
   background: #f08a24;
   color: #fff;
-  font: 700 10px/1.6 system-ui, sans-serif;
+  font:
+    700 10px / 1.6 system-ui,
+    sans-serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   vertical-align: 4px;

@@ -101,7 +101,10 @@ it('the sanitiser still removes script vectors', () => {
 });
 
 it('a changed reference definition marks every block that uses it, and names the new target', () => {
-  const r = renderMarkdown('Download the [installer][dl].\n\n[dl]: https://good.example/setup.sh\n', 'Download the [installer][dl].\n\n[dl]: https://evil.example/setup.sh\n');
+  const r = renderMarkdown(
+    'Download the [installer][dl].\n\n[dl]: https://good.example/setup.sh\n',
+    'Download the [installer][dl].\n\n[dl]: https://evil.example/setup.sh\n',
+  );
   expect(r.stats).toStrictEqual({ added: 0, removed: 0, modified: 1 });
   const note = r.content.querySelector('.mr-link-note')!;
   expect(note.querySelector('del')!.textContent).toBe('https://good.example/setup.sh');
@@ -150,7 +153,8 @@ it('table edits highlight only the changed cell and preserve neighbouring values
 
 it('retains deleted table rows in their original position and distinguishes newly added rows', () => {
   const header = '| Name | Detail |\n|---|---|\n';
-  const first = '| First | First detail |\n', last = '| Last | Last detail |\n';
+  const first = '| First | First detail |\n',
+    last = '| Last | Last detail |\n';
   const r = renderMarkdown(`${header}${first}| Removed | Obsolete policy |\n${last}`, `${header}${first}${last}| New | New policy |\n`);
   const rows = [...r.content.querySelectorAll('tbody tr')];
   expect(rows.map((row) => row.firstElementChild?.textContent)).toEqual(['First', 'Removed', 'Last', 'New']);
@@ -174,7 +178,8 @@ it('retains a deleted final table row and names changed link destinations even w
 });
 
 it('external images wait for a click; platform, repository and inline images load', () => {
-  const md = '![Pixel](https://tracker.example/p.gif)\n\n![Own](https://gitlab.example/uploads/a.png)\n\n![Repo](img/b.png)\n\n![Inline](data:image/gif;base64,R0lGODlhAQABAAAAACw=)\n';
+  const md =
+    '![Pixel](https://tracker.example/p.gif)\n\n![Own](https://gitlab.example/uploads/a.png)\n\n![Repo](img/b.png)\n\n![Inline](data:image/gif;base64,R0lGODlhAQABAAAAACw=)\n';
   const r = renderMarkdown('', md, 'added');
   expect(r.heldImages).toBe(1);
   const [pixel, own, repo, inline] = [...r.content.querySelectorAll('img')];
@@ -184,7 +189,15 @@ it('external images wait for a click; platform, repository and inline images loa
   expect(own.getAttribute('src')).toBe('https://gitlab.example/uploads/a.png');
   expect(repo.getAttribute('src')).toBe('/raw/docs/img/b.png');
   expect(inline.getAttribute('src')!).toMatch(/^data:image\/gif/);
-  const always = renderDocument(document, { path: 'docs/a.md', status: 'added', base: '', head: md, links: { raw: (p) => p, blob: (p) => p }, origin: 'https://gitlab.example', images: 'load' });
+  const always = renderDocument(document, {
+    path: 'docs/a.md',
+    status: 'added',
+    base: '',
+    head: md,
+    links: { raw: (p) => p, blob: (p) => p },
+    origin: 'https://gitlab.example',
+    images: 'load',
+  });
   expect(always.heldImages).toBe(0);
   expect(always.content.querySelector('img')!.getAttribute('src')).toBe('https://tracker.example/p.gif');
 });
@@ -243,22 +256,28 @@ it('preserves every old and new paragraph when rendering a large document', () =
   // jsdom DOM allocation under coverage varies with shared-runner load. Keep this an integration
   // check; core/limits.test.ts separately checks that 40,000-element diffs stay within their budget.
   const paragraphs = (prefix: string) => Array.from({ length: 400 }, (_, i) => `${prefix} paragraph ${i}.`);
-  const base = paragraphs('Old'), head = paragraphs('New');
+  const base = paragraphs('Old'),
+    head = paragraphs('New');
   const r = renderMarkdown(base.join('\n\n'), head.join('\n\n'));
   const rows = [...r.content.querySelectorAll('p')];
   expect(rows).toHaveLength(head.length);
   expect(r.stats).toEqual({ added: 0, removed: 0, modified: head.length });
-  const version = (omit: 'ins' | 'del') => rows.map((row) => {
-    const clone = row.cloneNode(true) as HTMLElement;
-    for (const mark of clone.querySelectorAll(omit)) mark.remove();
-    return clone.textContent;
-  });
+  const version = (omit: 'ins' | 'del') =>
+    rows.map((row) => {
+      const clone = row.cloneNode(true) as HTMLElement;
+      for (const mark of clone.querySelectorAll(omit)) mark.remove();
+      return clone.textContent;
+    });
   expect(version('ins')).toEqual(base);
   expect(version('del')).toEqual(head);
 });
 
 it('comment bodies go through the document sanitiser and image rules', () => {
-  const frag = renderSnippet(document, 'Hi <img src=x onerror=alert(1)> <script>alert(2)</script> [site](https://ok.example) ![p](https://t.example/p.gif) <p class="mr-banner" data-mr-change="added">x</p> [jump](#top)', 'https://gitlab.example');
+  const frag = renderSnippet(
+    document,
+    'Hi <img src=x onerror=alert(1)> <script>alert(2)</script> [site](https://ok.example) ![p](https://t.example/p.gif) <p class="mr-banner" data-mr-change="added">x</p> [jump](#top)',
+    'https://gitlab.example',
+  );
   const box = document.createElement('div');
   box.append(frag);
   expect(box.querySelectorAll('script, [onerror], .mr-banner, [data-mr-change]').length).toBe(0);
@@ -272,7 +291,11 @@ it('comment bodies go through the document sanitiser and image rules', () => {
 });
 
 it('document ids and names cannot collide with the reader’s own ids', () => {
-  const r = renderMarkdown('', '# MR comment status\n\n<p id="mr-comment">x</p><a name="mr-code-label">y</a>\n\nSee[^1] and <span id="user-content-kept">z</span>.\n\n[^1]: Note.\n', 'added');
+  const r = renderMarkdown(
+    '',
+    '# MR comment status\n\n<p id="mr-comment">x</p><a name="mr-code-label">y</a>\n\nSee[^1] and <span id="user-content-kept">z</span>.\n\n[^1]: Note.\n',
+    'added',
+  );
   const ids = [...r.content.querySelectorAll('[id]')].map((el) => el.id);
   expect(ids).toContain('user-content-mr-comment-status');
   expect(ids).toContain('user-content-mr-comment');
@@ -282,7 +305,10 @@ it('document ids and names cannot collide with the reader’s own ids', () => {
   // Footnote links still find their targets the way the reader resolves #fragments.
   for (const link of r.content.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
     const id = decodeURIComponent(link.getAttribute('href')!.slice(1));
-    expect(ids.some((candidate) => candidate === id || candidate === `user-content-${id}`), id).toBe(true);
+    expect(
+      ids.some((candidate) => candidate === id || candidate === `user-content-${id}`),
+      id,
+    ).toBe(true);
   }
 });
 
@@ -290,7 +316,16 @@ it('links built from platform data stay on the platform', () => {
   const origin = 'https://gitlab.example';
   expect(platformLink('https://gitlab.example/g/p/-/merge_requests/1#note_5', origin)).toBe('https://gitlab.example/g/p/-/merge_requests/1#note_5');
   expect(platformLink('#thread-1', origin)).toBe('#thread-1');
-  for (const url of ['javascript:alert(1)', 'data:text/html,x', 'https://evil.example/', 'https://gitlab.example.evil.example/', 'http://gitlab.example/', '//evil.example', '# x', 'not a url']) {
+  for (const url of [
+    'javascript:alert(1)',
+    'data:text/html,x',
+    'https://evil.example/',
+    'https://gitlab.example.evil.example/',
+    'http://gitlab.example/',
+    '//evil.example',
+    '# x',
+    'not a url',
+  ]) {
     expect(platformLink(url, origin), url).toBe(null);
   }
 });
@@ -301,6 +336,8 @@ it('very long comment bodies are shortened before rendering', () => {
   expect(box.textContent).not.toContain('TAIL');
   expect(box.textContent!.length).toBeLessThan(66_000);
   expect(box.lastElementChild!.textContent).toContain('Open it on the platform');
-  const short = document.createElement('div'); short.append(renderSnippet(document, 'Fine', 'https://gitlab.example'));
-  expect(short.textContent!.trim()).toBe('Fine'); expect(short.children).toHaveLength(1);
+  const short = document.createElement('div');
+  short.append(renderSnippet(document, 'Fine', 'https://gitlab.example'));
+  expect(short.textContent!.trim()).toBe('Fine');
+  expect(short.children).toHaveLength(1);
 });

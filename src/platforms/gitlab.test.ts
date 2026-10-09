@@ -31,7 +31,7 @@ interface GitLabWrite {
 
 it('GitLab replies within the existing discussion using a fresh session token, including newly created threads', async () => {
   let csrf: string | null = 'session-csrf';
-  vi.stubGlobal('document', { querySelector: () => csrf ? { content: csrf } : null });
+  vi.stubGlobal('document', { querySelector: () => (csrf ? { content: csrf } : null) });
   const writes: Array<{ url: string; body: unknown }> = [];
   let failure = 0;
   mockFetch(async (url, init) => {
@@ -41,15 +41,43 @@ it('GitLab replies within the existing discussion using a fresh session token, i
       writes.push({ url: String(url), body: JSON.parse(init.body as string) });
       return response(String(url).endsWith('/notes') ? { id: 43 } : { id: 'new-thread', notes: [{ id: 42 }] }, failure || 201);
     }
-    if (String(url).includes('/discussions?')) return response([{ id: 'existing/thread', notes: [{ id: 5, body: 'Question', created_at: '2026-10-01', position: { new_path: 'new.md', old_path: 'old.md', new_line: 2 } }] }]);
+    if (String(url).includes('/discussions?'))
+      return response([
+        {
+          id: 'existing/thread',
+          notes: [{ id: 5, body: 'Question', created_at: '2026-10-01', position: { new_path: 'new.md', old_path: 'old.md', new_line: 2 } }],
+        },
+      ]);
     if (String(url).includes('/diffs?')) return response([{ new_path: 'new.md', old_path: 'old.md', renamed_file: true, diff: patch }]);
-    return response({ title: 'Docs', description: 'Closes #3.', author: { username: 'dana', name: 'Dana Whitfield' }, diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
+    return response({
+      title: 'Docs',
+      description: 'Closes #3.',
+      author: { username: 'dana', name: 'Dana Whitfield' },
+      diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' },
+    });
   });
-  const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '/gitlab', projectPath: 'a/b', projectId: '10', iid: 7 });
-  expect(source.overview).toEqual({ kind: 'Merge request', title: 'Docs', description: 'Closes #3.', author: 'Dana Whitfield', url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7' });
+  const source = await loadGitLab({
+    platform: 'gitlab',
+    key: '',
+    origin: 'https://git.example.com',
+    prefix: '/gitlab',
+    projectPath: 'a/b',
+    projectId: '10',
+    iid: 7,
+  });
+  expect(source.overview).toEqual({
+    kind: 'Merge request',
+    title: 'Docs',
+    description: 'Closes #3.',
+    author: 'Dana Whitfield',
+    url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7',
+  });
   const [thread] = await source.loadThreads!();
   await expect(thread.reply!('  Reply **here**  ')).resolves.toEqual({ url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7#note_43' });
-  expect(writes[0]).toEqual({ url: 'https://git.example.com/gitlab/api/v4/projects/10/merge_requests/7/discussions/existing%2Fthread/notes', body: { body: 'Reply **here**' } });
+  expect(writes[0]).toEqual({
+    url: 'https://git.example.com/gitlab/api/v4/projects/10/merge_requests/7/discussions/existing%2Fthread/notes',
+    body: { body: 'Reply **here**' },
+  });
   const posted = await (await source.prepareComment!({ ...target, doc: source.docs[0] })).post('New thread');
   await posted.reply!('Follow-up');
   expect(writes.at(-1)!.url).toContain('/discussions/new-thread/notes');
@@ -57,7 +85,8 @@ it('GitLab replies within the existing discussion using a fresh session token, i
   await expect(thread.reply!('No session')).rejects.toThrow(/session token is missing/);
   await expect(thread.reply!(' ')).rejects.toThrow(/Write a comment/);
   expect(writes).toHaveLength(3);
-  csrf = 'fresh-session'; failure = 403;
+  csrf = 'fresh-session';
+  failure = 403;
   await expect(thread.reply!('Denied')).rejects.toThrow(/did not allow this reply/);
   expect(writes).toHaveLength(4);
   failure = 404;
@@ -79,12 +108,24 @@ it('GitLab uses the native session, CSRF, shifted context and diff refs for inli
     if (String(url).includes('/diffs?')) return response([{ new_path: 'new.md', old_path: 'old.md', renamed_file: true, diff: patch }]);
     return response({ title: 'Docs', diff_refs: refs });
   });
-  const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '/gitlab', projectPath: 'nested/docs', projectId: null, iid: 7 });
+  const source = await loadGitLab({
+    platform: 'gitlab',
+    key: '',
+    origin: 'https://git.example.com',
+    prefix: '/gitlab',
+    projectPath: 'nested/docs',
+    projectId: null,
+    iid: 7,
+  });
   const selected = { ...target, doc: source.docs[0] };
   const inline = await source.prepareComment!(selected);
   expect(inline.kind).toBe('inline');
   expect((await inline.post('Read this')).url).toMatch(/\/gitlab\/nested\/docs\/-\/merge_requests\/7#note_42$/);
-  expect({ base: writes[0].position!.base_sha, head: writes[0].position!.head_sha, start: writes[0].position!.start_sha }).toStrictEqual({ base: 'b', head: 'h', start: 's' });
+  expect({ base: writes[0].position!.base_sha, head: writes[0].position!.head_sha, start: writes[0].position!.start_sha }).toStrictEqual({
+    base: 'b',
+    head: 'h',
+    start: 's',
+  });
   expect(writes[0].position!.old_line).toBe(undefined);
   expect(writes[0].position!.new_line).toBe(3);
   expect(writes[0].position!.line_range!.start.new_line).toBe(2);
@@ -111,20 +152,33 @@ it('GitLab offers source-only reviews and sends old-side source comments with na
   let rawReads = 0;
   const writes: GitLabWrite[] = [];
   mockFetch(async (url, init) => {
-    if (init?.method === 'POST') { writes.push(JSON.parse(init.body as string)); return response({ notes: [{ id: 17 }] }, 201); }
-    if (String(url).includes('/raw?')) { rawReads++; return new Response(String(url).endsWith('ref=b') ? 'old value\n' : 'new value\n'); }
-    if (String(url).includes('/diffs?')) return response([
-      { new_path: 'src/main.py', old_path: 'src/main.py', diff: codePatch },
-      { new_path: 'photo.jpg', old_path: 'photo.jpg' },
-    ]);
+    if (init?.method === 'POST') {
+      writes.push(JSON.parse(init.body as string));
+      return response({ notes: [{ id: 17 }] }, 201);
+    }
+    if (String(url).includes('/raw?')) {
+      rawReads++;
+      return new Response(String(url).endsWith('ref=b') ? 'old value\n' : 'new value\n');
+    }
+    if (String(url).includes('/diffs?'))
+      return response([
+        { new_path: 'src/main.py', old_path: 'src/main.py', diff: codePatch },
+        { new_path: 'photo.jpg', old_path: 'photo.jpg' },
+      ]);
     return response({ title: 'Code only', diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
   });
   const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '', projectPath: 'a/b', projectId: null, iid: 7 });
-  expect(source.docs).toHaveLength(0); expect(source.codeDocs!).toHaveLength(1); expect(rawReads).toBe(0);
-  expect(await source.load(source.codeDocs![0])).toStrictEqual({ base: 'old value\n', head: 'new value\n' }); expect(rawReads).toBe(2);
+  expect(source.docs).toHaveLength(0);
+  expect(source.codeDocs!).toHaveLength(1);
+  expect(rawReads).toBe(0);
+  expect(await source.load(source.codeDocs![0])).toStrictEqual({ base: 'old value\n', head: 'new value\n' });
+  expect(rawReads).toBe(2);
   const plan = await source.prepareComment!({ doc: source.codeDocs![0], side: 'base', startLine: 1, endLine: 1, quote: 'old value' });
-  expect(plan.kind).toBe('inline'); await plan.post('Why remove this?');
-  expect(writes[0].position!.old_path).toBe('src/main.py'); expect(writes[0].position!.old_line).toBe(1); expect(writes[0].position!.new_line).toBe(undefined);
+  expect(plan.kind).toBe('inline');
+  await plan.post('Why remove this?');
+  expect(writes[0].position!.old_path).toBe('src/main.py');
+  expect(writes[0].position!.old_line).toBe(1);
+  expect(writes[0].position!.new_line).toBe(undefined);
 });
 
 it('GitLab loads diff discussions as threads with links to their notes, leaving out general discussion', async () => {
@@ -132,14 +186,26 @@ it('GitLab loads diff discussions as threads with links to their notes, leaving 
   mockFetch((url) => {
     if (url.includes('/discussions?')) {
       return response([
-        { notes: [{ id: 5, body: 'On the diff', created_at: at, author: { username: 'dana' }, position: { new_path: 'new.md', old_path: 'old.md', new_line: 2 } }] },
+        {
+          notes: [
+            { id: 5, body: 'On the diff', created_at: at, author: { username: 'dana' }, position: { new_path: 'new.md', old_path: 'old.md', new_line: 2 } },
+          ],
+        },
         { notes: [{ id: 6, body: 'General remark', created_at: at, author: { username: 'sam' } }] },
       ]);
     }
     if (url.includes('/diffs?')) return response([{ new_path: 'new.md', old_path: 'old.md', renamed_file: true, diff: patch }]);
     return response({ title: 'Docs', diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
   });
-  const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '/gitlab', projectPath: 'a/b', projectId: null, iid: 7 });
+  const source = await loadGitLab({
+    platform: 'gitlab',
+    key: '',
+    origin: 'https://git.example.com',
+    prefix: '/gitlab',
+    projectPath: 'a/b',
+    projectId: null,
+    iid: 7,
+  });
   const threads = await source.loadThreads!();
   expect(threads).toHaveLength(1);
   expect(threads[0]).toMatchObject({ side: 'head', line: 2, url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7#note_5' });

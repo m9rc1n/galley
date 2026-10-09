@@ -12,13 +12,28 @@ it('ignores metadata and no-newline markers in patches, and tolerates deleted ac
   expect(diffLines('file metadata\n@@ -1 +1 @@\n-old\n+new\n\\ No newline at end of file')).toHaveLength(2);
   const [github] = githubThreads([doc], [{ id: 1, path: 'new.md', created_at: '', html_url: '#1' }]);
   expect(github.comments[0]).toMatchObject({ author: 'ghost', body: '' });
-  const threads = gitlabThreads([doc], [{ notes: [] }, { notes: [{ id: 1, body: '', created_at: '', position: { old_path: 'old.md' } }] }, { notes: [{ id: 2, body: '', created_at: '', position: { new_path: 'other.md' } }] }], (id) => `#${id}`);
+  const threads = gitlabThreads(
+    [doc],
+    [
+      { notes: [] },
+      { notes: [{ id: 1, body: '', created_at: '', position: { old_path: 'old.md' } }] },
+      { notes: [{ id: 2, body: '', created_at: '', position: { new_path: 'other.md' } }] },
+    ],
+    (id) => `#${id}`,
+  );
   expect(threads).toHaveLength(1);
   expect(threads[0]).toMatchObject({ side: 'base', line: null });
 });
 
 it('diff coordinates distinguish additions, deletions, shifted context and separate hunks', () => {
-  expect(diffLines(patch).map(({ oldLine, newLine }) => [oldLine, newLine])).toStrictEqual([[1,1], [2,undefined], [undefined,2], [undefined,3], [3,4], [4,5]]);
+  expect(diffLines(patch).map(({ oldLine, newLine }) => [oldLine, newLine])).toStrictEqual([
+    [1, 1],
+    [2, undefined],
+    [undefined, 2],
+    [undefined, 3],
+    [3, 4],
+    [4, 5],
+  ]);
   expect(diffRange(patch, target)?.length).toBe(2);
   expect(diffRange(patch, { ...target, startLine: 1, endLine: 8 })).toBe(null);
   expect(diffRange('@@ -1 +1 @@\n one\n@@ -2 +2 @@\n two', { ...target, startLine: 1, endLine: 2 })).toBe(null);
@@ -27,14 +42,71 @@ it('diff coordinates distinguish additions, deletions, shifted context and separ
 it('GitHub review comments become threads anchored to a version and line', () => {
   const doc = { path: 'docs/a.md', oldPath: 'docs/old.md', status: 'renamed' as const };
   const at = '2026-10-01T10:00:00Z';
-  const threads = githubThreads([doc], [
-    { id: 3, in_reply_to_id: 1, path: 'docs/a.md', line: 12, side: 'RIGHT', body: 'Reply', user: { login: 'lee' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r3' },
-    { id: 1, path: 'docs/a.md', line: 12, side: 'RIGHT', body: 'Root', user: { login: 'dana' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r1' },
-    { id: 2, path: 'docs/old.md', line: 4, side: 'LEFT', body: 'Old side', user: null, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r2' },
-    { id: 4, path: 'docs/a.md', line: null, side: 'RIGHT', body: 'Outdated', user: { login: 'sam' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r4' },
-    { id: 5, path: 'docs/a.md', subject_type: 'file', body: 'Whole file', user: { login: 'kim' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r5' },
-    { id: 6, path: 'src/other.ts', line: 1, side: 'RIGHT', body: 'Elsewhere', user: { login: 'x' }, created_at: at, html_url: 'https://github.com/o/r/pull/1#discussion_r6' },
-  ]);
+  const threads = githubThreads(
+    [doc],
+    [
+      {
+        id: 3,
+        in_reply_to_id: 1,
+        path: 'docs/a.md',
+        line: 12,
+        side: 'RIGHT',
+        body: 'Reply',
+        user: { login: 'lee' },
+        created_at: at,
+        html_url: 'https://github.com/o/r/pull/1#discussion_r3',
+      },
+      {
+        id: 1,
+        path: 'docs/a.md',
+        line: 12,
+        side: 'RIGHT',
+        body: 'Root',
+        user: { login: 'dana' },
+        created_at: at,
+        html_url: 'https://github.com/o/r/pull/1#discussion_r1',
+      },
+      {
+        id: 2,
+        path: 'docs/old.md',
+        line: 4,
+        side: 'LEFT',
+        body: 'Old side',
+        user: null,
+        created_at: at,
+        html_url: 'https://github.com/o/r/pull/1#discussion_r2',
+      },
+      {
+        id: 4,
+        path: 'docs/a.md',
+        line: null,
+        side: 'RIGHT',
+        body: 'Outdated',
+        user: { login: 'sam' },
+        created_at: at,
+        html_url: 'https://github.com/o/r/pull/1#discussion_r4',
+      },
+      {
+        id: 5,
+        path: 'docs/a.md',
+        subject_type: 'file',
+        body: 'Whole file',
+        user: { login: 'kim' },
+        created_at: at,
+        html_url: 'https://github.com/o/r/pull/1#discussion_r5',
+      },
+      {
+        id: 6,
+        path: 'src/other.ts',
+        line: 1,
+        side: 'RIGHT',
+        body: 'Elsewhere',
+        user: { login: 'x' },
+        created_at: at,
+        html_url: 'https://github.com/o/r/pull/1#discussion_r6',
+      },
+    ],
+  );
   expect(threads.map((t) => [t.side, t.line, Boolean(t.outdated), t.comments.map((c) => `${c.author}: ${c.body}`)])).toStrictEqual([
     ['head', 12, false, ['dana: Root', 'lee: Reply']],
     ['base', 4, false, ['ghost: Old side']],
@@ -46,11 +118,38 @@ it('GitHub review comments become threads anchored to a version and line', () =>
 it('GitLab diff discussions become threads; system notes and general discussions are left out', () => {
   const doc = { path: 'README.md', oldPath: 'README.md', status: 'modified' as const };
   const at = '2026-10-01T10:00:00Z';
-  const threads = gitlabThreads([doc], [
-    { notes: [{ id: 10, body: 'Nice', created_at: at, author: { username: 'dana' }, resolved: true, position: { new_path: 'README.md', old_path: 'README.md', new_line: 7, old_line: 7 } }, { id: 11, body: 'changed the description', system: true, created_at: at }, { id: 12, body: 'Thanks', created_at: at, author: { username: 'lee' } }] },
-    { notes: [{ id: 20, body: 'Removed line?', created_at: at, author: { username: 'sam' }, position: { new_path: 'README.md', old_path: 'README.md', new_line: null, old_line: 3 } }] },
-    { notes: [{ id: 30, body: 'General comment', created_at: at, author: { username: 'kim' } }] },
-  ], (id) => `https://gitlab.example/g/p/-/merge_requests/1#note_${id}`);
+  const threads = gitlabThreads(
+    [doc],
+    [
+      {
+        notes: [
+          {
+            id: 10,
+            body: 'Nice',
+            created_at: at,
+            author: { username: 'dana' },
+            resolved: true,
+            position: { new_path: 'README.md', old_path: 'README.md', new_line: 7, old_line: 7 },
+          },
+          { id: 11, body: 'changed the description', system: true, created_at: at },
+          { id: 12, body: 'Thanks', created_at: at, author: { username: 'lee' } },
+        ],
+      },
+      {
+        notes: [
+          {
+            id: 20,
+            body: 'Removed line?',
+            created_at: at,
+            author: { username: 'sam' },
+            position: { new_path: 'README.md', old_path: 'README.md', new_line: null, old_line: 3 },
+          },
+        ],
+      },
+      { notes: [{ id: 30, body: 'General comment', created_at: at, author: { username: 'kim' } }] },
+    ],
+    (id) => `https://gitlab.example/g/p/-/merge_requests/1#note_${id}`,
+  );
   expect(threads.map((t) => [t.side, t.line, t.resolved, t.url, t.comments.map((c) => c.author)])).toStrictEqual([
     ['head', 7, true, 'https://gitlab.example/g/p/-/merge_requests/1#note_10', ['dana', 'lee']],
     ['base', 3, false, 'https://gitlab.example/g/p/-/merge_requests/1#note_20', ['sam']],
@@ -61,11 +160,19 @@ it('GitLab participants appear by their display name; the username is kept for m
   const doc = { path: 'README.md', oldPath: 'README.md', status: 'modified' as const };
   const at = '2026-10-01T10:00:00Z';
   const position = { new_path: 'README.md', old_path: 'README.md', new_line: 7, old_line: 7 };
-  const [thread] = gitlabThreads([doc], [{ notes: [
-    { id: 1, body: 'Hi', created_at: at, author: { username: 'dana', name: 'Dana Whitfield' }, position },
-    { id: 2, body: 'Blank name', created_at: at, author: { username: 'lee', name: '  ' } },
-    { id: 3, body: 'Deleted account', created_at: at, author: null },
-  ] }], (id) => `#note_${id}`);
+  const [thread] = gitlabThreads(
+    [doc],
+    [
+      {
+        notes: [
+          { id: 1, body: 'Hi', created_at: at, author: { username: 'dana', name: 'Dana Whitfield' }, position },
+          { id: 2, body: 'Blank name', created_at: at, author: { username: 'lee', name: '  ' } },
+          { id: 3, body: 'Deleted account', created_at: at, author: null },
+        ],
+      },
+    ],
+    (id) => `#note_${id}`,
+  );
   expect(thread.comments.map(({ author, handle }) => ({ author, handle }))).toStrictEqual([
     { author: 'Dana Whitfield', handle: 'dana' },
     { author: 'lee', handle: 'lee' },
@@ -77,7 +184,9 @@ it('pull request text in a posted comment stays code: no mentions, references, l
   const md = new MarkdownIt({ linkify: true });
   const hostile = {
     doc: { path: 'docs/`@team` ![x](https://t.example/p.gif).md', oldPath: 'old\n@dana.md', status: 'renamed' as const },
-    side: 'head' as const, startLine: 4, endLine: 9,
+    side: 'head' as const,
+    startLine: 4,
+    endLine: 9,
     quote: 'Thanks @org/security-team, see #1\n````\n![pixel](https://tracker.example/p.gif) [ok](https://evil.example)\n```',
   };
   const body = commentContext(hostile, '  Looks good @reviewer  ');

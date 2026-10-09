@@ -28,9 +28,5 @@ export function boundedDiff<T>(a: T[], b: T[]): ArrayChange<T>[] {
     midA.length && midB.length
       ? (diffArrays(midA, midB, { maxEditLength: MAX_EDITS, timeout: TIMEOUT_MS }) ?? [part(midA, 'removed'), part(midB, 'added')])
       : [...(midA.length ? [part(midA, 'removed')] : []), ...(midB.length ? [part(midB, 'added')] : [])];
-  return [
-    ...(start ? [part(a.slice(0, start), 'same')] : []),
-    ...middle,
-    ...(end ? [part(a.slice(a.length - end), 'same')] : []),
-  ];
+  return [...(start ? [part(a.slice(0, start), 'same')] : []), ...middle, ...(end ? [part(a.slice(a.length - end), 'same')] : [])];
 }

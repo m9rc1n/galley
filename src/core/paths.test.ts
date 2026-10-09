@@ -29,6 +29,7 @@ it('encoded dot segments and slashes cannot climb out of the repository', () => 
 });
 
 it('only known source/configuration paths are offered as code files', () => {
-  for (const path of ['src/App.tsx', 'main.py', 'main.go', 'Dockerfile', '.env.local', '.gitignore', 'config.yaml', 'src/options.json']) expect(isCodePath(path), path).toBe(true);
+  for (const path of ['src/App.tsx', 'main.py', 'main.go', 'Dockerfile', '.env.local', '.gitignore', 'config.yaml', 'src/options.json'])
+    expect(isCodePath(path), path).toBe(true);
   for (const path of ['image.png', 'movie.mp4', 'archive.zip', 'font.woff', 'README.md', 'unknown.blob']) expect(isCodePath(path), path).toBe(false);
 });

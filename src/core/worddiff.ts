@@ -7,8 +7,7 @@ export interface Op {
   text: string;
 }
 
-const segmenter =
-  typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'word' }) : null;
+const segmenter = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'word' }) : null;
 
 /** Split text into words, spaces and punctuation. Intl.Segmenter also handles CJK and other scripts. */
 export function tokenize(text: string): string[] {
@@ -102,9 +101,7 @@ function factor(ops: Op[]): Op[] {
 
 export function wordDiff(before: string, after: string): Op[] {
   const parts = boundedDiff(tokenize(before), tokenize(after));
-  return factor(
-    cleanup(parts.map((p): Op => ({ type: p.added ? 'ins' : p.removed ? 'del' : 'eq', text: p.value.join('') }))),
-  );
+  return factor(cleanup(parts.map((p): Op => ({ type: p.added ? 'ins' : p.removed ? 'del' : 'eq', text: p.value.join('') }))));
 }
 
 /** Share of the text that changed, ignoring whitespace (0 = identical, 1 = completely rewritten). */

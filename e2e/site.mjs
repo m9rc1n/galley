@@ -7,12 +7,9 @@ import { startSiteServer } from '../scripts/serve-site.mjs';
 
 const chrome =
   process.env.CHROME_PATH ??
-  [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/chromium',
-  ].find((path) => existsSync(path));
+  ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium'].find(
+    (path) => existsSync(path),
+  );
 assert.ok(chrome, 'Chrome is required; set CHROME_PATH to its executable.');
 await mkdir('reports/site', { recursive: true });
 const server = await startSiteServer(0, '/galley');
@@ -35,54 +32,31 @@ try {
   });
   page.on('requestfailed', (request) => failures.push(request.url()));
   page.on('request', (request) => {
-    if (!request.url().startsWith(origin) && !request.url().startsWith('data:') && !request.url().startsWith('blob:'))
-      external.push(request.url());
+    if (!request.url().startsWith(origin) && !request.url().startsWith('data:') && !request.url().startsWith('blob:')) external.push(request.url());
   });
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   await page.setViewport({ width: 1440, height: 1000 });
   await page.goto(`${origin}/galley/`, { waitUntil: 'networkidle0' });
   await page.evaluate(() => document.fonts.ready);
   assert.ok(
-    await page.evaluate(() =>
-      [...document.fonts].filter((font) => font.status === 'loaded').some((font) => font.family === 'Newsreader'),
-    ),
+    await page.evaluate(() => [...document.fonts].filter((font) => font.status === 'loaded').some((font) => font.family === 'Newsreader')),
     'The editorial webfont must load from the Pages artifact',
   );
   assert.ok(
-    await page.evaluate(() =>
-      [...document.fonts].filter((font) => font.status === 'loaded').some((font) => font.family === 'DM Sans'),
-    ),
+    await page.evaluate(() => [...document.fonts].filter((font) => font.status === 'loaded').some((font) => font.family === 'DM Sans')),
     'The interface webfont must load from the Pages artifact',
   );
-  assert.equal(
-    await page.$eval('.hero-actions .button-primary', (button) => button.getAttribute('href')),
-    storeUrl,
-    'Installation is the primary action',
-  );
+  assert.equal(await page.$eval('.hero-actions .button-primary', (button) => button.getAttribute('href')), storeUrl, 'Installation is the primary action');
   assert.ok(
-    await page.$$eval(
-      'a.button-primary',
-      (buttons, url) => buttons.every((button) => button.getAttribute('href') === url),
-      storeUrl,
-    ),
+    await page.$$eval('a.button-primary', (buttons, url) => buttons.every((button) => button.getAttribute('href') === url), storeUrl),
     'All primary install actions should lead to the published store listing',
   );
   assert.ok(
-    await page.$eval(
-      '.install-steps',
-      (steps) => steps.textContent.includes('Add to Chrome') && !steps.textContent.includes('Developer mode'),
-    ),
+    await page.$eval('.install-steps', (steps) => steps.textContent.includes('Add to Chrome') && !steps.textContent.includes('Developer mode')),
     'Installation should use the Chrome Web Store',
   );
-  assert.ok(
-    await page.evaluate(() => !document.body.textContent.includes('coming soon')),
-    'Do not describe the published extension as coming soon',
-  );
-  assert.equal(
-    await page.$eval('.hero-actions .button-demo', (button) => button.getAttribute('href')),
-    'demo/',
-    'Demo should be a visible secondary action',
-  );
+  assert.ok(await page.evaluate(() => !document.body.textContent.includes('coming soon')), 'Do not describe the published extension as coming soon');
+  assert.equal(await page.$eval('.hero-actions .button-demo', (button) => button.getAttribute('href')), 'demo/', 'Demo should be a visible secondary action');
   await page.screenshot({ path: 'reports/site/desktop.png', fullPage: true });
   await page.screenshot({ path: 'reports/site/desktop-hero.png' });
 
@@ -95,10 +69,7 @@ try {
   );
   for (const link of links) {
     if (link.raw.startsWith('#')) {
-      assert.ok(
-        await page.evaluate((id) => Boolean(document.getElementById(id)), link.raw.slice(1)),
-        `Missing anchor ${link.raw}`,
-      );
+      assert.ok(await page.evaluate((id) => Boolean(document.getElementById(id)), link.raw.slice(1)), `Missing anchor ${link.raw}`);
     } else if (link.url.startsWith(origin)) {
       assert.ok(link.url.startsWith(`${origin}/galley/`), `Escaped project path: ${link.url}`);
       assert.equal((await fetch(link.url)).status, 200, `Broken link: ${link.url}`);
@@ -111,10 +82,7 @@ try {
   assert.notEqual(await page.$eval('#illustrated-reader del', (element) => getComputedStyle(element).display), 'none');
   for (const preview of ['tables', 'dark', 'changes']) {
     await page.click(`[data-preview="${preview}"]`);
-    await page.waitForFunction(
-      () =>
-        document.querySelector('#preview-image').complete && document.querySelector('#preview-image').naturalWidth > 0,
-    );
+    await page.waitForFunction(() => document.querySelector('#preview-image').complete && document.querySelector('#preview-image').naturalWidth > 0);
     assert.equal(await page.$$eval('[data-preview][aria-pressed="true"]', (buttons) => buttons.length), 1);
     assert.ok(await page.$eval('#preview-caption', (element) => element.textContent.length > 30));
   }
@@ -124,10 +92,7 @@ try {
   // Layout checks cover the narrowest supported phone as well as desktop/tablet breakpoints.
   for (const width of [1440, 1100, 800, 768, 540, 390, 320]) {
     await page.setViewport({ width, height: 900 });
-    assert.ok(
-      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-      `Horizontal overflow at ${width}px`,
-    );
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Horizontal overflow at ${width}px`);
     assert.ok(
       await page.$$eval('.button', (buttons) => buttons.every((button) => button.getBoundingClientRect().height >= 38)),
       `Small action targets at ${width}px`,
@@ -162,26 +127,19 @@ try {
   assert.match(await page.$eval('h1', (element) => element.textContent), /privacy/i);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Privacy page overflow');
   assert.ok(
-    await page.evaluate(() =>
-      [...document.querySelectorAll('a[href^="#"]')].every((link) => document.getElementById(link.hash.slice(1))),
-    ),
+    await page.evaluate(() => [...document.querySelectorAll('a[href^="#"]')].every((link) => document.getElementById(link.hash.slice(1)))),
     'Privacy section links',
   );
 
   // A landing page demo link must run the real reader and its lazy engines on GitHub Pages.
   await page.setViewport({ width: 1440, height: 1000 });
   await page.goto(`${origin}/galley/demo/`, { waitUntil: 'networkidle0' });
-  await page.waitForFunction(
-    () => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('[data-document] .mr-content').length === 3,
-  );
+  await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('[data-document] .mr-content').length === 3);
   assert.ok(await page.$('a.logo[href="../"]'), 'Demo should have a route home');
   await page.evaluate(() => {
-    for (const button of document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-context-toggle'))
-      button.click();
+    for (const button of document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-context-toggle')) button.click();
   });
-  await page.waitForFunction(() =>
-    document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-diagram img'),
-  );
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-diagram img'));
   await page.screenshot({ path: 'reports/site/demo.png', fullPage: true });
   await page.setViewport({ width: 390, height: 900 });
   assert.ok(
@@ -200,9 +158,7 @@ try {
   assert.deepEqual(errors, [], 'Browser errors');
   assert.deepEqual(failures, [], 'Failed resources');
   assert.deepEqual(external, [], 'The website and demo should load without external requests');
-  console.log(
-    'Website passed: desktop/mobile layouts, previews, FAQs, local links, privacy, no external requests, and live demo at /galley/.',
-  );
+  console.log('Website passed: desktop/mobile layouts, previews, FAQs, local links, privacy, no external requests, and live demo at /galley/.');
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.close(resolve));

@@ -20,12 +20,19 @@ it('restores the content script of every enabled site that an update cleared, an
   expect(await restoreSites()).toEqual(['https://ghe.corp.example:8443']);
   expect(register).toHaveBeenCalledExactlyOnceWith([siteScript('https://ghe.corp.example:8443')]);
   expect(siteScript('https://ghe.corp.example:8443')).toEqual({
-    id: 'galley-https-ghe-corp-example-8443', matches: ['https://ghe.corp.example:8443/*'], js: ['content.js'], runAt: 'document_idle', persistAcrossSessions: true,
+    id: 'galley-https-ghe-corp-example-8443',
+    matches: ['https://ghe.corp.example:8443/*'],
+    js: ['content.js'],
+    runAt: 'document_idle',
+    persistAcrossSessions: true,
   });
 });
 
 it('leaves the built-in sites to the manifest and does nothing when every enabled site is registered', async () => {
-  const register = browser([...BUILT_IN_ORIGINS].map((origin) => `${origin}/*`), []);
+  const register = browser(
+    [...BUILT_IN_ORIGINS].map((origin) => `${origin}/*`),
+    [],
+  );
   expect(await restoreSites()).toEqual([]);
   expect(register).not.toHaveBeenCalled();
 });

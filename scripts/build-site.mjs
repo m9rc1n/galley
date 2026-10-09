@@ -19,8 +19,7 @@ const assets = {
 };
 for (const [source, target] of Object.entries(assets)) await cp(`${root}${source}`, `${out}/assets/${target}`);
 await mkdir(`${out}/demo`, { recursive: true });
-for (const file of ['index.html', 'samples', 'build'])
-  await cp(`${root}demo/${file}`, `${out}/demo/${file}`, { recursive: true });
+for (const file of ['index.html', 'samples', 'build']) await cp(`${root}demo/${file}`, `${out}/demo/${file}`, { recursive: true });
 await cp(`${root}dist/chrome/THIRD_PARTY_NOTICES.txt`, `${out}/demo/THIRD_PARTY_NOTICES.txt`);
 // Give the existing demo a route back to the website without changing the local development demo.
 const demo = await readFile(`${out}/demo/index.html`, 'utf8');
@@ -31,10 +30,7 @@ await writeFile(
       '<title>Galley demo</title>',
       '<title>Galley — Live reader demo</title><link rel="icon" href="../assets/icon.png"><meta name="robots" content="noindex">',
     )
-    .replace(
-      '<span class="logo">acme</span>',
-      '<a class="logo" href="../" style="color:inherit;text-decoration:none">← Galley home</a>',
-    ),
+    .replace('<span class="logo">acme</span>', '<a class="logo" href="../" style="color:inherit;text-decoration:none">← Galley home</a>'),
 );
 
 const markdown = markdownit({ html: false, linkify: true, typographer: true });

@@ -14,11 +14,15 @@ import puppeteer from 'puppeteer-core';
 import { startDemoServer } from '../scripts/serve.mjs';
 
 function contrast(first, second) {
-  const luminance = (colour) => colour.match(/[\d.]+/g).slice(0, 3)
-    .map((channel) => Number(channel) / 255)
-    .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
-    .reduce((sum, channel, i) => sum + channel * [0.2126, 0.7152, 0.0722][i], 0);
-  const a = luminance(first), b = luminance(second);
+  const luminance = (colour) =>
+    colour
+      .match(/[\d.]+/g)
+      .slice(0, 3)
+      .map((channel) => Number(channel) / 255)
+      .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
+      .reduce((sum, channel, i) => sum + channel * [0.2126, 0.7152, 0.0722][i], 0);
+  const a = luminance(first),
+    b = luminance(second);
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
@@ -55,21 +59,33 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1440, height: 1000 });
-  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'light' }]);
+  await page.emulateMediaFeatures([
+    { name: 'prefers-reduced-motion', value: 'reduce' },
+    { name: 'prefers-color-scheme', value: 'light' },
+  ]);
   await page.goto(demoUrl, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('[data-document] .mr-content').length === 3);
-  await page.waitForFunction(() => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'));
+  await page.waitForFunction(
+    () => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'),
+  );
   const inspect = (fn, ...args) => page.evaluate(fn, ...args);
-  const selectFont = (font) => inspect((font) => {
-    const control = document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-typeface');
-    control.value = font; control.dispatchEvent(new Event('change', { bubbles: true }));
-  }, font);
+  const selectFont = (font) =>
+    inspect((font) => {
+      const control = document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-typeface');
+      control.value = font;
+      control.dispatchEvent(new Event('change', { bubbles: true }));
+    }, font);
   const typography = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     const title = getComputedStyle(s.querySelector('h1.mr-lead'));
     const insertion = getComputedStyle(s.querySelector('ins.mr-ins'));
     const replacement = getComputedStyle(s.querySelector('p del.mr-del + ins.mr-ins'));
-    return { family: title.fontFamily, weight: title.fontWeight, insertion: insertion.backgroundColor, replacementGap: parseFloat(replacement.marginInlineStart) };
+    return {
+      family: title.fontFamily,
+      weight: title.fontWeight,
+      insertion: insertion.backgroundColor,
+      replacementGap: parseFloat(replacement.marginInlineStart),
+    };
   });
   assert.match(typography.family, /Galley Newsreader/);
   assert.equal(typography.weight, '400');
@@ -77,28 +93,60 @@ try {
   assert.ok(typography.replacementGap >= 3, 'Adjacent old and new words need a visible gap');
   const initial = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    return { files: [...s.querySelectorAll('.mr-document')].filter((el) => !el.hidden).length, nextButtons: s.querySelectorAll('.mr-next').length, filter: s.querySelector('[data-scope="changed"]').getAttribute('aria-pressed'), close: s.querySelector('[data-act="close"]').getAttribute('title'), hidden: s.querySelectorAll('.mr-content [hidden]').length, composers: s.querySelectorAll('.mr-composer').length, commentButtons: s.querySelectorAll('.mr-topbar [data-act*="comment"]').length, threads: s.querySelectorAll('.mr-thread').length, rail: s.querySelectorAll('.mr-threads .mr-thread').length };
+    return {
+      files: [...s.querySelectorAll('.mr-document')].filter((el) => !el.hidden).length,
+      nextButtons: s.querySelectorAll('.mr-next').length,
+      filter: s.querySelector('[data-scope="changed"]').getAttribute('aria-pressed'),
+      close: s.querySelector('[data-act="close"]').getAttribute('title'),
+      hidden: s.querySelectorAll('.mr-content [hidden]').length,
+      composers: s.querySelectorAll('.mr-composer').length,
+      commentButtons: s.querySelectorAll('.mr-topbar [data-act*="comment"]').length,
+      threads: s.querySelectorAll('.mr-thread').length,
+      rail: s.querySelectorAll('.mr-threads .mr-thread').length,
+    };
   });
-  assert.equal(initial.files, 3); assert.equal(initial.nextButtons, 0); assert.equal(initial.filter, 'true'); assert.ok(initial.hidden > 0); assert.match(initial.close, /Esc/);
+  assert.equal(initial.files, 3);
+  assert.equal(initial.nextButtons, 0);
+  assert.equal(initial.filter, 'true');
+  assert.ok(initial.hidden > 0);
+  assert.match(initial.close, /Esc/);
   // Nothing follows the reader around: editors open only beside chosen text, threads sit in the margin, and
   // the top bar has no comment button.
-  assert.equal(initial.composers, 0); assert.equal(initial.commentButtons, 0); assert.equal(initial.threads, 3); assert.equal(initial.rail, 2);
+  assert.equal(initial.composers, 0);
+  assert.equal(initial.commentButtons, 0);
+  assert.equal(initial.threads, 3);
+  assert.equal(initial.rail, 2);
   const columns = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     const article = s.querySelector('.mr-article').getBoundingClientRect();
     const contents = s.querySelector('.mr-toc').getBoundingClientRect();
     const threads = s.querySelector('.mr-threads').getBoundingClientRect();
-    return { article: { left: article.left, right: article.right }, contents: { left: contents.left, right: contents.right }, threads: { left: threads.left, right: threads.right } };
+    return {
+      article: { left: article.left, right: article.right },
+      contents: { left: contents.left, right: contents.right },
+      threads: { left: threads.left, right: threads.right },
+    };
   });
-  assert.ok(columns.article.left - columns.contents.right >= 55 && columns.threads.left - columns.article.right >= 55 && columns.threads.right <= 1440, JSON.stringify(columns));
+  assert.ok(
+    columns.article.left - columns.contents.right >= 55 && columns.threads.left - columns.article.right >= 55 && columns.threads.right <= 1440,
+    JSON.stringify(columns),
+  );
   for (const width of [1280, 1360, 1440, 1920, 1440, 1100, 1440]) {
     await page.setViewport({ width, height: 1000 });
-    await page.waitForFunction((wide) => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('has-rail') === wide, {}, width >= 1280);
+    await page.waitForFunction(
+      (wide) => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('has-rail') === wide,
+      {},
+      width >= 1280,
+    );
     const gaps = await inspect(() => {
-      const s = document.querySelector('#galley-reader').shadowRoot, article = s.querySelector('.mr-article').getBoundingClientRect();
-      const toc = s.querySelector('.mr-toc').getBoundingClientRect(), rail = s.querySelector('.mr-threads').getBoundingClientRect(), mark = s.querySelector('.mr-mark').getBoundingClientRect();
+      const s = document.querySelector('#galley-reader').shadowRoot,
+        article = s.querySelector('.mr-article').getBoundingClientRect();
+      const toc = s.querySelector('.mr-toc').getBoundingClientRect(),
+        rail = s.querySelector('.mr-threads').getBoundingClientRect(),
+        mark = s.querySelector('.mr-mark').getBoundingClientRect();
       const dots = [...s.querySelectorAll('.mr-toc .mr-dot')].map((dot) => {
-        const rect = dot.getBoundingClientRect(), label = dot.parentElement.querySelector('span:not(.mr-dot)').getBoundingClientRect();
+        const rect = dot.getBoundingClientRect(),
+          label = dot.parentElement.querySelector('span:not(.mr-dot)').getBoundingClientRect();
         return { toLabel: label.left - rect.right, toMarker: mark.left - rect.right };
       });
       const inlineThreads = [...s.querySelectorAll('.mr-content .mr-thread')].filter((thread) => !thread.closest('.mr-file-threads')).length;
@@ -106,23 +154,34 @@ try {
     });
     if (width >= 1280) {
       assert.ok(gaps.left >= 55 && gaps.right >= 55 && gaps.marker >= 19 && gaps.inlineThreads === 0, JSON.stringify({ width, gaps }));
-      assert.ok(gaps.dots.length > 0 && gaps.dots.every((dot) => dot.toLabel >= 9 && dot.toLabel <= 11 && dot.toMarker >= 150), 'Contents dots belong beside their labels, away from the document change bars');
-    }
-    else assert.equal(gaps.inlineThreads, 2, 'Resizing moves comments inline even when the prose width stays the same');
+      assert.ok(
+        gaps.dots.length > 0 && gaps.dots.every((dot) => dot.toLabel >= 9 && dot.toLabel <= 11 && dot.toMarker >= 150),
+        'Contents dots belong beside their labels, away from the document change bars',
+      );
+    } else assert.equal(gaps.inlineThreads, 2, 'Resizing moves comments inline even when the prose width stays the same');
   }
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').click());
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').getAttribute('aria-expanded')), 'true');
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').getAttribute('aria-expanded')),
+    'true',
+  );
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').click());
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').getAttribute('aria-expanded')), 'false');
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-context-toggle').getAttribute('aria-expanded')),
+    'false',
+  );
   await page.screenshot({ path: join(screenshots, 'galley-reader-desktop.png') });
   // Toolbar controls stay centred, ordered and within the viewport at every supported width.
   for (const width of [1440, 1100, 900, 768, 760, 390, 320]) {
     await page.setViewport({ width, height: 1000 });
     const aligned = await inspect(() => {
       const s = document.querySelector('#galley-reader').shadowRoot;
-      return [...s.querySelectorAll('.mr-topbar button')].filter((el) => el.getClientRects().length && !el.closest('[hidden]')).map((el) => {
-        const r = el.getBoundingClientRect(); return { act: el.dataset.act, left: r.left, right: r.right, center: (r.top + r.bottom) / 2 };
-      });
+      return [...s.querySelectorAll('.mr-topbar button')]
+        .filter((el) => el.getClientRects().length && !el.closest('[hidden]'))
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          return { act: el.dataset.act, left: r.left, right: r.right, center: (r.top + r.bottom) / 2 };
+        });
     });
     for (let i = 0; i < aligned.length; i++) {
       assert.ok(aligned[i].left >= 0 && aligned[i].right <= width, JSON.stringify({ width, aligned }));
@@ -132,8 +191,14 @@ try {
   }
   await page.setViewport({ width: 1440, height: 1000 });
   // The bar names the current document; settings live in a sheet, paths and progress in the documents menu.
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-topbar [data-mode], .mr-topbar [data-scope]').length), 0);
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path), 'docs/rfcs/0042-reading-first-reviews.md');
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-topbar [data-mode], .mr-topbar [data-scope]').length),
+    0,
+  );
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path),
+    'docs/rfcs/0042-reading-first-reviews.md',
+  );
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-file-header').length), 0);
   await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').disabled);
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
@@ -146,8 +211,21 @@ try {
   await page.keyboard.press('ArrowRight');
   // Layout sits between reading and review: five layouts drawn as pages, and a density choice.
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-layout-panel').hidden), false);
-  assert.deepEqual(await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="layout"] [data-value]')].map((b) => [b.dataset.value, b.getAttribute('aria-pressed')])),
-    [['balanced', 'true'], ['review', 'false'], ['wide', 'false'], ['focus', 'false'], ['fit', 'false']]);
+  assert.deepEqual(
+    await inspect(() =>
+      [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="layout"] [data-value]')].map((b) => [
+        b.dataset.value,
+        b.getAttribute('aria-pressed'),
+      ]),
+    ),
+    [
+      ['balanced', 'true'],
+      ['review', 'false'],
+      ['wide', 'false'],
+      ['focus', 'false'],
+      ['fit', 'false'],
+    ],
+  );
   await page.keyboard.press('ArrowRight');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-review-panel').hidden), false);
   await page.keyboard.press('Tab');
@@ -174,58 +252,92 @@ try {
     const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
     let text = walker.nextNode();
     while (text && !text.textContent.includes('design')) text = walker.nextNode();
-    const range = document.createRange(), start = text.textContent.indexOf('design');
-    range.setStart(text, start); range.setEnd(text, start + 6);
-    const sel = s.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    const range = document.createRange(),
+      start = text.textContent.indexOf('design');
+    range.setStart(text, start);
+    range.setEnd(text, start + 6);
+    const sel = s.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
     paragraph.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    const chip = s.querySelector('.mr-select-chip'), shownBefore = s.querySelectorAll('.mr-composer').length;
+    const chip = s.querySelector('.mr-select-chip'),
+      shownBefore = s.querySelectorAll('.mr-composer').length;
     chip.click();
-    const composer = s.activeElement.closest('.mr-composer'), rect = composer.getBoundingClientRect(), block = paragraph.getBoundingClientRect();
-    return { chip: !chip.disabled, shownBefore, quote: composer.querySelector('.mr-comment-quote').textContent, target: composer.querySelector('.mr-comment-target').textContent, inRail: composer.parentElement.matches('.mr-threads'), width: rect.width, level: Math.abs(rect.top - block.top) };
+    const composer = s.activeElement.closest('.mr-composer'),
+      rect = composer.getBoundingClientRect(),
+      block = paragraph.getBoundingClientRect();
+    return {
+      chip: !chip.disabled,
+      shownBefore,
+      quote: composer.querySelector('.mr-comment-quote').textContent,
+      target: composer.querySelector('.mr-comment-target').textContent,
+      inRail: composer.parentElement.matches('.mr-threads'),
+      width: rect.width,
+      level: Math.abs(rect.top - block.top),
+    };
   });
-  assert.equal(selected.chip, true); assert.equal(selected.shownBefore, 0);
+  assert.equal(selected.chip, true);
+  assert.equal(selected.shownBefore, 0);
   assert.equal(selected.quote, 'design');
   assert.match(selected.target, /^Comment on line \d+$/);
   // The editor opens beside its text in the comments column, wide enough to write in.
   assert.ok(selected.inRail && selected.width >= 340 && selected.level <= 40, JSON.stringify(selected));
   await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, textarea = s.querySelector('.mr-composer textarea');
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      textarea = s.querySelector('.mr-composer textarea');
     textarea.value = 'Could we explain this more clearly?';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     s.querySelector('.mr-root').scrollTop = s.querySelector('.mr-root').scrollHeight;
   });
   await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer .mr-submit').disabled);
   await new Promise((resolve) => setTimeout(resolve, 150));
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer .mr-comment-target').textContent), selected.target);
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer .mr-comment-target').textContent),
+    selected.target,
+  );
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer').requestSubmit());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-thread.is-own').length === 1);
   const posted = await inspect(() => JSON.parse(sessionStorage.getItem('galley:demo-comments'))[0]);
-  assert.equal(posted.quote, 'design'); assert.equal(posted.body, 'Could we explain this more clearly?'); assert.equal(posted.doc.path, 'docs/rfcs/0042-reading-first-reviews.md');
+  assert.equal(posted.quote, 'design');
+  assert.equal(posted.body, 'Could we explain this more clearly?');
+  assert.equal(posted.doc.path, 'docs/rfcs/0042-reading-first-reviews.md');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-composer').length), 0);
   assert.match(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-toast').textContent), /Comment posted/);
   // The control beside the paragraph under the pointer opens an editor for it; each text keeps its own draft.
-  const commentOn = (text) => inspect((text) => {
-    const s = document.querySelector('#galley-reader').shadowRoot;
-    const el = [...s.querySelectorAll('.mr-content p, .mr-content .mr-tight, .mr-code-text, .mr-diagram-view img')].find((node) => !node.closest('[hidden]') && node.textContent.includes(text) || node.alt?.includes(text));
-    el.scrollIntoView({ block: 'center' });
-    el.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
-    const button = s.querySelector('.mr-comment-btn');
-    if (button.hidden) return null;
-    button.click();
-    return s.activeElement.closest('.mr-composer').querySelector('.mr-comment-target').textContent;
-  }, text);
+  const commentOn = (text) =>
+    inspect((text) => {
+      const s = document.querySelector('#galley-reader').shadowRoot;
+      const el = [...s.querySelectorAll('.mr-content p, .mr-content .mr-tight, .mr-code-text, .mr-diagram-view img')].find(
+        (node) => (!node.closest('[hidden]') && node.textContent.includes(text)) || node.alt?.includes(text),
+      );
+      el.scrollIntoView({ block: 'center' });
+      el.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
+      const button = s.querySelector('.mr-comment-btn');
+      if (button.hidden) return null;
+      button.click();
+      return s.activeElement.closest('.mr-composer').querySelector('.mr-comment-target').textContent;
+    }, text);
   const first = await commentOn('Most of our design work');
   assert.equal(first, 'Comment on line 11');
   await inspect(() => {
     const textarea = document.querySelector('#galley-reader').shadowRoot.activeElement;
-    textarea.value = 'A draft that stays'; textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.value = 'A draft that stays';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
   });
   const second = await commentOn('A small browser extension adds');
   assert.notEqual(second, first);
-  assert.deepEqual(await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-composer textarea')].map((field) => field.value)), ['A draft that stays', '']);
+  assert.deepEqual(
+    await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-composer textarea')].map((field) => field.value)),
+    ['A draft that stays', ''],
+  );
   // Escape closes an empty editor and keeps a draft; Cancel discards a draft.
   await page.keyboard.press('Escape');
-  assert.equal(await inspect(() => document.querySelectorAll('#galley-reader') && document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-composer').length), 1);
+  assert.equal(
+    await inspect(
+      () => document.querySelectorAll('#galley-reader') && document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-composer').length,
+    ),
+    1,
+  );
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer .mr-cancel').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-composer').length), 0);
   // Full context toggle is independent of Changes/Clean; file links now scroll in-place.
@@ -233,11 +345,18 @@ try {
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-content [hidden]').length), 0);
   const codeLayout = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    const code = s.querySelector('.mr-content > pre'), article = s.querySelector('.mr-article');
+    const code = s.querySelector('.mr-content > pre'),
+      article = s.querySelector('.mr-article');
     const rect = code.getBoundingClientRect();
     s.querySelector('.mr-root').scrollTop += rect.top - 220;
     s.getSelection().removeAllRanges();
-    return { width: rect.width, prose: article.getBoundingClientRect().width, left: rect.left, right: rect.right, articleRight: article.getBoundingClientRect().right };
+    return {
+      width: rect.width,
+      prose: article.getBoundingClientRect().width,
+      left: rect.left,
+      right: rect.right,
+      articleRight: article.getBoundingClientRect().right,
+    };
   });
   // A code block runs as wide as its longest line, up to 120 characters, growing to the left: its right
   // edge stays level with the text, so the comments column beside it stays clear.
@@ -245,7 +364,8 @@ try {
   assert.ok(Math.abs(codeLayout.right - codeLayout.articleRight) <= 1, JSON.stringify(codeLayout));
   assert.ok(codeLayout.left >= 0 && codeLayout.right <= 1440, JSON.stringify(codeLayout));
   const nestedCode = await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, quote = s.querySelector('.mr-content blockquote');
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      quote = s.querySelector('.mr-content blockquote');
     const pre = document.createElement('pre');
     pre.textContent = 'A long nested snippet '.repeat(8);
     quote.append(pre);
@@ -266,7 +386,11 @@ try {
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path === 'README.md');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-document] .mr-content').length), 3);
   // Mobile layout must not extend past either side of the viewport.
-  assert.equal(await inspect(() => getComputedStyle(document.querySelector('#galley-reader').shadowRoot.querySelector('p del.mr-del + ins.mr-ins')).marginInlineStart), '0px', 'Clean reading must retain the document’s original spacing');
+  assert.equal(
+    await inspect(() => getComputedStyle(document.querySelector('#galley-reader').shadowRoot.querySelector('p del.mr-del + ins.mr-ins')).marginInlineStart),
+    '0px',
+    'Clean reading must retain the document’s original spacing',
+  );
   await page.setViewport({ width: 390, height: 844 });
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
@@ -280,13 +404,23 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 150));
   const layout = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    return ['.mr-composer', '.mr-topbar', '.mr-file-btn', '.mr-composer textarea', '.mr-composer .mr-submit', '.mr-content > pre'].map((selector) => { const rect = s.querySelector(selector).getBoundingClientRect(); return { selector, left: rect.left, right: rect.right, height: rect.height }; });
+    return ['.mr-composer', '.mr-topbar', '.mr-file-btn', '.mr-composer textarea', '.mr-composer .mr-submit', '.mr-content > pre'].map((selector) => {
+      const rect = s.querySelector(selector).getBoundingClientRect();
+      return { selector, left: rect.left, right: rect.right, height: rect.height };
+    });
   });
-  for (const rect of layout) { assert.ok(rect.left >= 0, JSON.stringify(rect)); assert.ok(rect.right <= 390, JSON.stringify(rect)); }
+  for (const rect of layout) {
+    assert.ok(rect.left >= 0, JSON.stringify(rect));
+    assert.ok(rect.right <= 390, JSON.stringify(rect));
+  }
   assert.ok(layout.find((rect) => rect.selector === '.mr-composer .mr-submit').height >= 44, 'Touch targets in the editor');
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer').parentElement.matches('.mr-threads')), false);
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer').parentElement.matches('.mr-threads')),
+    false,
+  );
   const mobileCode = await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, code = s.querySelector('.mr-content > pre');
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      code = s.querySelector('.mr-content > pre');
     return { width: code.clientWidth, content: code.scrollWidth, page: s.querySelector('.mr-root').scrollWidth };
   });
   // Code wraps under its own indentation instead of hiding past the edge.
@@ -329,27 +463,38 @@ try {
   await page.setViewport({ width: 1440, height: 1000 });
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    s.querySelector('[data-act="settings"]').click(); s.querySelector('[data-value="dark"]').click(); s.querySelector('.mr-settings [data-act="close-settings"]').click();
+    s.querySelector('[data-act="settings"]').click();
+    s.querySelector('[data-value="dark"]').click();
+    s.querySelector('.mr-settings [data-act="close-settings"]').click();
   });
   await page.screenshot({ path: join(screenshots, 'galley-reader-dark.png') });
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="sepia"]').click());
   await page.screenshot({ path: join(screenshots, 'galley-reader-sepia.png') });
   await selectFont('sans');
-  assert.match(await inspect(() => getComputedStyle(document.querySelector('#galley-reader').shadowRoot.querySelector('h1.mr-lead')).fontFamily), /Galley DM Sans/);
+  assert.match(
+    await inspect(() => getComputedStyle(document.querySelector('#galley-reader').shadowRoot.querySelector('h1.mr-lead')).fontFamily),
+    /Galley DM Sans/,
+  );
   await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    const control = s.querySelector('#mr-typeface'); control.value = 'serif'; control.dispatchEvent(new Event('change', { bubbles: true }));
+    const control = s.querySelector('#mr-typeface');
+    control.value = 'serif';
+    control.dispatchEvent(new Event('change', { bubbles: true }));
     s.querySelector('[data-value="dark"]').click();
   });
   await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, gap = s.querySelector('.mr-context-toggle'), root = s.querySelector('.mr-root');
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      gap = s.querySelector('.mr-context-toggle'),
+      root = s.querySelector('.mr-root');
     root.scrollTop += gap.getBoundingClientRect().top - 260;
     gap.click();
   });
   await new Promise((resolve) => setTimeout(resolve, 150));
   await page.screenshot({ path: join(screenshots, 'galley-reader-context.png') });
   // Mermaid renders locally and preserves both whole diagram versions for source comments.
-  await page.waitForFunction(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-diagram-view')].every((el) => el.dataset.state === 'ready'));
+  await page.waitForFunction(() =>
+    [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-diagram-view')].every((el) => el.dataset.state === 'ready'),
+  );
   const diagrams = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     const versions = s.querySelector('.mr-diagram').querySelectorAll('[data-mr-side]');
@@ -360,9 +505,17 @@ try {
     });
     s.activeElement.closest('.mr-composer').querySelector('.mr-cancel').click();
     const image = s.querySelector('.mr-diagram-view img');
-    return { count: s.querySelectorAll('.mr-diagram-view img').length, targets, editors: s.querySelectorAll('.mr-composer').length, natural: image.width, shown: image.getBoundingClientRect().width };
+    return {
+      count: s.querySelectorAll('.mr-diagram-view img').length,
+      targets,
+      editors: s.querySelectorAll('.mr-composer').length,
+      natural: image.width,
+      shown: image.getBoundingClientRect().width,
+    };
   });
-  assert.equal(diagrams.count, 3); assert.equal(diagrams.targets[0], 'Comment on old lines 30–34'); assert.equal(diagrams.targets[1], 'Comment on lines 31–37');
+  assert.equal(diagrams.count, 3);
+  assert.equal(diagrams.targets[0], 'Comment on old lines 30–34');
+  assert.equal(diagrams.targets[1], 'Comment on lines 31–37');
   assert.equal(diagrams.editors, 0, 'An editor left empty makes way for the next one; Cancel closes the other');
   // Diagrams are shown at the size they were laid out for, never stretched beyond it.
   assert.ok(diagrams.natural > 0 && diagrams.shown <= diagrams.natural + 1, JSON.stringify(diagrams));
@@ -378,44 +531,83 @@ try {
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-content [class^="hljs-"]'));
   const frames = await inspect(() => ({
     page: document.querySelectorAll('iframe').length,
-    reader: [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('iframe')].map((frame) => `${frame.getAttribute('sandbox')} ${new URL(frame.src).pathname}`).sort(),
+    reader: [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('iframe')]
+      .map((frame) => `${frame.getAttribute('sandbox')} ${new URL(frame.src).pathname}`)
+      .sort(),
   }));
   assert.equal(frames.page, 0);
   assert.deepEqual(frames.reader, ['allow-scripts /build/diagram-frame.html', 'allow-scripts /build/highlight-frame.html']);
   // Opting into code appends it after the documents without replacing their rendered DOM.
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="code-files"]').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-code-file').length === 2);
-  assert.deepEqual(await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-document')].filter((el) => !el.hidden).map((el) => el.getAttribute('aria-label'))), ['docs/rfcs/0042-reading-first-reviews.md', 'README.md', 'docs/adr/0007-render-markdown-in-the-browser.md', 'src/review.ts', 'src/options.json']);
+  assert.deepEqual(
+    await inspect(() =>
+      [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-document')]
+        .filter((el) => !el.hidden)
+        .map((el) => el.getAttribute('aria-label')),
+    ),
+    ['docs/rfcs/0042-reading-first-reviews.md', 'README.md', 'docs/adr/0007-render-markdown-in-the-browser.md', 'src/review.ts', 'src/options.json'],
+  );
   const codeTarget = await commentOn('export const changedOnly = true;');
   assert.equal(codeTarget, 'Comment on line 6');
   const sourceColumns = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     const article = s.querySelector('.mr-article').getBoundingClientRect();
-    const code = s.querySelector('.mr-document.is-code').getBoundingClientRect(), lines = s.querySelector('.mr-document.is-code .mr-code-lines');
-    const composer = s.querySelector('.mr-composer'), box = composer.getBoundingClientRect();
-    const text = s.querySelector('.mr-document.is-code .mr-code-line[data-mr-change] .mr-code-text'), style = getComputedStyle(text), canvas = document.createElement('canvas').getContext('2d');
+    const code = s.querySelector('.mr-document.is-code').getBoundingClientRect(),
+      lines = s.querySelector('.mr-document.is-code .mr-code-lines');
+    const composer = s.querySelector('.mr-composer'),
+      box = composer.getBoundingClientRect();
+    const text = s.querySelector('.mr-document.is-code .mr-code-line[data-mr-change] .mr-code-text'),
+      style = getComputedStyle(text),
+      canvas = document.createElement('canvas').getContext('2d');
     canvas.font = `${style.fontSize} ${style.fontFamily}`;
-    const codeMarks = [...s.querySelectorAll('.mr-mark')].filter((mark) => { const rect = mark.getBoundingClientRect(); return rect.top >= code.top && rect.top < code.bottom; }).length;
-    return { left: code.left, width: code.width, proseWidth: article.width, right: code.right, characters: Math.floor(text.getBoundingClientRect().width / canvas.measureText('0').width), inRail: composer.parentElement.matches('.mr-threads') && lines.contains(composer) === false, composerLeft: box.left, composerRight: box.right, composerWidth: box.width, codeMarks };
+    const codeMarks = [...s.querySelectorAll('.mr-mark')].filter((mark) => {
+      const rect = mark.getBoundingClientRect();
+      return rect.top >= code.top && rect.top < code.bottom;
+    }).length;
+    return {
+      left: code.left,
+      width: code.width,
+      proseWidth: article.width,
+      right: code.right,
+      characters: Math.floor(text.getBoundingClientRect().width / canvas.measureText('0').width),
+      inRail: composer.parentElement.matches('.mr-threads') && lines.contains(composer) === false,
+      composerLeft: box.left,
+      composerRight: box.right,
+      composerWidth: box.width,
+      codeMarks,
+    };
   });
   // Source files are much wider than prose, and are commented on the same way: in the column beside them.
   assert.ok(sourceColumns.left >= 24 && sourceColumns.width > sourceColumns.proseWidth + 300 && sourceColumns.characters >= 115, JSON.stringify(sourceColumns));
-  assert.ok(sourceColumns.inRail && sourceColumns.composerLeft - sourceColumns.right >= 55 && sourceColumns.composerRight <= 1440 && sourceColumns.composerWidth >= 300, JSON.stringify(sourceColumns));
+  assert.ok(
+    sourceColumns.inRail && sourceColumns.composerLeft - sourceColumns.right >= 55 && sourceColumns.composerRight <= 1440 && sourceColumns.composerWidth >= 300,
+    JSON.stringify(sourceColumns),
+  );
   assert.equal(sourceColumns.codeMarks, 0);
   await page.screenshot({ path: join(screenshots, 'galley-reader-source-review.png') });
   await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, input = s.querySelector('.mr-composer textarea');
-    input.value = 'Explain this default'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      input = s.querySelector('.mr-composer textarea');
+    input.value = 'Explain this default';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer .mr-submit').disabled);
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer').requestSubmit());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-thread.is-own').length === 2);
   const codePosted = await inspect(() => JSON.parse(sessionStorage.getItem('galley:demo-comments')).at(-1));
-  assert.equal(codePosted.doc.path, 'src/review.ts'); assert.equal(codePosted.startLine, 6); assert.equal(codePosted.quote, 'export const changedOnly = true;');
+  assert.equal(codePosted.doc.path, 'src/review.ts');
+  assert.equal(codePosted.startLine, 6);
+  assert.equal(codePosted.quote, 'export const changedOnly = true;');
   const sourceSizes = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    const line = s.querySelector('.mr-code-line'), title = s.querySelector('.mr-document[data-document] .mr-content > h1, .mr-document[data-document] .mr-title');
-    const sizes = () => ({ code: parseFloat(getComputedStyle(line).fontSize), title: parseFloat(getComputedStyle(title).fontSize), byline: parseFloat(getComputedStyle(s.querySelector('.mr-byline')).fontSize) });
+    const line = s.querySelector('.mr-code-line'),
+      title = s.querySelector('.mr-document[data-document] .mr-content > h1, .mr-document[data-document] .mr-title');
+    const sizes = () => ({
+      code: parseFloat(getComputedStyle(line).fontSize),
+      title: parseFloat(getComputedStyle(title).fontSize),
+      byline: parseFloat(getComputedStyle(s.querySelector('.mr-byline')).fontSize),
+    });
     const before = sizes();
     s.querySelector('[data-act="larger"]').click();
     const after = sizes();
@@ -428,23 +620,37 @@ try {
   for (const width of [1280, 1100, 900, 768, 760, 390, 320]) {
     await page.setViewport({ width, height: 844 });
     const source = await inspect(() => {
-      const s = document.querySelector('#galley-reader').shadowRoot, code = s.querySelector('.mr-code-lines'), rect = code.getBoundingClientRect();
+      const s = document.querySelector('#galley-reader').shadowRoot,
+        code = s.querySelector('.mr-code-lines'),
+        rect = code.getBoundingClientRect();
       return { left: rect.left, right: rect.right, client: code.clientWidth, scroll: code.scrollWidth, page: s.querySelector('.mr-root').scrollWidth };
     });
     assert.ok(source.left >= 0 && source.right <= width && source.page <= width && source.scroll <= source.client + 1, JSON.stringify({ width, source }));
   }
   await page.setViewport({ width: 390, height: 844 });
   const sourceLayout = await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, source = s.querySelector('.mr-code-lines');
-    return { left: source.getBoundingClientRect().left, right: source.getBoundingClientRect().right, client: source.clientWidth, scroll: source.scrollWidth, page: s.querySelector('.mr-root').scrollWidth };
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      source = s.querySelector('.mr-code-lines');
+    return {
+      left: source.getBoundingClientRect().left,
+      right: source.getBoundingClientRect().right,
+      client: source.clientWidth,
+      scroll: source.scrollWidth,
+      page: s.querySelector('.mr-root').scrollWidth,
+    };
   });
-  assert.ok(sourceLayout.left >= 0 && sourceLayout.right <= 390 && sourceLayout.page <= 390 && sourceLayout.scroll <= sourceLayout.client + 1, JSON.stringify(sourceLayout));
+  assert.ok(
+    sourceLayout.left >= 0 && sourceLayout.right <= 390 && sourceLayout.page <= 390 && sourceLayout.scroll <= sourceLayout.client + 1,
+    JSON.stringify(sourceLayout),
+  );
   await page.setViewport({ width: 1440, height: 1000 });
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="code-files"]').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-document:not([hidden])').length), 3);
   // The single sticky bar follows the file in view and its Viewed button targets that file.
   await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, root = s.querySelector('.mr-root'), section = s.querySelectorAll('.mr-document[data-document]')[1];
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      root = s.querySelector('.mr-root'),
+      section = s.querySelectorAll('.mr-document[data-document]')[1];
     root.scrollTop += section.getBoundingClientRect().top + 200 - 56;
   });
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path === 'README.md');
@@ -477,69 +683,116 @@ try {
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.activeElement?.matches('.mr-reply textarea'));
   await inspect(() => {
     const input = document.querySelector('#galley-reader').shadowRoot.activeElement;
-    input.value = 'I can add that reference. **Thanks!**'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.value = 'I can add that reference. **Thanks!**';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await page.screenshot({ path: join(screenshots, 'galley-reader-reply-desktop.png') });
-  await page.keyboard.down('Control'); await page.keyboard.press('Enter'); await page.keyboard.up('Control');
+  await page.keyboard.down('Control');
+  await page.keyboard.press('Enter');
+  await page.keyboard.up('Control');
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-toast').textContent.includes('Reply posted'));
   const replied = await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, card = s.querySelector('.mr-thread');
-    return { count: card.querySelectorAll('.mr-thread-comment').length, threads: s.querySelectorAll('.mr-thread').length, body: card.querySelector('.mr-thread-comment:last-of-type .mr-thread-body')?.textContent, saved: JSON.parse(sessionStorage.getItem('galley:demo-replies') ?? '[]') };
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      card = s.querySelector('.mr-thread');
+    return {
+      count: card.querySelectorAll('.mr-thread-comment').length,
+      threads: s.querySelectorAll('.mr-thread').length,
+      body: card.querySelector('.mr-thread-comment:last-of-type .mr-thread-body')?.textContent,
+      saved: JSON.parse(sessionStorage.getItem('galley:demo-replies') ?? '[]'),
+    };
   });
-  assert.equal(replied.count, beforeReply.count + 1); assert.equal(replied.threads, beforeReply.threads);
-  assert.equal(replied.saved.length, 1); assert.equal(replied.saved[0].body, 'I can add that reference. **Thanks!**');
+  assert.equal(replied.count, beforeReply.count + 1);
+  assert.equal(replied.threads, beforeReply.threads);
+  assert.equal(replied.saved.length, 1);
+  assert.equal(replied.saved[0].body, 'I can add that reference. **Thanks!**');
   await page.setViewport({ width: 390, height: 844 });
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-thread .mr-reply-to').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.activeElement?.matches('.mr-reply textarea'));
   await inspect(() => {
     const input = document.querySelector('#galley-reader').shadowRoot.activeElement;
-    input.value = 'A reply draft on mobile'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.value = 'A reply draft on mobile';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   const mobileReply = await inspect(() => {
     const box = document.querySelector('#galley-reader').shadowRoot.activeElement.closest('.mr-reply');
     return [box, ...box.querySelectorAll('textarea, button')].map((el) => {
-      const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height, button: el.tagName === 'BUTTON' };
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, height: r.height, button: el.tagName === 'BUTTON' };
     });
   });
   for (const rect of mobileReply) assert.ok(rect.left >= 0 && rect.right <= 390 && (!rect.button || rect.height >= 44), JSON.stringify(rect));
   await page.screenshot({ path: join(screenshots, 'galley-reader-reply-mobile.png') });
   await page.keyboard.press('Escape');
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-thread .mr-reply textarea').value), 'A reply draft on mobile');
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-thread .mr-reply textarea').value),
+    'A reply draft on mobile',
+  );
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-thread .mr-reply .mr-cancel').click());
   await page.setViewport({ width: 1440, height: 1000 });
   // Colour and brightness are independent, with readable light and dark versions of every palette.
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
   const backgrounds = { light: new Set(), dark: new Set() };
-  const contrastReport = [], contrastFailures = [];
+  const contrastReport = [],
+    contrastFailures = [];
   const palettes = ['paper', 'eink', 'cream', 'sepia', 'night', 'blush', 'sage', 'seafoam', 'slate', 'nord', 'dusk', 'contrast'];
   for (const theme of palettes) {
-    await inspect((theme) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-setting="theme"] [data-value="${theme}"]`).click(), theme);
+    await inspect(
+      (theme) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-setting="theme"] [data-value="${theme}"]`).click(),
+      theme,
+    );
     for (const appearance of ['light', 'dark']) {
       const colours = await inspect((appearance) => {
         const s = document.querySelector('#galley-reader').shadowRoot;
         s.querySelector(`[data-setting="appearance"] [data-value="${appearance}"]`).click();
-        const root = s.querySelector('.mr-root'), style = getComputedStyle(root);
-        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+        const root = s.querySelector('.mr-root'),
+          style = getComputedStyle(root);
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 1;
         const context = canvas.getContext('2d');
         const opaque = (...colours) => {
           context.clearRect(0, 0, 1, 1);
-          for (const colour of colours) { context.fillStyle = colour; context.fillRect(0, 0, 1, 1); }
+          for (const colour of colours) {
+            context.fillStyle = colour;
+            context.fillRect(0, 0, 1, 1);
+          }
           const data = context.getImageData(0, 0, 1, 1).data;
           return `rgb(${data[0]}, ${data[1]}, ${data[2]})`;
         };
         const samples = [];
-        const probe = document.createElement('div'); root.append(probe);
+        const probe = document.createElement('div');
+        root.append(probe);
         for (const background of ['--bg', '--soft', '--code-bg', '--code-add', '--code-del', '--ins-band', '--del-bg']) {
           probe.style.backgroundColor = `var(${background})`;
           const bg = opaque(style.backgroundColor, getComputedStyle(probe).backgroundColor);
-          const tokens = background.startsWith('--code') ? ['--fg', '--muted', '--hl-comment', '--hl-keyword', '--hl-string', '--hl-number', '--hl-title', '--hl-attr', '--hl-builtin', '--hl-tag', '--hl-meta'] : background === '--del-bg' ? ['--del'] : ['--fg', '--muted'];
+          const tokens = background.startsWith('--code')
+            ? [
+                '--fg',
+                '--muted',
+                '--hl-comment',
+                '--hl-keyword',
+                '--hl-string',
+                '--hl-number',
+                '--hl-title',
+                '--hl-attr',
+                '--hl-builtin',
+                '--hl-tag',
+                '--hl-meta',
+              ]
+            : background === '--del-bg'
+              ? ['--del']
+              : ['--fg', '--muted'];
           for (const token of tokens) {
             probe.style.color = `var(${token})`;
             samples.push({ name: `${token} on ${background}`, fg: opaque(bg, getComputedStyle(probe).color), bg, minimum: 4.5 });
           }
         }
         probe.style.backgroundColor = 'var(--bg)';
-        samples.push({ name: 'comment placeholder', fg: opaque(style.backgroundColor, getComputedStyle(s.querySelector('textarea'), '::placeholder').color), bg: style.backgroundColor, minimum: 4.5 });
+        samples.push({
+          name: 'comment placeholder',
+          fg: opaque(style.backgroundColor, getComputedStyle(s.querySelector('textarea'), '::placeholder').color),
+          bg: style.backgroundColor,
+          minimum: 4.5,
+        });
         for (const token of ['--accent', '--gutter-added', '--gutter-modified', '--gutter-removed']) {
           probe.style.color = `var(${token})`;
           samples.push({ name: token, fg: opaque(style.backgroundColor, getComputedStyle(probe).color), bg: style.backgroundColor, minimum: 3 });
@@ -550,7 +803,19 @@ try {
           samples.push({ name: `palette ${selector}`, fg: getComputedStyle(card.querySelector(selector)).color, bg: cardStyle.backgroundColor, minimum: 4.5 });
         }
         probe.remove();
-        return { theme: root.dataset.theme, dark: root.classList.contains('is-dark'), background: style.backgroundColor, foreground: style.color, muted: getComputedStyle(s.querySelector('.mr-settings-note')).color, previewBackground: cardStyle.backgroundColor, previewForeground: cardStyle.color, selectedChecks: [...s.querySelectorAll('[data-setting="theme"] .mr-theme-label .mr-icon')].filter((icon) => getComputedStyle(icon).visibility === 'visible').length, samples };
+        return {
+          theme: root.dataset.theme,
+          dark: root.classList.contains('is-dark'),
+          background: style.backgroundColor,
+          foreground: style.color,
+          muted: getComputedStyle(s.querySelector('.mr-settings-note')).color,
+          previewBackground: cardStyle.backgroundColor,
+          previewForeground: cardStyle.color,
+          selectedChecks: [...s.querySelectorAll('[data-setting="theme"] .mr-theme-label .mr-icon')].filter(
+            (icon) => getComputedStyle(icon).visibility === 'visible',
+          ).length,
+          samples,
+        };
       }, appearance);
       assert.equal(colours.theme, theme, 'Appearance must not replace the palette');
       assert.equal(colours.dark, appearance === 'dark');
@@ -567,16 +832,30 @@ try {
       backgrounds[appearance].add(colours.background);
     }
   }
-  assert.equal(backgrounds.light.size, palettes.length); assert.equal(backgrounds.dark.size, palettes.length);
+  assert.equal(backgrounds.light.size, palettes.length);
+  assert.equal(backgrounds.dark.size, palettes.length);
   await writeFile(join(screenshots, 'contrast.json'), JSON.stringify(contrastReport, null, 2));
   assert.deepEqual(contrastFailures, [], 'Every reading and syntax colour must meet its contrast minimum');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="auto"]').click());
-  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await page.emulateMediaFeatures([
+    { name: 'prefers-color-scheme', value: 'light' },
+    { name: 'prefers-reduced-motion', value: 'reduce' },
+  ]);
   await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark'));
-  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await page.emulateMediaFeatures([
+    { name: 'prefers-color-scheme', value: 'dark' },
+    { name: 'prefers-reduced-motion', value: 'reduce' },
+  ]);
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark'));
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').dataset.theme), 'contrast');
-  for (const [font, family] of [['galley', 'Galley Newsreader'], ['serif', 'Galley Newsreader'], ['sans', 'Galley DM Sans'], ['georgia', 'Georgia'], ['system', 'system-ui'], ['mono', 'monospace']]) {
+  for (const [font, family] of [
+    ['galley', 'Galley Newsreader'],
+    ['serif', 'Galley Newsreader'],
+    ['sans', 'Galley DM Sans'],
+    ['georgia', 'Georgia'],
+    ['system', 'system-ui'],
+    ['mono', 'monospace'],
+  ]) {
     await selectFont(font);
     const actual = await inspect(() => {
       const s = document.querySelector('#galley-reader').shadowRoot;
@@ -588,24 +867,42 @@ try {
   await selectFont('galley');
   const pairing = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    return { standfirst: getComputedStyle(s.querySelector('.mr-subtitle')).fontFamily, text: getComputedStyle(s.querySelector('.mr-content p:not(.mr-subtitle)')).fontFamily };
+    return {
+      standfirst: getComputedStyle(s.querySelector('.mr-subtitle')).fontFamily,
+      text: getComputedStyle(s.querySelector('.mr-content p:not(.mr-subtitle)')).fontFamily,
+    };
   });
   assert.ok(pairing.standfirst.includes('Galley Newsreader') && pairing.text.includes('Galley DM Sans'), JSON.stringify(pairing));
   await selectFont('serif');
   for (const width of [390, 320]) {
     await page.setViewport({ width, height: 844 });
-    const cards = await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="theme"] .mr-palette-page:first-child button, .mr-font-select select')].map((button) => {
-      const rect = button.getBoundingClientRect(); return { left: rect.left, right: rect.right, height: rect.height, client: button.clientWidth, scroll: button.scrollWidth };
-    }));
-    for (const card of cards) assert.ok(card.left >= 0 && card.right <= width && card.height >= 44 && card.scroll <= card.client + 1, JSON.stringify({ width, card }));
+    const cards = await inspect(() =>
+      [
+        ...document
+          .querySelector('#galley-reader')
+          .shadowRoot.querySelectorAll('[data-setting="theme"] .mr-palette-page:first-child button, .mr-font-select select'),
+      ].map((button) => {
+        const rect = button.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, height: rect.height, client: button.clientWidth, scroll: button.scrollWidth };
+      }),
+    );
+    for (const card of cards)
+      assert.ok(card.left >= 0 && card.right <= width && card.height >= 44 && card.scroll <= card.client + 1, JSON.stringify({ width, card }));
     if (width === 390) await page.screenshot({ path: join(screenshots, 'galley-reader-themes-mobile.png') });
   }
   await page.setViewport({ width: 1440, height: 1000 });
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="paper"]').click());
   await page.screenshot({ path: join(screenshots, 'galley-reader-themes.png') });
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="dark"]').click());
-  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark')), true, 'Manual appearance must ignore system changes');
+  await page.emulateMediaFeatures([
+    { name: 'prefers-color-scheme', value: 'light' },
+    { name: 'prefers-reduced-motion', value: 'reduce' },
+  ]);
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark')),
+    true,
+    'Manual appearance must ignore system changes',
+  );
   await page.reload({ waitUntil: 'networkidle0' });
   await page.waitForFunction(() => {
     const root = document.querySelector('#galley-reader')?.shadowRoot.querySelector('.mr-root');
@@ -616,22 +913,34 @@ try {
   await page.goto(`${demoUrl}/?closed`, { waitUntil: 'networkidle0' });
   await inspect(() => {
     const policy = document.createElement('meta');
-    policy.httpEquiv = 'Content-Security-Policy'; policy.content = "font-src 'none'";
+    policy.httpEquiv = 'Content-Security-Policy';
+    policy.content = "font-src 'none'";
     document.head.append(policy);
     document.querySelector('#galley-launcher').shadowRoot.querySelector('button').click();
   });
   // The merge request's own description is an optional first document, off until chosen.
   const overview = await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, section = s.querySelector('.mr-overview');
+    const s = document.querySelector('#galley-reader').shadowRoot,
+      section = s.querySelector('.mr-overview');
     const before = section.hidden;
     s.querySelector('[data-act="overview"]').click();
-    const shown = { before, after: section.hidden, first: section === s.querySelector('.mr-document:not([hidden])'), title: section.querySelector('.mr-title').textContent, list: section.querySelectorAll('.mr-content li').length };
+    const shown = {
+      before,
+      after: section.hidden,
+      first: section === s.querySelector('.mr-document:not([hidden])'),
+      title: section.querySelector('.mr-title').textContent,
+      list: section.querySelectorAll('.mr-content li').length,
+    };
     s.querySelector('[data-act="overview"]').click();
     return shown;
   });
   assert.deepEqual(overview, { before: true, after: false, first: true, title: 'Docs: reading-first reviews', list: 2 });
-  await page.waitForFunction(() => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'));
-  console.log('Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, twelve light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, Escape layers, the optional request description.');
+  await page.waitForFunction(
+    () => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'),
+  );
+  console.log(
+    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, twelve light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, Escape layers, the optional request description.',
+  );
 } finally {
   await browser.close();
   server?.close();

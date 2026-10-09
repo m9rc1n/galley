@@ -14,14 +14,14 @@ it('front matter is split off without shifting line numbers', () => {
 it('every leaf block becomes a unit that knows its source lines', () => {
   const doc = parseDocument('# Title\n\nIntro paragraph\nwrapped.\n\n- one\n- two\n\n```js\nx()\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---\n');
   expect(doc.units.map((u) => [u.kind, u.lines, u.inList])).toStrictEqual([
-      ['heading', [0, 1], false],
-      ['paragraph', [2, 4], false],
-      ['paragraph', [5, 6], true],
-      ['paragraph', [6, 7], true],
-      ['code', [8, 11], false],
-      ['table', [12, 15], false],
-      ['rule', [16, 17], false],
-    ]);
+    ['heading', [0, 1], false],
+    ['paragraph', [2, 4], false],
+    ['paragraph', [5, 6], true],
+    ['paragraph', [6, 7], true],
+    ['code', [8, 11], false],
+    ['table', [12, 15], false],
+    ['rule', [16, 17], false],
+  ]);
   expect(doc.units[1].key).toBe('paragraph:Intro paragraph wrapped.');
   // Block ids carry a random per-render nonce, so raw HTML in the document cannot forge them.
   expect(doc.nonce).toMatch(/^[0-9a-f]{16}$/);
@@ -43,7 +43,9 @@ it('front matter is the first unit and renders as a metadata card', () => {
 
 it('task lists and alerts render like on GitHub and GitLab', () => {
   const { html, nonce } = parseDocument('- [x] done\n- [ ] todo\n\n> [!WARNING]\n> Careful.\n');
-  expect(html.includes(`<li class="mr-task-item"><span class="mr-tight" data-mr-u="${nonce}:0"><input type="checkbox" class="mr-task" disabled checked>done`)).toBeTruthy();
+  expect(
+    html.includes(`<li class="mr-task-item"><span class="mr-tight" data-mr-u="${nonce}:0"><input type="checkbox" class="mr-task" disabled checked>done`),
+  ).toBeTruthy();
   expect(html).toMatch(/<input type="checkbox" class="mr-task" disabled>todo/);
   // The alert title comes from the class (in CSS), not from an attribute.
   expect(html).toMatch(/<blockquote class="mr-alert mr-alert-warning">/);

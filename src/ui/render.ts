@@ -104,7 +104,12 @@ export function sanitize(doc: Document, html: string): DocumentFragment {
       } else if (name === 'src' && node.nodeName !== 'IMG') {
         // e.g. <input type="image" src>, MathML <mglyph src>.
         data.keepAttr = false;
-      } else if ((name === 'href' || name === 'xlink:href') && node.namespaceURI === SVG_NS && node.nodeName.toLowerCase() !== 'a' && !data.attrValue.startsWith('#')) {
+      } else if (
+        (name === 'href' || name === 'xlink:href') &&
+        node.namespaceURI === SVG_NS &&
+        node.nodeName.toLowerCase() !== 'a' &&
+        !data.attrValue.startsWith('#')
+      ) {
         // SVG <use>, <image> and filter references to other documents.
         data.keepAttr = false;
       }
@@ -121,7 +126,25 @@ export function sanitize(doc: Document, html: string): DocumentFragment {
   }
   return purifier.sanitize(html, {
     RETURN_DOM_FRAGMENT: true,
-    FORBID_TAGS: ['style', 'form', 'iframe', 'frame', 'frameset', 'object', 'embed', 'base', 'link', 'meta', 'button', 'textarea', 'select', 'video', 'audio', 'source', 'track'],
+    FORBID_TAGS: [
+      'style',
+      'form',
+      'iframe',
+      'frame',
+      'frameset',
+      'object',
+      'embed',
+      'base',
+      'link',
+      'meta',
+      'button',
+      'textarea',
+      'select',
+      'video',
+      'audio',
+      'source',
+      'track',
+    ],
     FORBID_ATTR: ['style', 'srcset', 'poster', 'background', 'ping', 'lowsrc', 'dynsrc'],
     // No data-* attributes from documents, except the two Galley renders itself.
     ALLOW_DATA_ATTR: false,
@@ -337,7 +360,10 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
   const headRows = [...table.querySelectorAll('tr')];
   const baseRows = [...before.querySelectorAll('tr')];
   if (!headRows.length || !baseRows.length) return false;
-  const key = (row: Element) => cells(row).map((c) => normalize(c.textContent ?? '')).join('\u0001');
+  const key = (row: Element) =>
+    cells(row)
+      .map((c) => normalize(c.textContent ?? ''))
+      .join('\u0001');
   const parts = boundedDiff(baseRows.map(key), headRows.map(key));
 
   const ghostRow = (row: Element, anchor: Element | undefined) => {
@@ -643,7 +669,10 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   for (const block of blocks) {
     const before = block.el;
     const diagram = prepareDiagram(doc, block);
-    if (diagram) { diagrams.push(diagram); changes = changes.map((el) => el === before ? diagram.el : el); }
+    if (diagram) {
+      diagrams.push(diagram);
+      changes = changes.map((el) => (el === before ? diagram.el : el));
+    }
   }
   const fm = new Map(head.frontmatter?.fields ?? []);
   const first = [...root.children].find((el) => !el.matches('details.mr-meta, .mr-ghost'));

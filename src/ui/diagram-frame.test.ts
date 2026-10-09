@@ -7,7 +7,8 @@ const channels: MessageChannel[] = [];
 
 beforeEach(() => {
   vi.resetModules();
-  engine.initialize.mockClear(); engine.render.mockReset();
+  engine.initialize.mockClear();
+  engine.render.mockReset();
 });
 afterEach(() => {
   for (const channel of channels.splice(0)) channel.port1.close();
@@ -15,7 +16,8 @@ afterEach(() => {
 
 /** A reader-side port connected to a frame-side port the frame script serves. */
 function connect(serve: (port: MessagePort) => void) {
-  const channel = new MessageChannel(); channels.push(channel);
+  const channel = new MessageChannel();
+  channels.push(channel);
   serve(channel.port2);
   const replies: unknown[] = [];
   channel.port1.onmessage = ({ data }) => replies.push(data);
@@ -25,7 +27,14 @@ function connect(serve: (port: MessagePort) => void) {
 it('accepts only well-formed requests within the source limit', async () => {
   const { isRequest } = await import('./diagram-frame.ts');
   expect(isRequest({ id: 1, code: 'flowchart LR', dark: false })).toBe(true);
-  for (const bad of [null, 'galley-sandbox', { id: '1', code: '', dark: false }, { id: 1, code: 2, dark: false }, { id: 1, code: '', dark: 'no' }, { id: 1, code: 'x'.repeat(20_001), dark: true }]) {
+  for (const bad of [
+    null,
+    'galley-sandbox',
+    { id: '1', code: '', dark: false },
+    { id: 1, code: 2, dark: false },
+    { id: 1, code: '', dark: 'no' },
+    { id: 1, code: 'x'.repeat(20_001), dark: true },
+  ]) {
     expect(isRequest(bad)).toBe(false);
   }
 });
@@ -34,7 +43,8 @@ it('renders one request at a time across ports and answers errors without detail
   const { serveDiagrams } = await import('./diagram-frame.ts');
   const slow = deferred<{ svg: string }>();
   engine.render.mockReturnValueOnce(slow.promise).mockRejectedValueOnce(new Error('Parse error near <secret>'));
-  const a = connect((port) => serveDiagrams(port, engine)), b = connect((port) => serveDiagrams(port, engine));
+  const a = connect((port) => serveDiagrams(port, engine)),
+    b = connect((port) => serveDiagrams(port, engine));
   a.send({ id: 1, code: 'flowchart LR\n A --> B', dark: false });
   b.send({ id: 2, code: 'not a diagram', dark: true });
   b.send({ nonsense: true });
@@ -50,7 +60,8 @@ it('renders one request at a time across ports and answers errors without detail
 it('serves any port the reader transfers when the frame loads', async () => {
   engine.render.mockResolvedValue({ svg: '<svg/>' });
   await import('./diagram-frame.ts');
-  const channel = new MessageChannel(); channels.push(channel);
+  const channel = new MessageChannel();
+  channels.push(channel);
   const event = new MessageEvent('message', { data: 'galley-sandbox' });
   Object.defineProperty(event, 'ports', { value: [channel.port2] });
   window.dispatchEvent(event);
@@ -75,7 +86,15 @@ it('accepts only a complete palette of plain hex colours', async () => {
   const { isRequest } = await import('./diagram-frame.ts');
   expect(isRequest({ id: 1, code: 'flowchart LR', dark: false, palette })).toBe(true);
   expect(isRequest({ id: 1, code: 'flowchart LR', dark: false, palette: { ...palette, bg: '#fff' } })).toBe(true);
-  for (const bad of [null, 'paper', { ...palette, extra: '#000000' }, { ...palette, bg: 'red' }, { ...palette, fg: 'url(https://x.example/a)' }, { ...palette, accent: '#12345' }, { ...palette, rule: undefined }]) {
+  for (const bad of [
+    null,
+    'paper',
+    { ...palette, extra: '#000000' },
+    { ...palette, bg: 'red' },
+    { ...palette, fg: 'url(https://x.example/a)' },
+    { ...palette, accent: '#12345' },
+    { ...palette, rule: undefined },
+  ]) {
     expect(isRequest({ id: 1, code: 'flowchart LR', dark: false, palette: bad })).toBe(false);
   }
 });
@@ -85,7 +104,11 @@ it('draws diagrams in the reader’s palette: cards on a soft canvas, quiet line
   engine.render.mockResolvedValue({ svg: '<svg/>' });
   await renderRequest(engine, { id: 1, code: 'flowchart LR', dark: false, palette });
   const light = engine.initialize.mock.lastCall![0];
-  expect(light).toMatchObject({ theme: 'base', look: 'classic', themeVariables: { primaryColor: palette.bg, background: palette.code, textColor: palette.fg, darkMode: false } });
+  expect(light).toMatchObject({
+    theme: 'base',
+    look: 'classic',
+    themeVariables: { primaryColor: palette.bg, background: palette.code, textColor: palette.fg, darkMode: false },
+  });
   expect(light.secure).toEqual(expect.arrayContaining(['themeVariables', 'themeCSS', 'look', 'flowchart', 'sequence']));
   expect(light.themeCSS).toContain(`fill: ${palette.bg}`);
   expect(light.themeCSS).not.toMatch(/url\(|@import/);

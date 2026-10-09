@@ -9,9 +9,11 @@ const api = 'https://api.github.com/repos/acme/docs';
 const graphql = (query: string, variables: Record<string, unknown> = { owner: 'acme', repo: 'docs', number: 12 }) => JSON.stringify({ query, variables });
 
 it('the direct API refuses an unsupported endpoint before reading a token or making a request', async () => {
-  const tokenFor = vi.fn(), fetch = mockFetch(() => new Response('{}'));
+  const tokenFor = vi.fn(),
+    fetch = mockFetch(() => new Response('{}'));
   await expect(directApi('https://github.com', tokenFor).request('https://api.github.com/user')).rejects.toThrow('Galley does not make this request');
-  expect(tokenFor).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
+  expect(tokenFor).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
 });
 
 it('the background worker allows exactly the GitHub calls the reader makes', () => {
@@ -22,11 +24,14 @@ it('the background worker allows exactly the GitHub calls the reader makes', () 
   expect(ok(`${api}/compare/aaa...bbb`)).toBeTruthy();
   expect(ok(`${api}/pulls/12/comments`, 'POST', '{}')).toBeTruthy();
   expect(ok('https://api.github.com/graphql', 'POST', graphql(VIEWED_FILES_QUERY))).toBeTruthy();
-  expect(ok('https://api.github.com/graphql', 'POST', JSON.stringify({ query: MARK_VIEWED, variables: { input: { pullRequestId: 'PR', path: 'a.md' } } }))).toBeTruthy();
+  expect(
+    ok('https://api.github.com/graphql', 'POST', JSON.stringify({ query: MARK_VIEWED, variables: { input: { pullRequestId: 'PR', path: 'a.md' } } })),
+  ).toBeTruthy();
 });
 
 it('anything else is refused, including other repositories and pull requests', () => {
-  const no = (url: string, method = 'GET', body?: string, from = page) => expect(allowedRequest('https://github.com', from, url, method, body), `${method} ${url}`).toBe(false);
+  const no = (url: string, method = 'GET', body?: string, from = page) =>
+    expect(allowedRequest('https://github.com', from, url, method, body), `${method} ${url}`).toBe(false);
   no('https://api.github.com/user');
   no('https://api.github.com/user/repos');
   no(`${api}/contents/secret.md`);
@@ -43,8 +48,12 @@ it('anything else is refused, including other repositories and pull requests', (
   no('https://evil.example/repos/acme/docs/pulls/12');
   no(`${api}/pulls/12`, 'GET', undefined, 'https://github.com/acme/docs/issues/12');
   // Enterprise: the token's own site only.
-  expect(allowedRequest('https://git.example.com', 'https://git.example.com/acme/docs/pull/3', 'https://git.example.com/api/v3/repos/acme/docs/pulls/3', 'GET')).toBeTruthy();
-  expect(allowedRequest('https://git.example.com', 'https://git.example.com/acme/docs/pull/3', 'https://api.github.com/repos/acme/docs/pulls/3', 'GET')).toBe(false);
+  expect(
+    allowedRequest('https://git.example.com', 'https://git.example.com/acme/docs/pull/3', 'https://git.example.com/api/v3/repos/acme/docs/pulls/3', 'GET'),
+  ).toBeTruthy();
+  expect(allowedRequest('https://git.example.com', 'https://git.example.com/acme/docs/pull/3', 'https://api.github.com/repos/acme/docs/pulls/3', 'GET')).toBe(
+    false,
+  );
 });
 
 it('tokens are only attached to https requests', async () => {

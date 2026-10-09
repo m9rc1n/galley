@@ -21,12 +21,24 @@ it('GitHub posts ordinary inline/file comments, keeps the reviewed head, and che
       expect(init.credentials).toBe('omit');
       return response({ html_url: 'https://github.com/acme/docs/pull/1#discussion-1' }, 201);
     }
-    if (String(url).includes('/files?')) return response([{ filename: 'new.md', previous_filename: 'old.md', status: 'renamed', changes: 2, patch, raw_url: 'https://github.com/acme/docs/raw/base-sha/new.md' }]);
+    if (String(url).includes('/files?'))
+      return response([
+        { filename: 'new.md', previous_filename: 'old.md', status: 'renamed', changes: 2, patch, raw_url: 'https://github.com/acme/docs/raw/base-sha/new.md' },
+      ]);
     return response({ head: { sha: head }, base: { sha: 'base-sha' }, title: 'Docs: reading first', body: 'Adds **RFC 42**.', user: { login: 'dana' } });
   });
-  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'acme', repo: 'docs', number: 1, title: 'Docs' }, directApi('https://github.com', getToken));
+  const source = await loadGitHub(
+    { platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'acme', repo: 'docs', number: 1, title: 'Docs' },
+    directApi('https://github.com', getToken),
+  );
   // The pull request's own title and description come with it, for the optional first document.
-  expect(source.overview).toEqual({ kind: 'Pull request', title: 'Docs: reading first', description: 'Adds **RFC 42**.', author: 'dana', url: 'https://github.com/acme/docs/pull/1' });
+  expect(source.overview).toEqual({
+    kind: 'Pull request',
+    title: 'Docs: reading first',
+    description: 'Adds **RFC 42**.',
+    author: 'dana',
+    url: 'https://github.com/acme/docs/pull/1',
+  });
   const selected = { ...target, doc: source.docs[0] };
   const inline = await source.prepareComment!(selected);
   expect(inline.kind).toBe('inline');
@@ -58,11 +70,17 @@ it('GitHub preserves permission failures and never retries a rejected write as a
   await setToken('https://github.com', 'read-only');
   let posts = 0;
   mockFetch(async (url, init) => {
-    if (init?.method === 'POST') { posts++; return response({}, 403); }
+    if (init?.method === 'POST') {
+      posts++;
+      return response({}, 403);
+    }
     if (String(url).includes('/files?')) return response([{ filename: 'new.md', status: 'modified', changes: 2, patch, raw_url: '' }]);
     return response({ head: { sha: 'h' }, base: { sha: 'b' } });
   });
-  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, directApi('https://github.com', getToken));
+  const source = await loadGitHub(
+    { platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' },
+    directApi('https://github.com', getToken),
+  );
   const plan = await source.prepareComment!({ ...target, doc: source.docs[0] });
   await expect(plan.post('')).rejects.toThrow(/Write a comment/);
   await expect(plan.post('Hello')).rejects.toThrow(/did not allow/);
@@ -80,14 +98,18 @@ it('GitHub replies to the original conversation and allows immediate replies to 
       expect(String(url)).toBe('https://api.github.com/repos/a/b/pulls/1/comments');
       return response({ id: 90, html_url: 'https://github.com/a/b/pull/1#r90' }, failure || 201);
     }
-    if (String(url).includes('/comments?')) return response([
-      { id: 12, path: 'new.md', line: 2, side: 'RIGHT', body: 'Question', created_at: '2026-10-01', html_url: '#r12' },
-      { id: 18, in_reply_to_id: 12, path: 'new.md', body: 'First reply', created_at: '2026-10-01', html_url: '#r18' },
-    ]);
+    if (String(url).includes('/comments?'))
+      return response([
+        { id: 12, path: 'new.md', line: 2, side: 'RIGHT', body: 'Question', created_at: '2026-10-01', html_url: '#r12' },
+        { id: 18, in_reply_to_id: 12, path: 'new.md', body: 'First reply', created_at: '2026-10-01', html_url: '#r18' },
+      ]);
     if (String(url).includes('/files?')) return response([{ filename: 'new.md', status: 'modified', changes: 2, patch, raw_url: '' }]);
     return response({ head: { sha: 'h' }, base: { sha: 'b' } });
   });
-  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, directApi('https://github.com', getToken));
+  const source = await loadGitHub(
+    { platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' },
+    directApi('https://github.com', getToken),
+  );
   const [thread] = await source.loadThreads!();
   expect(thread.comments).toHaveLength(2);
   await expect(thread.reply!('  A direct **reply**  ')).resolves.toEqual({ url: 'https://github.com/a/b/pull/1#r90' });
@@ -114,28 +136,50 @@ it('GitHub offers source files after docs without fetching them until requested,
   let rawReads = 0;
   const writes: Array<Record<string, unknown>> = [];
   mockFetch(async (url, init) => {
-    if (init?.method === 'POST') { writes.push(JSON.parse(init.body as string)); return response({ html_url: 'https://github.com/a/b/pull/1#discussion-1' }, 201); }
-    if (String(url).includes('/raw/')) { rawReads++; return new Response('const value = 2;\n'); }
-    if (String(url).includes('/files?')) return response([
-      { filename: 'src/main.ts', status: 'modified', changes: 2, patch: codePatch, raw_url: '' },
-      { filename: 'image.png', status: 'added', changes: 0, raw_url: '' },
-      { filename: 'README.md', status: 'modified', changes: 2, patch, raw_url: '' },
-      { filename: 'src/renamed.unknown', previous_filename: 'src/old.py', status: 'renamed', changes: 0, raw_url: '' },
-    ]);
+    if (init?.method === 'POST') {
+      writes.push(JSON.parse(init.body as string));
+      return response({ html_url: 'https://github.com/a/b/pull/1#discussion-1' }, 201);
+    }
+    if (String(url).includes('/raw/')) {
+      rawReads++;
+      return new Response('const value = 2;\n');
+    }
+    if (String(url).includes('/files?'))
+      return response([
+        { filename: 'src/main.ts', status: 'modified', changes: 2, patch: codePatch, raw_url: '' },
+        { filename: 'image.png', status: 'added', changes: 0, raw_url: '' },
+        { filename: 'README.md', status: 'modified', changes: 2, patch, raw_url: '' },
+        { filename: 'src/renamed.unknown', previous_filename: 'src/old.py', status: 'renamed', changes: 0, raw_url: '' },
+      ]);
     return response({ head: { sha: 'h' }, base: { sha: 'b' } });
   });
-  const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' }, directApi('https://github.com', getToken));
+  const source = await loadGitHub(
+    { platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' },
+    directApi('https://github.com', getToken),
+  );
   expect(source.docs.map((doc) => doc.path)).toStrictEqual(['README.md']);
   expect(source.codeDocs!.map((doc) => doc.path)).toStrictEqual(['src/main.ts', 'src/renamed.unknown']);
   expect(rawReads).toBe(0);
   expect(await source.load(source.codeDocs![0])).toStrictEqual({ base: 'const value = 1;\n', head: 'const value = 2;\n' });
   expect(rawReads).toBe(1);
   const plan = await source.prepareComment!({ doc: source.codeDocs![0], side: 'head', startLine: 1, endLine: 1, quote: 'const value = 2;' });
-  expect(plan.kind).toBe('inline'); await plan.post('Explain this value');
-  expect(writes[0].path).toBe('src/main.ts'); expect(writes[0].line).toBe(1); expect(writes[0].side).toBe('RIGHT');
+  expect(plan.kind).toBe('inline');
+  await plan.post('Explain this value');
+  expect(writes[0].path).toBe('src/main.ts');
+  expect(writes[0].line).toBe(1);
+  expect(writes[0].side).toBe('RIGHT');
 });
 
-const ctx = { platform: 'github' as const, key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'a', repo: 'b', number: 1, title: '' };
+const ctx = {
+  platform: 'github' as const,
+  key: '',
+  origin: 'https://github.com',
+  apiBase: 'https://api.github.com',
+  owner: 'a',
+  repo: 'b',
+  number: 1,
+  title: '',
+};
 const load = () => loadGitHub(ctx, directApi(ctx.origin, getToken));
 
 interface Failure {
@@ -150,12 +194,52 @@ interface Failure {
 
 /** Every way GitHub can refuse a request becomes a message that says what to do next. */
 it.each<Failure>([
-  { name: 'rate limit, no token', status: 403, headers: { 'x-ratelimit-remaining': '0' }, token: false, message: /rate limit reached/, hint: /Add a read-only token/, needsToken: true },
-  { name: 'rate limit, with token', status: 429, headers: { 'x-ratelimit-remaining': '0' }, token: true, message: /rate limit reached/, hint: /Wait a few minutes/, needsToken: false },
-  { name: 'SSO not authorised', status: 403, headers: { 'x-github-sso': 'required' }, token: true, message: /not authorized for this organization/, hint: /Authorize the token/, needsToken: true },
+  {
+    name: 'rate limit, no token',
+    status: 403,
+    headers: { 'x-ratelimit-remaining': '0' },
+    token: false,
+    message: /rate limit reached/,
+    hint: /Add a read-only token/,
+    needsToken: true,
+  },
+  {
+    name: 'rate limit, with token',
+    status: 429,
+    headers: { 'x-ratelimit-remaining': '0' },
+    token: true,
+    message: /rate limit reached/,
+    hint: /Wait a few minutes/,
+    needsToken: false,
+  },
+  {
+    name: 'SSO not authorised',
+    status: 403,
+    headers: { 'x-github-sso': 'required' },
+    token: true,
+    message: /not authorized for this organization/,
+    hint: /Authorize the token/,
+    needsToken: true,
+  },
   { name: 'bad token', status: 401, headers: {}, token: true, message: /rejected the token/, hint: /Replace it/, needsToken: true },
-  { name: 'private repository, no token', status: 404, headers: {}, token: false, message: /private repository/, hint: /Add a read-only GitHub token/, needsToken: true },
-  { name: 'token cannot see it', status: 404, headers: {}, token: true, message: /could not find this pull request/, hint: /Contents and Pull requests/, needsToken: true },
+  {
+    name: 'private repository, no token',
+    status: 404,
+    headers: {},
+    token: false,
+    message: /private repository/,
+    hint: /Add a read-only GitHub token/,
+    needsToken: true,
+  },
+  {
+    name: 'token cannot see it',
+    status: 404,
+    headers: {},
+    token: true,
+    message: /could not find this pull request/,
+    hint: /Contents and Pull requests/,
+    needsToken: true,
+  },
   { name: 'server error', status: 500, headers: {}, token: false, message: /returned an error \(500\)/, hint: /Try again/, needsToken: false },
 ])('explains a GitHub failure: $name', async ({ status, headers, token, message, hint, needsToken }) => {
   if (token) await setToken(ctx.origin, 'github_pat_x');
@@ -172,9 +256,22 @@ it('explains a network failure', async () => {
 
 it('loads the review threads of the pull request, replies included', async () => {
   const at = '2026-10-01T10:00:00Z';
-  const comment = (id: number, extra: Record<string, unknown>) => ({ id, path: 'new.md', body: `comment ${id}`, user: { login: 'dana' }, created_at: at, html_url: `https://github.com/a/b/pull/1#r${id}`, ...extra });
+  const comment = (id: number, extra: Record<string, unknown>) => ({
+    id,
+    path: 'new.md',
+    body: `comment ${id}`,
+    user: { login: 'dana' },
+    created_at: at,
+    html_url: `https://github.com/a/b/pull/1#r${id}`,
+    ...extra,
+  });
   mockFetch((url) => {
-    if (url.includes('/comments?')) return response([comment(1, { line: 3, side: 'RIGHT' }), comment(2, { in_reply_to_id: 1 }), comment(3, { path: 'elsewhere.ts', line: 1, side: 'RIGHT' })]);
+    if (url.includes('/comments?'))
+      return response([
+        comment(1, { line: 3, side: 'RIGHT' }),
+        comment(2, { in_reply_to_id: 1 }),
+        comment(3, { path: 'elsewhere.ts', line: 1, side: 'RIGHT' }),
+      ]);
     if (url.includes('/files?')) return response([{ filename: 'new.md', status: 'modified', changes: 1, patch, raw_url: '' }]);
     return response({ head: { sha: 'h' }, base: { sha: 'b' } });
   });

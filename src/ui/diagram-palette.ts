@@ -18,5 +18,10 @@ export const PALETTE_KEYS = ['bg', 'fg', 'muted', 'soft', 'rule', 'code', 'accen
 export function isPalette(value: unknown): value is DiagramPalette {
   if (typeof value !== 'object' || value === null) return false;
   const entries = Object.entries(value);
-  return entries.length === PALETTE_KEYS.length && entries.every(([key, colour]) => (PALETTE_KEYS as readonly string[]).includes(key) && typeof colour === 'string' && /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(colour));
+  return (
+    entries.length === PALETTE_KEYS.length &&
+    entries.every(
+      ([key, colour]) => (PALETTE_KEYS as readonly string[]).includes(key) && typeof colour === 'string' && /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(colour),
+    )
+  );
 }

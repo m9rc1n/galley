@@ -29,7 +29,8 @@ it('storage failures reject instead of reporting a saved Viewed flag', async () 
 
 it('uses extension storage for progress and only accepts an actual boolean flag', async () => {
   const get = vi.fn().mockResolvedValueOnce({ key: 'true' }).mockResolvedValueOnce({ key: true });
-  const set = vi.fn().mockResolvedValue(undefined), remove = vi.fn().mockResolvedValue(undefined);
+  const set = vi.fn().mockResolvedValue(undefined),
+    remove = vi.fn().mockResolvedValue(undefined);
   vi.stubGlobal('chrome', { storage: { local: { get, set, remove } } });
   expect(await loadViewed('key')).toBe(false);
   expect(await loadViewed('key')).toBe(true);

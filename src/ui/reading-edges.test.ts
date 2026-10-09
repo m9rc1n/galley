@@ -11,7 +11,11 @@ it('keeps parent headings with changes and allows folded footnote content to be 
   const base = '# Guide\n\n## First\n\nStable.[^note]\n\n## Second\n\nValue 10.\n\n[^note]: Footnote text.\n';
   const r = renderMarkdown(base, base.replace('Value 10', 'Value 20'));
   filterDocument(r, true);
-  expect(r.blocks.filter((b) => b.head?.kind === 'heading').map((b) => [b.el.textContent, b.el.hidden])).toEqual([['Guide', false], ['First', true], ['Second', false]]);
+  expect(r.blocks.filter((b) => b.head?.kind === 'heading').map((b) => [b.el.textContent, b.el.hidden])).toEqual([
+    ['Guide', false],
+    ['First', true],
+    ['Second', false],
+  ]);
   expect(r.content.querySelector<HTMLElement>('.footnotes p')!.hidden).toBe(true);
   expect(r.content.querySelector<HTMLElement>('.footnotes')!.hidden).toBe(false);
   r.content.querySelector<HTMLButtonElement>('.mr-context-toggle')!.click();
@@ -39,8 +43,10 @@ it('folds individual unchanged source lines and keeps blank lines in a code sele
 
 it('rejects selections outside mapped blocks, across versions, or consisting only of code gutters', () => {
   const r = renderMarkdown('Old only.\n\nShared text.\n', 'Shared text.\n\nNew only.\n');
-  const outside = document.createElement('p'); outside.textContent = 'Outside';
-  const range = document.createRange(); range.selectNodeContents(outside);
+  const outside = document.createElement('p');
+  outside.textContent = 'Outside';
+  const range = document.createRange();
+  range.selectNodeContents(outside);
   expect(selectionTarget(doc, r.blocks, range)).toBeNull();
   const removed = r.blocks.find((b) => b.kind === 'removed')!;
   const added = r.blocks.find((b) => b.kind === 'added')!;

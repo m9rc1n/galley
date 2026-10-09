@@ -18,18 +18,23 @@ export function githubViewed(ctx: GitHubContext, api: GitHubApi, docs: DocRef[],
     if (!(await api.hasToken())) throw new ReaderError('Add a GitHub token to sync Viewed status.');
     try {
       const { data: result } = await api.request<{ data?: T; errors?: Array<{ message: string }> }>(endpoint, { method: 'POST', body: { query, variables } });
-      if (result.errors?.length || !result.data) throw new ReaderError('GitHub could not sync Viewed status. Check your token and repository access, then try again.');
+      if (result.errors?.length || !result.data)
+        throw new ReaderError('GitHub could not sync Viewed status. Check your token and repository access, then try again.');
       return result.data;
     } catch (err) {
-      if (err instanceof HttpError) throw new ReaderError(err.status === 0
-        ? 'Could not confirm Viewed status. Check GitHub before trying again.'
-        : 'GitHub could not sync Viewed status. Check your token and repository access, then try again.');
+      if (err instanceof HttpError)
+        throw new ReaderError(
+          err.status === 0
+            ? 'Could not confirm Viewed status. Check GitHub before trying again.'
+            : 'GitHub could not sync Viewed status. Check your token and repository access, then try again.',
+        );
       throw err;
     }
   };
   const check = (pull: Pick<Pull, 'id' | 'headRefOid' | 'baseRefOid'> | null | undefined) => {
     if (!pull) throw new ReaderError('GitHub could not find this pull request.');
-    if (pull.headRefOid !== head || pull.baseRefOid !== base) throw new ReaderError('This pull request changed while you were reading. Reopen the reader before marking files viewed.');
+    if (pull.headRefOid !== head || pull.baseRefOid !== base)
+      throw new ReaderError('This pull request changed while you were reading. Reopen the reader before marking files viewed.');
     pullRequestId = pull.id;
     return pull;
   };
@@ -39,7 +44,12 @@ export function githubViewed(ctx: GitHubContext, api: GitHubApi, docs: DocRef[],
       const viewed: string[] = [];
       let after: string | null = null;
       for (let page = 0; page < 10; page++) {
-        const data: { repository: { pullRequest: Pull | null } | null } = await graphql(VIEWED_FILES_QUERY, { owner: ctx.owner, repo: ctx.repo, number: ctx.number, after });
+        const data: { repository: { pullRequest: Pull | null } | null } = await graphql(VIEWED_FILES_QUERY, {
+          owner: ctx.owner,
+          repo: ctx.repo,
+          number: ctx.number,
+          after,
+        });
         const pull = check(data.repository?.pullRequest) as Pull;
         viewed.push(...pull.files.nodes.filter((file) => file.viewerViewedState === 'VIEWED').map((file) => file.path));
         if (!pull.files.pageInfo.hasNextPage) return viewed;
@@ -49,10 +59,11 @@ export function githubViewed(ctx: GitHubContext, api: GitHubApi, docs: DocRef[],
     },
     async set(doc, viewed) {
       if (!docs.includes(doc)) throw new ReaderError('Choose a file from this pull request.');
-      const data = await graphql<{ repository: { pullRequest: Pick<Pull, 'id' | 'headRefOid' | 'baseRefOid'> | null } | null }>(
-        PULL_SNAPSHOT_QUERY,
-        { owner: ctx.owner, repo: ctx.repo, number: ctx.number },
-      );
+      const data = await graphql<{ repository: { pullRequest: Pick<Pull, 'id' | 'headRefOid' | 'baseRefOid'> | null } | null }>(PULL_SNAPSHOT_QUERY, {
+        owner: ctx.owner,
+        repo: ctx.repo,
+        number: ctx.number,
+      });
       check(data.repository?.pullRequest);
       // Mutations are sent once, only after an explicit user click.
       await graphql(viewed ? MARK_VIEWED : UNMARK_VIEWED, { input: { pullRequestId, path: doc.path } });
