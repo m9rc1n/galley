@@ -296,13 +296,24 @@ try {
   await page.keyboard.press('Escape');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer')), null);
   // A deferred touch tap must retain the paragraph inside the shadow root after event retargeting.
-  await inspect(() => {
+  await inspect(async () => {
     const s = document.querySelector('#galley-reader').shadowRoot;
     s.getSelection().removeAllRanges();
+    // Let removing the previous editor finish its layout and any resulting scroll adjustment.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const paragraph = [...s.querySelectorAll('.mr-content p[data-mr-u]')].find((p) => p.getClientRects().length && !p.closest('[hidden]'));
     paragraph.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerType: 'touch', clientX: 180, clientY: 250 }));
   });
   await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-select-chip').hidden);
+  // Layout frames must leave the touch target available; only actual scrolling dismisses it.
+  const touchChip = await inspect(async () => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    s.querySelector('.mr-root').dispatchEvent(new Event('galley:context'));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const chip = s.querySelector('.mr-select-chip');
+    return { hidden: chip.hidden, disabled: chip.disabled };
+  });
+  assert.deepEqual(touchChip, { hidden: false, disabled: false });
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-select-chip').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.activeElement?.matches('.mr-composer textarea'));
   await page.keyboard.press('Escape');

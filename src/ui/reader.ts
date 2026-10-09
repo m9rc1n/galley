@@ -479,7 +479,10 @@ class Reader {
       if (this.rendered) this.buildToc(this.rendered);
       this.schedule(true);
     });
-    this.root.addEventListener('scroll', () => this.schedule(false), { passive: true });
+    this.root.addEventListener('scroll', () => {
+      if (!this.el.chip.hidden && !this.chipTarget?.range) this.hideChip();
+      this.schedule(false);
+    }, { passive: true });
     for (const type of ['keydown', 'keyup', 'keypress']) window.addEventListener(type, this.shield, true);
     this.dark.addEventListener('change', this.onSchemeChange);
     this.resize.observe(this.root);
@@ -2178,8 +2181,7 @@ class Reader {
       if (this.rendered) this.buildToc(this.rendered);
       else this.el.toc.replaceChildren();
     }
-    if (!this.el.chip.hidden && !this.chipTarget?.range) this.hideChip();
-    else if (this.chipTarget?.range) this.placeChip(this.chipTarget.range.getBoundingClientRect());
+    if (this.chipTarget?.range) this.placeChip(this.chipTarget.range.getBoundingClientRect());
 
     let activeHeading = -1;
     this.headings.forEach((hd, i) => {

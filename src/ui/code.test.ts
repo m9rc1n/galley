@@ -14,6 +14,7 @@ it('picks a highlighter language from a fence label or a file path', () => {
 
 it('recognises makefiles and Dockerfile variants, and leaves unsupported labels unnamed', () => {
   expect(languageOf('build/GNUmakefile')).toBe('makefile');
+  expect(languageOf('Makefile')).toBe('makefile');
   expect(languageOf('Dockerfile.production')).toBe('dockerfile');
   expect(languageOf('  ')).toBeNull();
   expect(languageName('unknown')).toBeNull();

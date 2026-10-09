@@ -58,6 +58,15 @@ it('shows table rows inserted before a paired edit and added cells without losin
   expect(row.querySelector('td:last-child ins')!.textContent).toBe('Added');
 });
 
+it('keeps deleted table rows before surviving rows and appends trailing deletions within the table', () => {
+  const header = '| Name | Value |\n|---|---|\n';
+  const r = renderMarkdown(`${header}| First removed | 11 |\n| Kept | 22 |\n| Last removed | 33 |\n`, `${header}| Kept | 22 |\n`);
+  expect([...r.content.querySelectorAll('tbody tr')].map((row) => [[...row.querySelectorAll('td')].map((cell) => cell.textContent), row.classList.contains('mr-ghost-row')])).toEqual([
+    [['First removed', '11'], true], [['Kept', '22'], false], [['Last removed', '33'], true],
+  ]);
+  expect(r.content.querySelector('tr:not(.mr-ghost-row) del, tr:not(.mr-ghost-row) ins')).toBeNull();
+});
+
 it('reports formatting-only code edits and empty documents without invented words or change targets', () => {
   const r = renderMarkdown('```js\nconst a = 1;\n```\n', '```javascript\nconst a = 1;\n```\n');
   expect(r.content.querySelector('.mr-subtle')).toBeTruthy();

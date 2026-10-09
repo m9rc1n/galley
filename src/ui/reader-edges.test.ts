@@ -137,6 +137,33 @@ it('keeps keyboard focus inside the reader and lets unrelated page controls rece
   ui.key('Home'); expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="reading"]'));
 });
 
+it('chooses palette pages directly and stops the next-change button at the final change', async () => {
+  await ui.open(review());
+  ui.key(','); ui.scroll.mockClear();
+  ui.click('.mr-carousel-dot[data-page="1"]');
+  expect(ui.q('.mr-carousel-dot[data-page="1"]').getAttribute('aria-current')).toBe('true');
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-prev"]').disabled).toBe(false);
+  expect(ui.scroll).toHaveBeenLastCalledWith({ left: 1280, behavior: 'smooth' });
+  ui.key('Escape'); ui.scroll.mockClear();
+  ui.bounds(ui.q('[data-mr-change="modified"]'), 300);
+  ui.click('[data-act="next"]'); ui.click('[data-act="next"]');
+  expect(ui.scroll.mock.calls.map(([options]) => options.top)).toEqual([60]);
+});
+
+it('offers a compact comment control beside the text when conversations fill its margin', async () => {
+  await ui.open(review({ loadThreads: async () => [thread(5)] }));
+  const card = ui.q('.mr-threads .mr-thread');
+  Object.defineProperty(card, 'offsetTop', { value: 0 });
+  Object.defineProperty(card, 'offsetHeight', { value: 200 });
+  ui.q('[data-mr-change="modified"]').dispatchEvent(new Event('pointerover', { bubbles: true }));
+  expect(ui.q('.mr-comment-btn').classList).toContain('is-gap');
+  expect(ui.q('.mr-comment-btn').hidden).toBe(false);
+  expect(ui.q('.mr-comment-btn').style.top).toBe('20px');
+  ui.click('[data-act="comment-block"]');
+  expect(ui.shadow().activeElement).toBe(ui.q('.mr-composer textarea'));
+});
+
 it('reveals a hidden anchor locally and leaves missing or empty anchors alone', async () => {
   const base = '# Guide\n\n[Jump](#hidden)\n\n## Hidden\n\nStable.\n\n## Edited\n\nValue 10.\n';
   await ui.open(review({ load: async () => ({ base, head: base.replace('Value 10', 'Value 20').replace('Jump', 'Jump now') }) }));
@@ -172,6 +199,21 @@ it('ignores touch gestures on controls and while selecting text', async () => {
   expect(ui.q('.mr-select-chip').hidden).toBe(true);
   selection.isCollapsed = false; pointer(ui.q('h1'), 'pointerup'); await ui.tick();
   expect(ui.q('.mr-select-chip').hidden).toBe(true);
+});
+
+it('keeps a touch comment available when a pending editor layout finishes without scrolling', async () => {
+  const prepare = vi.fn(async (): Promise<CommentPlan> => ({ kind: 'inline', label: 'Inline', post: vi.fn() }));
+  await ui.open(review({ prepareComment: prepare }));
+  await ui.commentOn(); ui.key('Escape');
+  Object.defineProperty(ui.shadow(), 'getSelection', { value: () => ({ isCollapsed: true }) });
+  pointer(ui.q('[data-mr-change="modified"]'), 'pointerup', 400, 300); await ui.tick();
+  expect(ui.q('.mr-select-chip').hidden).toBe(false);
+  // Closing the previous editor queued a layout frame, just as in the browser touch check.
+  ui.flushFrame();
+  expect(ui.q('.mr-select-chip').hidden).toBe(false);
+  ui.click('.mr-select-chip');
+  expect(ui.shadow().activeElement).toBe(ui.q('.mr-composer textarea'));
+  expect(prepare).toHaveBeenLastCalledWith(expect.objectContaining({ doc: guide, side: 'head', startLine: 5, quote: 'The limit is 20 euros.' }));
 });
 
 it('captures keyboard selections, highlights quotes, repositions the chip, and clears it on deselection', async () => {
