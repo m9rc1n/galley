@@ -7,6 +7,16 @@ const patch = '@@ -1,4 +1,5 @@\n # Guide\n-old wording\n+new wording\n+another l
 const doc = { path: 'new.md', oldPath: 'old.md', status: 'renamed' as const };
 const target: CommentTarget = { doc, side: 'head', startLine: 2, endLine: 3, quote: 'new wording\nanother line' };
 
+it('ignores metadata and no-newline markers in patches, and tolerates deleted accounts and missing discussion coordinates', () => {
+  expect(diffLines()).toEqual([]);
+  expect(diffLines('file metadata\n@@ -1 +1 @@\n-old\n+new\n\\ No newline at end of file')).toHaveLength(2);
+  const [github] = githubThreads([doc], [{ id: 1, path: 'new.md', created_at: '', html_url: '#1' }]);
+  expect(github.comments[0]).toMatchObject({ author: 'ghost', body: '' });
+  const threads = gitlabThreads([doc], [{ notes: [] }, { notes: [{ id: 1, body: '', created_at: '', position: { old_path: 'old.md' } }] }, { notes: [{ id: 2, body: '', created_at: '', position: { new_path: 'other.md' } }] }], (id) => `#${id}`);
+  expect(threads).toHaveLength(1);
+  expect(threads[0]).toMatchObject({ side: 'base', line: null });
+});
+
 it('diff coordinates distinguish additions, deletions, shifted context and separate hunks', () => {
   expect(diffLines(patch).map(({ oldLine, newLine }) => [oldLine, newLine])).toStrictEqual([[1,1], [2,undefined], [undefined,2], [undefined,3], [3,4], [4,5]]);
   expect(diffRange(patch, target)?.length).toBe(2);

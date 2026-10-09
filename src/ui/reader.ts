@@ -454,7 +454,13 @@ class Reader {
     this.root.addEventListener('pointerleave', () => this.clearHover());
     this.root.addEventListener('pointerover', (e) => this.linkCard(e.target));
     this.root.addEventListener('focusin', (e) => this.onFocusIn(e.target));
-    this.el.doc.addEventListener('pointerup', (e) => { if (e.pointerType === 'touch') setTimeout(() => this.onTap(e), 0); });
+    this.el.doc.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'touch') {
+        // Shadow DOM retargets the event after dispatch; retain the actual paragraph for the deferred tap.
+        const node = e.target as Element;
+        setTimeout(() => this.onTap(e, node), 0);
+      }
+    });
     document.addEventListener('selectionchange', this.onSelectionChange);
     this.el.doc.replaceChildren(this.skeleton());
 
@@ -1102,7 +1108,7 @@ class Reader {
     if (overview.author) byline.append(h('span', 'mr-overview-author', `Opened by ${overview.author}`));
     const href = platformLink(overview.url, location.origin);
     if (href) {
-      const link = h('a', 'mr-overview-link', `Open on ${new URL(href).host}`);
+      const link = h('a', 'mr-overview-link', `Open on ${new URL(href, location.href).host}`);
       link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
       byline.append(link);
     }
@@ -1226,9 +1232,6 @@ class Reader {
     if (!this.el.settings.hidden || !this.el.lightbox.hidden) return;
     if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable]')) return;
     switch (e.key) {
-      case 'Escape':
-        if (!this.closeMenus()) this.close();
-        break;
       case 'j':
         this.step(1);
         break;
@@ -1633,8 +1636,7 @@ class Reader {
   }
 
   /** On touch screens a tap on a paragraph offers the chip for that paragraph. */
-  private onTap(e: PointerEvent): void {
-    const node = e.target as Element;
+  private onTap(e: PointerEvent, node: Element): void {
     if (node.closest('a, button, summary, input, textarea, .mr-thread, .mr-composer') || !this.shadowSelection()?.isCollapsed) return;
     const hit = this.blockAt(node);
     const target = hit && paragraphTarget(hit.view.doc, hit.block, hit.side);

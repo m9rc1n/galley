@@ -26,3 +26,20 @@ it('storage failures reject instead of reporting a saved Viewed flag', async () 
   });
   await expect(saveViewed('key', true)).rejects.toThrow(/Storage is full/);
 });
+
+it('uses extension storage for progress and only accepts an actual boolean flag', async () => {
+  const get = vi.fn().mockResolvedValueOnce({ key: 'true' }).mockResolvedValueOnce({ key: true });
+  const set = vi.fn().mockResolvedValue(undefined), remove = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('chrome', { storage: { local: { get, set, remove } } });
+  expect(await loadViewed('key')).toBe(false);
+  expect(await loadViewed('key')).toBe(true);
+  await saveViewed('key', true);
+  expect(set).toHaveBeenCalledWith({ key: true });
+  await saveViewed('key', false);
+  expect(remove).toHaveBeenCalledWith('key');
+  expect(localStorage.length).toBe(0);
+  get.mockRejectedValue(new Error('Unavailable'));
+  await expect(loadViewed('key')).rejects.toThrow('Unavailable');
+  remove.mockRejectedValue(new Error('Write denied'));
+  await expect(saveViewed('key', false)).rejects.toThrow('Write denied');
+});

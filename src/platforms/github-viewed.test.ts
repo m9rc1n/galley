@@ -1,12 +1,30 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { headersOf, jsonResponse, mockFetch } from '../testing/http.ts';
 import { directApi } from './github-api.ts';
 import { githubViewed } from './github-viewed.ts';
 import { getToken, setToken } from './tokens.ts';
+import { HttpError } from './http.ts';
 
 const ctx = { platform: 'github' as const, key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'acme', repo: 'docs', number: 12, title: 'Docs' };
 const doc = { path: 'docs/guide.md', oldPath: 'docs/guide.md', status: 'modified' as const };
 const response = jsonResponse;
+
+it('rejects missing pull requests, transport errors, and incomplete pagination without pretending progress is loaded', async () => {
+  const request = vi.fn();
+  const store = githubViewed(ctx, { request, hasToken: async () => true }, [doc], 'h', 'b');
+  request.mockResolvedValue({ data: { data: { repository: null } } });
+  await expect(store.load()).rejects.toThrow('could not find');
+  request.mockRejectedValue(new HttpError(0, 'offline', null));
+  await expect(store.load()).rejects.toThrow('Check GitHub before trying again');
+  request.mockRejectedValue(new HttpError(403, 'forbidden', null));
+  await expect(store.load()).rejects.toThrow('could not sync');
+  request.mockRejectedValue(new Error('Storage unavailable'));
+  await expect(store.load()).rejects.toThrow('Storage unavailable');
+  request.mockResolvedValue({ data: { data: { repository: { pullRequest: { id: 'id', headRefOid: 'h', baseRefOid: 'b', files: { nodes: [], pageInfo: { hasNextPage: true, endCursor: 'cursor' } } } } } } });
+  request.mockClear();
+  await expect(store.load()).rejects.toThrow('could not load all');
+  expect(request).toHaveBeenCalledTimes(10);
+});
 
 it('GitHub loads paginated native progress and marks/unmarks with current authentication', async () => {
   await setToken(ctx.origin, 'current-token');

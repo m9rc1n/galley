@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { expect, it } from 'vitest';
 import { renderMarkdown } from '../testing/render.ts';
-import { languageName, languageOf, splitHighlighted } from './code.ts';
+import { languageName, languageOf, lineify, setIndent, splitHighlighted } from './code.ts';
 
 it('picks a highlighter language from a fence label or a file path', () => {
   expect(languageOf('ts title="x.ts"')).toBe('typescript');
@@ -10,6 +10,28 @@ it('picks a highlighter language from a fence label or a file path', () => {
   expect(languageOf('notes.unknown')).toBeNull();
   expect(languageName('typescript')).toBe('TypeScript');
   expect(languageName(null)).toBeNull();
+});
+
+it('recognises makefiles and Dockerfile variants, and leaves unsupported labels unnamed', () => {
+  expect(languageOf('build/GNUmakefile')).toBe('makefile');
+  expect(languageOf('Dockerfile.production')).toBe('dockerfile');
+  expect(languageOf('  ')).toBeNull();
+  expect(languageName('unknown')).toBeNull();
+});
+
+it('caps indentation, aligns tabs to four columns, and does not lineify a block twice', () => {
+  const row = document.createElement('span');
+  setIndent(row, ' \t  code');
+  expect(row.style.getPropertyValue('--indent')).toBe('6ch');
+  setIndent(row, `${' '.repeat(80)}code`);
+  expect(row.style.getPropertyValue('--indent')).toBe('40ch');
+  const pre = document.createElement('pre'); pre.textContent = 'one\ntwo\n';
+  lineify(document, pre);
+  const first = pre.firstChild;
+  lineify(document, pre);
+  expect(pre.firstChild).toBe(first);
+  expect(pre.querySelectorAll('[data-line]')).toHaveLength(2);
+  expect(splitHighlighted(document, '<span class="unknown">a\nb</span><!-- ignored -->').map((l) => l.textContent)).toEqual(['a', 'b']);
 });
 
 it('splits highlighted code per line, re-opening tokens that span lines and dropping foreign markup', () => {

@@ -295,6 +295,18 @@ try {
   await page.screenshot({ path: join(screenshots, 'galley-reader-mobile.png') });
   await page.keyboard.press('Escape');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer')), null);
+  // A deferred touch tap must retain the paragraph inside the shadow root after event retargeting.
+  await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    s.getSelection().removeAllRanges();
+    const paragraph = [...s.querySelectorAll('.mr-content p[data-mr-u]')].find((p) => p.getClientRects().length && !p.closest('[hidden]'));
+    paragraph.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerType: 'touch', clientX: 180, clientY: 250 }));
+  });
+  await page.waitForFunction(() => !document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-select-chip').hidden);
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-select-chip').click());
+  await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.activeElement?.matches('.mr-composer textarea'));
+  await page.keyboard.press('Escape');
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-composer')), null);
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
   const drawer = await inspect(() => {
     const panel = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-settings-panel');

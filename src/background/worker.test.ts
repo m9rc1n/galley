@@ -57,6 +57,13 @@ it('leaves messages it does not own to other listeners', () => {
   expect(listener(undefined, sender(), vi.fn())).toBe(false);
 });
 
+it('returns a readable reply for unexpected sender and token-store failures', async () => {
+  expect(await send({ type: 'galley:has-token' }, sender('not a URL'))).toMatchObject({ error: expect.stringContaining('Invalid URL') });
+  const tokens = await import('../platforms/tokens.ts');
+  vi.spyOn(tokens, 'getToken').mockRejectedValue('Token store unavailable');
+  expect(await send({ type: 'galley:has-token' })).toEqual({ error: 'Token store unavailable' });
+});
+
 it('only answers Galley’s own content scripts in a tab', async () => {
   const fetchSpy = mockFetch(() => jsonResponse([]));
   await setToken('https://github.com', 'github_pat_secret');
