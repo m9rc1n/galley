@@ -125,3 +125,21 @@ it('draws diagrams in the reader’s palette: cards on a soft canvas, quiet line
   expect(colours.every((colour) => /^#[\da-f]{6}$/.test(colour))).toBe(true);
   expect(chartColours('#808080', true, 3)).toHaveLength(3);
 });
+
+it.each([
+  ['#c04030', 'red'],
+  ['#506b38', 'green'],
+  ['#3050c0', 'blue'],
+])('starts the chart colours at the hue of a %2$s accent', async (accent) => {
+  const { chartColours } = await import('./diagram-frame.ts');
+  const [r, g, b] = chartColours(accent, false, 1)[0]
+    .slice(1)
+    .match(/../g)!
+    .map((hex) => parseInt(hex, 16));
+  const [ar, ag, ab] = accent
+    .slice(1)
+    .match(/../g)!
+    .map((hex) => parseInt(hex, 16));
+  const dominant = (x: number, y: number, z: number) => [x, y, z].indexOf(Math.max(x, y, z));
+  expect(dominant(r, g, b)).toBe(dominant(ar, ag, ab));
+});

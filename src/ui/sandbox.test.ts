@@ -98,3 +98,17 @@ it('discards a frame that stops answering or is removed, and opens a fresh one f
   await connectFrame('test-frame.html', (port) => echo(port));
   await expect(next).resolves.toMatchObject({ n: 3 });
 });
+
+it('ignores messages from the frame that are not replies to a request', async () => {
+  const box = sandbox('test-frame.html', 5_000);
+  const reply = box.request(document.body, { n: 1 });
+  await connectFrame('test-frame.html', (port) => {
+    const original = port.postMessage.bind(port);
+    port.postMessage = (message: unknown) => {
+      for (const stray of [null, 'text', 7, {}, { id: 'abc' }, { id: null }]) original(stray);
+      original(message);
+    };
+    echo(port);
+  });
+  await expect(reply).resolves.toMatchObject({ n: 1 });
+});

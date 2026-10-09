@@ -131,3 +131,10 @@ it('reloads a single active tab and tolerates registrations without URL matches'
   expect(api.tabs.query).toHaveBeenCalledWith({ active: true, url: ['https://github.com/*'] });
   expect(console.log).toHaveBeenCalledWith('Galley dev: content script updated, refreshed 1 tab');
 });
+
+it('carries on when the registration left by the old name cannot be removed', async () => {
+  api.scripting.unregisterContentScripts.mockRejectedValue(new Error('No such script'));
+  await start();
+  expect(api.scripting.unregisterContentScripts).toHaveBeenCalledWith({ ids: ['mreadie-dev-main'] });
+  expect(sockets).toHaveLength(1);
+});

@@ -213,3 +213,19 @@ it('draws in the reader’s palette, redraws when the palette changes, and shows
   renderDiagrams([d], false, vi.fn(), { ...palette, accent: '#466b96' });
   await vi.waitFor(() => expect(engine.render).toHaveBeenCalledTimes(2));
 });
+
+it('keeps drawing the next diagram when the reader fails while taking one in', async () => {
+  const { renderDiagrams } = await import('./diagrams.ts');
+  const first = await diagram('', fence('flowchart LR\n A --> B'));
+  const second = await diagram('', fence('flowchart LR\n C --> D'));
+  const changed = vi
+    .fn()
+    .mockImplementationOnce(() => {
+      throw new Error('The reader was closed');
+    })
+    .mockImplementation(() => {});
+  renderDiagrams([first, second], false, changed);
+  await connect();
+  await vi.waitFor(() => expect(second.versions[0].view.dataset.state).toBe('ready'));
+  expect(first.versions[0].view.dataset.state).toBe('ready');
+});

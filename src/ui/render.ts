@@ -92,7 +92,7 @@ let purifier: ReturnType<typeof DOMPurify> | null = null;
  */
 export function sanitize(doc: Document, html: string): DocumentFragment {
   if (!purifier) {
-    purifier = DOMPurify(doc.defaultView ?? window);
+    purifier = DOMPurify(doc.defaultView!);
     purifier.addHook('uponSanitizeAttribute', (node, data) => {
       const name = data.attrName;
       if (name === 'class') {
@@ -222,7 +222,7 @@ function holdImage(doc: Document, img: HTMLImageElement, src: string): void {
 function blocksById(root: HTMLElement, nonce: string): Map<number, HTMLElement> {
   const byId = new Map<number, HTMLElement>();
   for (const el of root.querySelectorAll<HTMLElement>('[data-mr-u]')) {
-    const [stamp, id] = (el.dataset.mrU ?? '').split(':');
+    const [stamp, id] = el.dataset.mrU!.split(':');
     if (stamp === nonce && id && !byId.has(Number(id))) byId.set(Number(id), el);
     else el.removeAttribute('data-mr-u');
   }
@@ -247,7 +247,7 @@ interface LinkTarget {
 function linkTargets(root: ParentNode): LinkTarget[] {
   return [...root.querySelectorAll('a[href], img')].map((el) => ({
     el,
-    label: el.tagName === 'IMG' ? `img:${el.getAttribute('alt') ?? ''}` : `a:${normalize(el.textContent ?? '')}`,
+    label: el.tagName === 'IMG' ? `img:${el.getAttribute('alt') ?? ''}` : `a:${normalize(el.textContent!)}`,
     url: el.getAttribute('href') ?? el.getAttribute('src') ?? el.getAttribute('data-mr-src') ?? '',
   }));
 }
@@ -311,8 +311,8 @@ function insertGhost(doc: Document, root: HTMLElement, unit: Unit, parsed: Parse
     ghost.append(frag);
     if (anchorItem && root.contains(anchorItem)) {
       // Not a list item, but the next live block sits in a list: go before the outermost list.
-      let list: Element = anchorItem.closest('ul, ol') ?? anchorItem;
-      for (let up = list.parentElement?.closest('ul, ol'); up && root.contains(up); up = up.parentElement?.closest('ul, ol')) list = up;
+      let list: Element = anchorItem.closest('ul, ol')!;
+      for (let up = list.parentElement!.closest('ul, ol'); up && root.contains(up); up = up.parentElement!.closest('ul, ol')) list = up;
       before = list;
     }
     if (unit.inList) ghost.classList.add('mr-ghost-item');
@@ -327,9 +327,9 @@ function insertGhost(doc: Document, root: HTMLElement, unit: Unit, parsed: Parse
 
 /** Code is compared line by line, like a code diff: removed lines above the lines that replaced them. */
 function diffCode(doc: Document, pre: HTMLElement, before: string): boolean {
-  const code = pre.querySelector('code') ?? pre;
+  const code = pre.querySelector('code')!;
   const base = before.replace(/\n$/, '');
-  const head = (code.textContent ?? '').replace(/\n$/, '');
+  const head = code.textContent!.replace(/\n$/, '');
   const parts = boundedDiff(base.split('\n'), head.split('\n'));
   if (!parts.some((p) => p.added || p.removed)) return false;
   // Every line is its own block, tagged with its line in the old or new text for highlighting.
@@ -359,10 +359,9 @@ function cells(row: Element): HTMLElement[] {
 function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boolean {
   const headRows = [...table.querySelectorAll('tr')];
   const baseRows = [...before.querySelectorAll('tr')];
-  if (!headRows.length || !baseRows.length) return false;
   const key = (row: Element) =>
     cells(row)
-      .map((c) => normalize(c.textContent ?? ''))
+      .map((c) => normalize(c.textContent!))
       .join('\u0001');
   const parts = boundedDiff(baseRows.map(key), headRows.map(key));
 
@@ -385,7 +384,7 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
   let hi = 0;
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    const count = part.count ?? part.value.length;
+    const count = part.count;
     if (!part.added && !part.removed) {
       bi += count;
       hi += count;
@@ -395,7 +394,7 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
     let removed: Element[] = [];
     let added: HTMLElement[] = [];
     for (; i < parts.length && (parts[i].added || parts[i].removed); i++) {
-      const n = parts[i].count ?? parts[i].value.length;
+      const n = parts[i].count;
       if (parts[i].removed) {
         removed = removed.concat(baseRows.slice(bi, bi + n));
         bi += n;
@@ -411,7 +410,7 @@ function diffTable(doc: Document, table: HTMLElement, before: ParentNode): boole
       let match = -1;
       let best = 0;
       for (let k = next; k < Math.min(added.length, next + 6); k++) {
-        const score = similarity(row.textContent ?? '', added[k].textContent ?? '');
+        const score = similarity(row.textContent!, added[k].textContent!);
         if (score >= 0.35 && score > best) {
           best = score;
           match = k;
@@ -453,7 +452,7 @@ function decorate(doc: Document, root: HTMLElement, input: RenderInput): { repla
     }
   }
   for (const a of root.querySelectorAll('a[href]')) {
-    const r = resolveHref(path, a.getAttribute('href') ?? '');
+    const r = resolveHref(path, a.getAttribute('href')!);
     if (r.type === 'anchor') continue;
     a.setAttribute('href', r.type === 'repo' ? links.blob(r.path) + r.suffix : r.href);
     a.setAttribute('target', '_blank');
@@ -530,7 +529,7 @@ function hiddenLines(baseSrc: string, headSrc: string, base: ParsedDoc, head: Pa
   let bi = 0;
   let hidden = 0;
   for (const part of boundedDiff(a, b)) {
-    const count = part.count ?? part.value.length;
+    const count = part.count;
     if (part.removed) for (let k = 0; k < count; k++, ai++) hidden += !inA[ai] && a[ai].trim() ? 1 : 0;
     else if (part.added) for (let k = 0; k < count; k++, bi++) hidden += !inB[bi] && b[bi].trim() ? 1 : 0;
     else {
@@ -582,7 +581,7 @@ function applyChanges(doc: Document, root: HTMLElement, changes: BlockChange[], 
       }
       // Compare against the old block element itself, not the fragment around it (which ends in a newline).
       const frag = fragmentFor(doc, change.base!, base);
-      const before = frag.firstElementChild ?? frag;
+      const before = frag.firstElementChild!;
       if (mermaidSource(change.base) !== null || mermaidSource(change.head) !== null) {
         mark(el, 'modified');
         touch(el);
@@ -654,7 +653,7 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   for (const pre of root.querySelectorAll<HTMLElement>('pre')) {
     lineify(doc, pre);
     // Wide screens give a code block the room its longest line needs, up to 120 characters (reader.css).
-    const longest = Math.max(0, ...[...pre.querySelectorAll('.mr-cl, .mr-line')].map((line) => (line.textContent ?? '').replace(/\t/g, '    ').length));
+    const longest = Math.max(0, ...[...pre.querySelectorAll('.mr-cl, .mr-line')].map((line) => line.textContent!.replace(/\t/g, '    ').length));
     pre.style.setProperty('--chars', String(longest));
   }
   for (const block of blocks) block.el = replacements.get(block.el) ?? block.el;
@@ -663,7 +662,7 @@ export function renderDocument(doc: Document, input: RenderInput): RenderedDoc {
   const order = new Map<Element, number>();
   let position = 0;
   for (const el of root.querySelectorAll('*')) order.set(el, position++);
-  blocks.sort((a, b) => (order.get(a.el) ?? 0) - (order.get(b.el) ?? 0));
+  blocks.sort((a, b) => order.get(a.el)! - order.get(b.el)!);
 
   const diagrams: Diagram[] = [];
   for (const block of blocks) {

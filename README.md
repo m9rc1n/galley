@@ -206,7 +206,7 @@ npm run dev:zip    # one-off dev build that works without the dev server (dist/d
 npm run demo       # build and serve the demo on http://localhost:4173
 npm test           # unit tests (Vitest), one project per folder
 npm run test:watch # unit tests, re-running as you edit
-npm run test:coverage # unit tests with coverage and the per-folder thresholds
+npm run test:coverage # unit tests with coverage, which must be 100% in every file
 npm run test:e2e   # builds the demo and runs the browser checks (Chrome; CHROME_PATH supported)
 npm run lint       # Biome; npm run lint:fix applies the safe fixes
 npm run format     # Biome formatter; npm run format:check only reports

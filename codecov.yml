@@ -9,7 +9,7 @@ coverage:
     patch:
       default:
         target: auto
-        # Vitest enforces the overall and per-folder floors; patch coverage stays advisory.
+        # Vitest enforces 100% in every file; patch coverage stays advisory.
         informational: true
 
 ignore:

@@ -86,3 +86,11 @@ it('diagrams are shown at the size they were laid out for, read from the drawing
   for (const svg of ['<svg width="100%">', '<svg viewBox="0 0 0 10">', '<svg viewBox="0 0 90000 10">', '<g viewBox="0 0 10 10"><svg>', 'not svg'])
     expect(diagramSize(svg)).toBeNull();
 });
+
+it('keeps links inside a drawing only when they point at a part of the drawing itself', () => {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><linearGradient id="a" href="#b"/><linearGradient id="b"/><linearGradient id="c" href="https://evil.example/x"/><linearGradient id="d" xlink:href="//evil.example/y"/></svg>';
+  const image = decodeURIComponent(diagramImage(document, svg).split(',')[1]);
+  expect(image).toContain('href="#b"');
+  expect(image).not.toContain('evil.example');
+});

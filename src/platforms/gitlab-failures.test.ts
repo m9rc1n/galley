@@ -198,3 +198,21 @@ it('refuses to post when the merge request moved on while the reviewer was readi
   current = { ...refs, head_sha: 'newer' };
   await expect(plan.post('Please clarify')).rejects.toThrow('This merge request changed while you were reading.');
 });
+
+it('types a range that starts on a context line as an old-side line, as GitLab does', async () => {
+  vi.stubGlobal('document', { querySelector: () => ({ content: 'csrf' }) });
+  gitlab({ '/diffs?': () => jsonResponse([{ ...diff, diff: '@@ -1,2 +1,3 @@\n # Guide\n context line\n+first addition' }]) });
+  const source = await loadGitLab(ctx);
+  const plan = await source.prepareComment!({ doc: source.docs[0], side: 'head', startLine: 2, endLine: 3, quote: 'context line\nfirst addition' });
+  const writes: Record<string, unknown>[] = [];
+  gitlab({
+    '/discussions': (_url, init) => {
+      writes.push(JSON.parse(init!.body as string));
+      return jsonResponse({ id: 'd1', notes: [{ id: 1 }] });
+    },
+  });
+  await plan.post('Look here');
+  expect(writes[0]).toMatchObject({
+    position: { line_range: { start: { type: 'old', old_line: 2, new_line: 2 }, end: { type: 'new', new_line: 3 } } },
+  });
+});

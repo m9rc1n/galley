@@ -27,7 +27,7 @@ function pageUrl(page: string): string {
 }
 
 function openFrame(host: ParentNode, page: string): Frame {
-  const doc = (host as Node).ownerDocument ?? (host as Document);
+  const doc = (host as Node).ownerDocument!;
   const el = doc.createElement('iframe');
   el.setAttribute('sandbox', 'allow-scripts');
   el.setAttribute('aria-hidden', 'true');
@@ -79,10 +79,9 @@ export function sandbox(page: string, timeoutMs: number): Sandbox {
       const watchdog = setInterval(() => {
         if (current.el.isConnected && Date.now() < deadline) return;
         done();
-        if (frame === current) {
-          current.el.remove();
-          frame = null;
-        }
+        // Requests run one at a time, so this is still the frame the page is using.
+        current.el.remove();
+        frame = null;
         reject(new Error('The renderer stopped.'));
       }, 250);
       current.replies.set(id, (reply) => {

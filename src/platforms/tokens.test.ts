@@ -71,3 +71,23 @@ it('does nothing when there is no extension storage', async () => {
   vi.stubGlobal('chrome', undefined);
   await expect(migrateTokens()).resolves.toBeUndefined();
 });
+
+it('passes on a database that cannot be opened', async () => {
+  vi.spyOn(indexedDB, 'open').mockImplementation(() => {
+    const request = { error: new Error('database blocked') } as IDBOpenDBRequest;
+    queueMicrotask(() => request.onerror!(new Event('error') as never));
+    return request;
+  });
+  await expect(getToken(GITHUB)).rejects.toThrow('database blocked');
+});
+
+it('passes on a transaction the browser aborts, as it does when storage is full', async () => {
+  const get = IDBObjectStore.prototype.get;
+  vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(function (this: IDBObjectStore, key) {
+    const request = get.call(this, key);
+    this.transaction.abort();
+    return request;
+  });
+  // An abort the page asks for leaves no error object; the caller still gets the rejection.
+  await expect(getToken(GITHUB)).rejects.toBeNull();
+});

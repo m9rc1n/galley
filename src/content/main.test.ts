@@ -154,3 +154,13 @@ it('does not replace the current launcher with an error for a review already lef
   await pending.promise.catch(() => {});
   expect(mocks.show).not.toHaveBeenCalled();
 });
+
+it('keeps the error launcher when the retry fails too, without an unhandled rejection', async () => {
+  mocks.loadSource.mockRejectedValue(new Error('No token'));
+  await start();
+  mocks.show.mock.calls[0][2]();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(mocks.openReader).toHaveBeenCalledOnce();
+  expect(mocks.loadSource).toHaveBeenCalledTimes(2);
+  expect(mocks.show).toHaveBeenCalledOnce();
+});

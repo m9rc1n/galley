@@ -20,7 +20,7 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
   for (const block of r.blocks) {
     const unit = block.head ?? block.base!;
     if (unit.kind === 'heading' && block.kind !== 'removed') {
-      while (headings.length && (headings[headings.length - 1].head?.level ?? 0) >= unit.level) headings.pop();
+      while (headings.length && headings[headings.length - 1].head!.level >= unit.level) headings.pop();
       headings.push(block);
     }
     if (block.kind !== 'same') for (const heading of headings) context.add(heading.el);
@@ -78,7 +78,7 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
     else if (el.matches('section.footnotes')) el.hidden = !r.blocks.some((block) => !block.el.hidden && block.el.querySelector('.footnote-ref'));
   }
   const separator = r.content.querySelector<HTMLElement>('.footnotes-sep');
-  if (separator) separator.hidden = r.content.querySelector<HTMLElement>('section.footnotes')?.hidden ?? true;
+  if (separator) separator.hidden = r.content.querySelector<HTMLElement>('section.footnotes')!.hidden;
 }
 
 function owner(node: Node, blocks: RenderedBlock[]): RenderedBlock | undefined {
@@ -100,7 +100,7 @@ export function paragraphTarget(doc: DocRef, block: RenderedBlock, side: 'base' 
     side,
     startLine: unit.lines[0] + 1,
     endLine: unit.lines[1],
-    quote: quote ?? (unit.kind === 'code' ? unit.source.replace(/\n$/, '') : (clone.textContent?.replace(/\s+/g, ' ').trim() ?? '')),
+    quote: quote ?? (unit.kind === 'code' ? unit.source.replace(/\n$/, '') : clone.textContent!.replace(/\s+/g, ' ').trim()),
   };
 }
 
@@ -119,8 +119,7 @@ export function selectionTarget(doc: DocRef, blocks: RenderedBlock[], range: Ran
     // DOM ranges include gutters and concatenate rows. Quote only source text, with its newlines.
     const rows = covered.flatMap((block) => {
       // The whole line: once highlighted, its text is split across token spans. Blank lines count too.
-      const text = block.el.querySelector('.mr-code-text');
-      if (!text || !range.intersectsNode(block.el)) return [];
+      const text = block.el.querySelector('.mr-code-text')!;
       if (!text.textContent) return [{ block, text: '' }];
       const selected = block.el.ownerDocument.createRange();
       selected.selectNodeContents(text);
@@ -129,9 +128,8 @@ export function selectionTarget(doc: DocRef, blocks: RenderedBlock[], range: Ran
       return selected.collapsed ? [] : [{ block, text: selected.toString().replace(/\u200b/g, '') }];
     });
     if (!rows.length) return null;
-    const start = paragraphTarget(doc, rows[0].block, side),
-      end = paragraphTarget(doc, rows[rows.length - 1].block, side);
-    if (!start || !end) return null;
+    const start = paragraphTarget(doc, rows[0].block, side)!,
+      end = paragraphTarget(doc, rows[rows.length - 1].block, side)!;
     return { ...start, endLine: end.endLine, quote: rows.map((row) => row.text).join('\n') };
   }
   // Inline removed/inserted text across both versions cannot have a single source range.
@@ -141,8 +139,8 @@ export function selectionTarget(doc: DocRef, blocks: RenderedBlock[], range: Ran
     (side === 'base' && fragment.querySelector('ins.mr-ins, [data-mr-side="head"]'))
   )
     return null;
-  const start = paragraphTarget(doc, first, side),
-    end = paragraphTarget(doc, last, side);
-  if (!start || !end) return null;
+  // Both ends were checked to have this side, so both have a unit for it.
+  const start = paragraphTarget(doc, first, side)!,
+    end = paragraphTarget(doc, last, side)!;
   return { ...start, endLine: end.endLine, quote: range.toString().trim() };
 }

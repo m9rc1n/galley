@@ -73,7 +73,7 @@ export function diffUnits(base: Unit[], head: Unit[]): BlockChange[] {
     added = [];
   };
   for (const part of parts) {
-    const count = part.count ?? part.value.length;
+    const count = part.count;
     if (part.removed) {
       for (let k = 0; k < count; k++) removed.push(base[bi + k]);
       bi += count;

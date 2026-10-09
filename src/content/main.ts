@@ -26,7 +26,7 @@ function start(): void {
     sourceFor(ctx).then(
       (source) => {
         if (current?.key !== ctx.key) return;
-        if (source.docs.length || source.codeDocs?.length) launcher.show(ctx.key, source.docs.length || source.codeDocs?.length || 0, () => openReader(source));
+        if (source.docs.length || source.codeDocs?.length) launcher.show(ctx.key, source.docs.length || source.codeDocs!.length, () => openReader(source));
         else launcher.hide();
       },
       () => {

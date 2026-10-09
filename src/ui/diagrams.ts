@@ -64,7 +64,7 @@ export function prepareDiagram(doc: Document, block: RenderedBlock): Diagram | n
     add(block.base, 'base', 'Before');
     add(block.head, 'head', 'After');
   } else if (block.head) add(block.head, 'head', block.kind === 'added' ? 'New diagram' : 'Diagram');
-  else if (block.base) add(block.base, 'base', 'Removed diagram');
+  else add(block.base!, 'base', 'Removed diagram');
   block.el.replaceWith(el);
   block.el = el;
   return { el, versions };
