@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.1](https://github.com/m9rc1n/galley/compare/v0.6.0...v0.6.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **reader:** preserve touch targets and enforce 95% coverage ([833bad3](https://github.com/m9rc1n/galley/commit/833bad34c2b55999c7eedbddc67bb329647a34fa))
+* **reader:** preserve touch targets and enforce 95% coverage ([4f6c319](https://github.com/m9rc1n/galley/commit/4f6c3193b0e0d383a40c36a44a4c58ca80ae0097))
+* **reader:** retain touch comment targets through layout updates ([7049c32](https://github.com/m9rc1n/galley/commit/7049c3205ad705c8722dcb288581962546fb696b))
+
 ## [0.6.0](https://github.com/m9rc1n/galley/compare/v0.5.1...v0.6.0) (2026-10-09)
 
 
