@@ -21,6 +21,27 @@ interface GitHubDoc extends DocRef {
 }
 
 const MAX_PAGES = 10;
+const READ_RETRY_DELAYS = [250, 750];
+
+/** Briefly retry transient reads, keeping the same URL/revision. Writes never pass through here. */
+async function readWithRetry<T>(read: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await read();
+    } catch (err) {
+      if (!(err instanceof HttpError) || attempt >= READ_RETRY_DELAYS.length) throw err;
+      const retryAfter = err.headers?.get('retry-after');
+      if (err.status === 403 || err.status === 429) {
+        // Secondary limits may name a short cooldown. Quota and permission failures need action.
+        if (!retryAfter || err.headers?.get('x-ratelimit-remaining') === '0' || err.headers?.get('x-github-sso')) throw err;
+      } else if (![0, 408, 500, 502, 503, 504].includes(err.status)) throw err;
+      const cooldown = Number(retryAfter ?? '0') * 1000;
+      // Do not retry before GitHub's requested cooldown or leave the reader waiting for a long one.
+      if (!Number.isFinite(cooldown) || cooldown < 0 || cooldown > 2000) throw err;
+      await new Promise((resolve) => setTimeout(resolve, Math.max(READ_RETRY_DELAYS[attempt], cooldown)));
+    }
+  }
+}
 
 function mapStatus(status: string): DocStatus {
   if (status === 'added' || status === 'copied') return 'added';
@@ -63,7 +84,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
   const repoApi = `${ctx.apiBase}/repos/${ctx.owner}/${ctx.repo}`;
   const api = async <T>(path: string) => {
     try {
-      return await github.request<T>(`${repoApi}${path}`);
+      return await readWithRetry(() => github.request<T>(`${repoApi}${path}`));
     } catch (err) {
       throw explain(err, hasToken);
     }
@@ -86,13 +107,25 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
   // Same-origin raw URLs work for public and private repositories alike: the browser session
   // authorises them and GitHub redirects to raw.githubusercontent.com.
   const raw = (sha: string, path: string) => `${repoUrl}/raw/${sha}/${encodePath(path)}`;
+  const readRaw = (sha: string, path: string) => {
+    const url = raw(sha, path);
+    return readWithRetry(async () => {
+      try {
+        return await getText(url, { cache: 'no-store' });
+      } catch (err) {
+        // A connection can also fail while consuming an otherwise successful response body.
+        if (err instanceof TypeError) throw new HttpError(0, url, null);
+        throw err;
+      }
+    });
+  };
 
   let mergeBase: Promise<string> | null = null;
   const getMergeBase = () =>
     (mergeBase ??= (async () => {
       const { data: cmp } = await api<{ merge_base_commit: { sha: string } }>(`/compare/${pr.base.sha}...${pr.head.sha}`);
       return cmp.merge_base_commit.sha;
-    })());
+    })().catch((err) => { mergeBase = null; throw err; }));
 
   const all: GitHubDoc[] = files
     .filter((f) => (isMarkdownPath(f.filename) || isMarkdownPath(f.previous_filename ?? '') || isCodePath(f.filename) || isCodePath(f.previous_filename ?? '')) && f.status !== 'unchanged')
@@ -125,7 +158,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
     viewed: hasToken ? githubViewed(ctx, github, all, headSha, pr.base.sha) : undefined,
     async load(ref) {
       const { file } = ref as GitHubDoc;
-      const head = ref.status === 'removed' ? '' : await getText(raw(headSha, ref.path));
+      const head = ref.status === 'removed' ? '' : await readRaw(headSha, ref.path);
       if (ref.status === 'added') return { base: '', head };
       if (file.patch) {
         const base = reconstructBase(head, file.patch);
@@ -134,7 +167,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
         return { base: head, head }; // pure rename
       }
       // Large diffs come without a patch: fetch the old version at the merge base instead.
-      const base = await getText(raw(await getMergeBase(), ref.oldPath));
+      const base = await readRaw(await getMergeBase(), ref.oldPath);
       return { base, head };
     },
     async loadThreads() {
