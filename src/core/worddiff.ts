@@ -29,7 +29,7 @@ function merge(ops: Op[]): Op[] {
   for (const op of ops) {
     if (op.type === 'del') del += op.text;
     else if (op.type === 'ins') ins += op.text;
-    else if (op.text) {
+    else {
       flush();
       const last = out[out.length - 1];
       if (last?.type === 'eq') last.text += op.text;
@@ -73,7 +73,7 @@ function cleanup(ops: Op[]): Op[] {
  * ("␣and runbooks␣" → ", runbooks and…␣"). Move them back out as unchanged text, whole tokens only,
  * so words are never split into letter-level edits.
  */
-function factor(ops: Op[]): Op[] {
+export function factor(ops: Op[]): Op[] {
   const out: Op[] = [];
   for (let i = 0; i < ops.length; i++) {
     const del = ops[i];

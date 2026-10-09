@@ -341,3 +341,56 @@ it('very long comment bodies are shortened before rendering', () => {
   expect(short.textContent!.trim()).toBe('Fine');
   expect(short.children).toHaveLength(1);
 });
+
+it('a removed code block keeps its place inside the list it was part of', () => {
+  const r = renderMarkdown('- First\n\n  ```js\n  const gone = true;\n  ```\n\n- Second\n', '- First\n\n- Second\n');
+  const ghost = r.content.querySelector<HTMLElement>('li.mr-ghost')!;
+  expect(ghost.querySelector('pre')!.textContent).toContain('const gone = true;');
+  expect(ghost.nextElementSibling!.textContent).toContain('Second');
+});
+
+it('a removed block goes above the outermost list when the next live block sits in a nested one', () => {
+  const r = renderMarkdown('Removed intro.\n\n- - Nested\n', '- - Nested\n');
+  const ghost = r.content.querySelector<HTMLElement>('.mr-ghost')!;
+  expect(ghost.textContent).toContain('Removed intro.');
+  expect(ghost.nextElementSibling!.tagName).toBe('UL');
+  expect(r.content.querySelectorAll('ul .mr-ghost')).toHaveLength(0);
+});
+
+it('compares a code block without a language line by line', () => {
+  const r = renderMarkdown('```\nfirst\nold line\nlast\n```\n', '```\nfirst\nnew line\nlast\n```\n');
+  expect(r.blocks.some((block) => block.kind === 'modified')).toBe(true);
+  expect(r.content.querySelector('pre')!.dataset.lang).toBeUndefined();
+  expect(r.content.querySelectorAll('.mr-line, .mr-cl').length).toBeGreaterThan(3);
+});
+
+it('copes with an HTML block the sanitiser drops entirely', () => {
+  const r = renderMarkdown('Intro.\n', '<frameset></frameset>\n');
+  expect(r.content.querySelector('frameset')).toBeNull();
+  expect(r.blocks).toHaveLength(1);
+});
+
+it('keeps a changed diagram next to the other changes in the reading order', () => {
+  const diagram = (edge: string) => `\`\`\`mermaid\nflowchart LR\n  A --> ${edge}\n\`\`\`\n`;
+  const r = renderMarkdown(`Intro text here.\n\nA stable paragraph.\n\n${diagram('B')}`, `Intro text changed here.\n\nA stable paragraph.\n\n${diagram('C')}`);
+  expect(r.diagrams).toHaveLength(1);
+  expect(r.changes).toHaveLength(2);
+  expect(r.changes).toContain(r.diagrams[0].el);
+  expect(r.changes[0].textContent).toContain('Intro');
+});
+
+it('a removed heading or block keeps neither its anchor id nor a block id that raw HTML tried to forge', () => {
+  // The sanitiser lets block ids through (it must), so the removed block is cleaned afterwards.
+  const forged = `<div data-mr-u='1234:9' id="forged">Gone block</div>`;
+  const r = renderMarkdown(`Keep.\n\n## Gone heading\n\n${forged}\n`, 'Keep.\n');
+  const ghosts = [...r.content.querySelectorAll('.mr-ghost')];
+  expect(ghosts.map((ghost) => ghost.textContent).join(' ')).toContain('Gone heading');
+  expect(ghosts.map((ghost) => ghost.textContent).join(' ')).toContain('Gone block');
+  expect(r.content.querySelectorAll('.mr-ghost [id], .mr-ghost [data-mr-u]')).toHaveLength(0);
+});
+
+it('a heading in a comment cannot take an anchor id from the document', () => {
+  const frag = renderSnippet(document, '## Title\n\nBody', location.origin);
+  expect(frag.querySelector('h2')!.textContent).toBe('Title');
+  expect(frag.querySelectorAll('[id]')).toHaveLength(0);
+});

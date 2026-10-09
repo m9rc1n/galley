@@ -84,7 +84,7 @@ export function renderCodeFile(doc: Document, ref: DocRef, contents: DocContents
     diagrams: [],
     isCode: true,
     lead: null,
-    title: ref.path.split('/').pop() ?? ref.path,
+    title: ref.path.slice(ref.path.lastIndexOf('/') + 1),
     description: null,
     words: 0,
     heldImages: 0,

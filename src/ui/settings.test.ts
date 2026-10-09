@@ -95,3 +95,15 @@ it('falls back to defaults after malformed data or denied reads, and tolerates d
   });
   await expect(saveSettings(DEFAULT_SETTINGS)).resolves.toBeUndefined();
 });
+
+it('uses the defaults when extension storage holds nothing yet, or cannot be reached at all', async () => {
+  vi.stubGlobal('chrome', { storage: { local: { get: async () => ({}), set: async () => {} } } });
+  expect(await loadSettings()).toEqual(DEFAULT_SETTINGS);
+  vi.stubGlobal('chrome', {
+    get storage(): never {
+      throw new Error('Extension context invalidated');
+    },
+  });
+  localStorage.setItem('galley:settings', JSON.stringify({ font: 'mono' }));
+  expect((await loadSettings()).font).toBe('mono');
+});

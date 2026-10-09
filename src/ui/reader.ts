@@ -258,14 +258,14 @@ function actionButton(label: string, act: string, className: string): HTMLButton
 
 /** "docs/adr/0007-use-markdown.md" → "0007 use markdown" */
 function prettyName(path: string): string {
-  const file = path.split('/').pop() ?? path;
+  const file = path.slice(path.lastIndexOf('/') + 1);
   return file.replace(/\.(md|markdown|mdown|mkd|mdx)$/i, '').replace(/[-_]+/g, ' ');
 }
 
 function textWithoutDeletions(el: HTMLElement): string {
   const clone = el.cloneNode(true) as HTMLElement;
   for (const del of clone.querySelectorAll('del')) del.remove();
-  return clone.textContent?.trim() ?? '';
+  return clone.textContent!.trim();
 }
 
 const relative =
@@ -283,7 +283,7 @@ function relativeTime(iso: string): string {
 
 /** Tight list items are inline spans; their visual block is the list item. */
 function surfaceOf(el: HTMLElement): HTMLElement {
-  return el.matches('.mr-tight') ? (el.closest('li') ?? el) : el;
+  return el.matches('.mr-tight') ? el.closest('li')! : el;
 }
 
 /** What a failed write says to the reviewer, with the platform's advice when it has some. */
@@ -430,7 +430,6 @@ class Reader {
   private lastStep: { el: HTMLElement; at: number } | null = null;
   private views: View[] = [];
   private readonly viewed = new Map<DocRef, { value: boolean; ready: boolean; busy: boolean; key?: string; error?: string }>();
-  private viewedLoading: Promise<void> | null = null;
   private drawerFocus: HTMLElement | null = null;
   private zoomFrom: HTMLElement | null = null;
   private readonly blockOf = new WeakMap<Element, { view: View; block: RenderedBlock }>();
@@ -498,12 +497,12 @@ class Reader {
     this.el.article.prepend(this.rail, this.commentBtn);
     q('.mr-tb-right').prepend(this.el.pill);
     this.root.addEventListener('mouseup', (e) => this.captureSelection(e));
-    this.el.doc.addEventListener('pointerover', (e) => this.onHover(e.target));
-    this.el.doc.addEventListener('focusin', (e) => this.onHover(e.target));
+    this.el.doc.addEventListener('pointerover', (e) => this.onHover(e.target as Element));
+    this.el.doc.addEventListener('focusin', (e) => this.onHover(e.target as Element));
     this.root.addEventListener('pointermove', (e) => this.trackPointer(e), { passive: true });
     this.root.addEventListener('pointerleave', () => this.clearHover());
-    this.root.addEventListener('pointerover', (e) => this.linkCard(e.target));
-    this.root.addEventListener('focusin', (e) => this.onFocusIn(e.target));
+    this.root.addEventListener('pointerover', (e) => this.linkCard(e.target as Element));
+    this.root.addEventListener('focusin', (e) => this.onFocusIn(e.target as Element));
     this.el.doc.addEventListener('pointerup', (e) => {
       if (e.pointerType === 'touch') {
         // Shadow DOM retargets the event after dispatch; retain the actual paragraph for the deferred tap.
@@ -592,7 +591,7 @@ class Reader {
     this.host.remove();
     document.documentElement.style.overflow = this.prevOverflow;
     if (this.prevFocus instanceof HTMLElement) this.prevFocus.focus({ preventScroll: true });
-    if (active === this) active = null;
+    active = null;
     this.onClose?.();
   }
 
@@ -610,7 +609,7 @@ class Reader {
       p.append(a, ' with read-only access to Contents and Pull requests, then click the Galley icon in your browser toolbar to save it.');
       extra.push(p);
     }
-    this.showMessage(e.message, e.hint, extra, Boolean(this.source));
+    this.showMessage(e.message, e.hint, extra);
   }
 
   // ---------------------------------------------------------------- documents
@@ -691,8 +690,8 @@ class Reader {
   }
 
   private show(index: number): void {
+    // Callers only offer visible documents: the menu, stepDoc and the starting index all skip hidden ones.
     const view = this.views[index];
-    if (!view || view.section.hidden) return;
     this.index = index;
     this.rendered = view.rendered;
     this.closeMenus();
@@ -824,9 +823,9 @@ class Reader {
     menu.replaceChildren();
     const head = h('div', 'mr-files-head');
     head.setAttribute('role', 'presentation');
-    head.append(h('p', 'mr-files-title', this.source?.title ?? ''));
+    head.append(h('p', 'mr-files-title', this.source!.title));
     const meta = h('p', 'mr-files-meta');
-    if (this.source?.subtitle) meta.append(h('span', 'mr-files-source', this.source.subtitle));
+    if (this.source!.subtitle) meta.append(h('span', 'mr-files-source', this.source!.subtitle));
     meta.append(h('span', 'mr-files-progress', `${docs.filter((doc) => this.viewed.get(doc)?.value).length} of ${docs.length} viewed`));
     head.append(meta);
     menu.append(head);
@@ -864,7 +863,7 @@ class Reader {
     return s;
   }
 
-  private showMessage(title: string, body: string, extra: Node[] = [], retry = false): void {
+  private showMessage(title: string, body: string, extra: Node[] = []): void {
     this.rendered = null;
     this.el.toc.replaceChildren();
     this.el.gutter.replaceChildren();
@@ -874,7 +873,6 @@ class Reader {
     if (body) box.append(h('p', '', body));
     box.append(...extra);
     const actions = h('div', 'mr-actions');
-    if (retry) actions.append(actionButton('Try again', 'retry', 'mr-primary'));
     actions.append(actionButton('Back to the diff', 'close', 'mr-outline'));
     box.append(actions);
     this.el.doc.replaceChildren(box);
@@ -943,27 +941,23 @@ class Reader {
     }
   }
 
-  private initNativeViewed(): Promise<void> {
-    if (this.viewedLoading) return this.viewedLoading;
-    this.viewedLoading = (async () => {
-      for (const state of this.viewed.values()) state.busy = true;
-      this.updateViewed();
-      try {
-        const paths = await this.source!.viewed!.load();
-        for (const [doc, state] of this.viewed) {
-          state.value = paths.includes(doc.path);
-          state.ready = true;
-          state.error = undefined;
-        }
-      } catch (err) {
-        for (const state of this.viewed.values()) state.error = err instanceof Error ? err.message : String(err);
-      } finally {
-        this.viewedLoading = null;
-        for (const state of this.viewed.values()) state.busy = false;
-        if (!this.closed) this.updateViewed();
+  /** Busy documents ignore the Viewed control, so only one load is ever in flight. */
+  private async initNativeViewed(): Promise<void> {
+    for (const state of this.viewed.values()) state.busy = true;
+    this.updateViewed();
+    try {
+      const paths = await this.source!.viewed!.load();
+      for (const [doc, state] of this.viewed) {
+        state.value = paths.includes(doc.path);
+        state.ready = true;
+        state.error = undefined;
       }
-    })();
-    return this.viewedLoading;
+    } catch (err) {
+      for (const state of this.viewed.values()) state.error = err instanceof Error ? err.message : String(err);
+    } finally {
+      for (const state of this.viewed.values()) state.busy = false;
+      if (!this.closed) this.updateViewed();
+    }
   }
 
   private updateViewed(): void {
@@ -997,7 +991,6 @@ class Reader {
 
   private async toggleViewed(index: number): Promise<void> {
     const view = this.views[index];
-    if (!view) return;
     const state = this.viewed.get(view.doc)!;
     if (state.busy) return;
     if (!state.ready) {
@@ -1179,7 +1172,7 @@ class Reader {
     // Several conversations can share one paragraph, so the list holds cards, positioned by their text.
     const cards = threads.map((thread) => thread.card);
     const tops = new Map(threads.map((thread) => [thread.card, thread.anchor.getBoundingClientRect().top]));
-    const card = this.nextOf(cards, direction, (el) => tops.get(el) ?? 0);
+    const card = this.nextOf(cards, direction, (el) => tops.get(el)!);
     if (!card) {
       this.toast(direction === 1 ? 'No more conversations below' : 'No more conversations above');
       return;
@@ -1212,7 +1205,8 @@ class Reader {
   /** The settings sheet, open at one of its tabs. */
   private openSettings(tab: SettingsTab): void {
     this.selectSettingsTab(tab);
-    if (this.el.settings.hidden) this.toggleMenu(this.el.settings, this.shadow.querySelector<HTMLElement>('[data-act="settings"]'));
+    // Shortcuts are ignored while the sheet is open, so it is always closed here.
+    this.toggleMenu(this.el.settings, this.shadow.querySelector<HTMLElement>('[data-act="settings"]'));
     this.revealPalette();
   }
 
@@ -1269,7 +1263,7 @@ class Reader {
   private revealPalette(): void {
     const track = this.paletteTrack();
     const page = track.querySelector(`[data-value="${this.settings.theme}"]`)?.closest('.mr-palette-page');
-    this.turnPalettes(page ? [...track.children].indexOf(page) : 0, false);
+    this.turnPalettes([...track.children].indexOf(page!), false);
   }
 
   private stepDoc(direction: 1 | -1): void {
@@ -1440,7 +1434,7 @@ class Reader {
       e.preventDefault();
       const id = decodeURIComponent(anchor.getAttribute('href')!.slice(1));
       const content = anchor.closest('.mr-content');
-      const dest = id ? [...(content?.querySelectorAll('[id]') ?? [])].find((el) => el.id === id || el.id === `user-content-${id}`) : undefined;
+      const dest = id ? [...content!.querySelectorAll('[id]')].find((el) => el.id === id || el.id === `user-content-${id}`) : undefined;
       if (dest?.closest('[hidden]')) this.update({ scope: 'all' });
       if (dest) this.scrollToEl(dest, 0.12);
       return;
@@ -1526,43 +1520,36 @@ class Reader {
         void this.loadView(Number(action.dataset.doc));
         return;
       case 'comment-block':
-        if (this.hover) this.commentOn(this.hover);
+        this.commentOn(this.hover!);
         return;
       case 'comment-selection':
-        if (this.chipTarget) this.startComment(this.chipTarget.target, this.chipTarget.elements, this.chipTarget.range);
+        this.startComment(this.chipTarget!.target, this.chipTarget!.elements, this.chipTarget!.range);
         return;
       case 'reply-to': {
-        const thread = this.threadByCard.get(action.closest('.mr-thread')!);
-        if (thread) this.openReply(thread, Number(action.dataset.comment));
+        this.openReply(this.threadByCard.get(action.closest('.mr-thread')!)!, Number(action.dataset.comment));
         return;
       }
       case 'load-image': {
-        const img = action.closest('.mr-img-hold')?.nextElementSibling;
-        if (img instanceof HTMLImageElement) this.loadImages(img.parentElement!);
+        this.loadImages(action.closest('.mr-img-hold')!.parentElement!);
         return;
       }
       case 'load-images':
-        this.loadImages(action.closest('.mr-document') ?? this.root);
+        this.loadImages(action.closest('.mr-document')!);
         return;
       case 'toggle-thread': {
-        const card = action.closest('.mr-thread');
-        card?.classList.toggle('is-expanded');
-        action.textContent = card?.classList.contains('is-expanded') ? 'Show fewer replies' : (action.dataset.label ?? '');
+        const card = action.closest('.mr-thread')!;
+        card.classList.toggle('is-expanded');
+        action.textContent = card.classList.contains('is-expanded') ? 'Show fewer replies' : action.dataset.label!;
         this.schedule(true);
         return;
       }
-      case 'retry':
-        if (this.source) void this.show(this.index);
-        return;
       case 'heading': {
         e.preventDefault();
-        const hd = this.headings[Number(action.dataset.i)];
-        if (hd) this.scrollToEl(hd.el, 0.12, false);
+        this.scrollToEl(this.headings[Number(action.dataset.i)].el, 0.12, false);
         return;
       }
       case 'mark': {
-        const dest = this.markTargets[Number(action.dataset.i)];
-        if (dest) this.scrollToEl(dest);
+        this.scrollToEl(this.markTargets[Number(action.dataset.i)]);
         return;
       }
     }
@@ -1575,16 +1562,15 @@ class Reader {
   // in the comments column or below the block on narrow screens, and keeps its draft until it is
   // posted or cancelled. Replies are written inside their thread.
 
-  private hitFor(view: View, block: RenderedBlock, node?: Node): Hit {
-    const el = node instanceof Element ? node : node?.parentElement;
+  private hitFor(view: View, block: RenderedBlock, el?: Element): Hit {
     const version = el?.closest<HTMLElement>('.mr-diagram-version') ?? null;
     const old = el?.closest('.mr-ghost-row, [data-mr-side="base"]');
     return { view, block, side: old || !block.head ? 'base' : 'head', el: version ?? block.el };
   }
 
   /** The innermost rendered block containing `node`. */
-  private blockAt(node: Node): Hit | null {
-    for (let el: Element | null = node instanceof Element ? node : node.parentElement; el && !el.matches('.mr-document'); el = el.parentElement) {
+  private blockAt(node: Element): Hit | null {
+    for (let el: Element | null = node; el && !el.matches('.mr-document'); el = el.parentElement) {
       if (el.matches('.mr-thread, .mr-composer')) return null;
       const entry = this.blockOf.get(el);
       if (entry) return this.hitFor(entry.view, entry.block, node);
@@ -1592,8 +1578,7 @@ class Reader {
     return null;
   }
 
-  private onHover(node: EventTarget | null): void {
-    if (!(node instanceof Node)) return;
+  private onHover(node: Element): void {
     const hit = this.blockAt(node);
     if (!hit || (hit.el === this.hover?.el && hit.side === this.hover.side)) return;
     this.hover = hit;
@@ -1631,8 +1616,8 @@ class Reader {
   }
 
   /** Pointing at a card, or at the comment control, marks the text it belongs to. */
-  private linkCard(node: EventTarget | null): void {
-    const card = node instanceof Element ? node.closest<HTMLElement>('.mr-thread, .mr-composer, .mr-comment-btn') : null;
+  private linkCard(node: Element): void {
+    const card = node.closest<HTMLElement>('.mr-thread, .mr-composer, .mr-comment-btn');
     const anchor = card === this.commentBtn ? this.hover?.el : card ? this.anchorOf(card) : undefined;
     const el = anchor ? surfaceOf(anchor) : null;
     if (el === this.linked) return;
@@ -1646,8 +1631,8 @@ class Reader {
   }
 
   /** The card in use is the one the comments column is arranged around. */
-  private onFocusIn(node: EventTarget | null): void {
-    const card = node instanceof Element ? node.closest<HTMLElement>('.mr-thread, .mr-composer') : null;
+  private onFocusIn(node: Element): void {
+    const card = node.closest<HTMLElement>('.mr-thread, .mr-composer');
     if (!card || card === this.active) return;
     this.active = card;
     this.schedule(true);
@@ -1675,8 +1660,9 @@ class Reader {
     button.classList.toggle('is-beside-code', lane && hover.view.doc.kind === 'code');
     button.classList.remove('is-gap');
     button.classList.toggle('is-compact', !lane && this.root.clientWidth - right < 140);
-    const unit = hover.side === 'base' ? hover.block.base : hover.block.head;
-    const label = unit ? `Comment on ${placeName(hover.side, unit.lines[0] + 1, unit.lines[1])}` : 'Comment';
+    // A hit always carries the side its block has.
+    const unit = (hover.side === 'base' ? hover.block.base : hover.block.head)!;
+    const label = `Comment on ${placeName(hover.side, unit.lines[0] + 1, unit.lines[1])}`;
     button.setAttribute('aria-label', label);
     button.title = `${label} (R)`;
     button.querySelector('.mr-comment-btn-label')!.textContent = lane ? 'Add a comment…' : 'Comment';
@@ -1701,8 +1687,7 @@ class Reader {
   }
 
   private commentOn(hit: Hit): void {
-    const target = paragraphTarget(hit.view.doc, hit.block, hit.side);
-    if (target) this.startComment(target, [hit.el]);
+    this.startComment(paragraphTarget(hit.view.doc, hit.block, hit.side)!, [hit.el]);
   }
 
   /** R: the selected words if there are any, otherwise the block nearest the reading line. */
@@ -1746,10 +1731,9 @@ class Reader {
     if (!selection || selection.isCollapsed || !selection.rangeCount) return;
     const range = selection.getRangeAt(0);
     const view = this.views.find((v) => v.section.contains(range.startContainer) && v.section.contains(range.endContainer));
-    const inCard = [range.startContainer, range.endContainer].some((node) =>
-      (node instanceof Element ? node : node.parentElement)?.closest('.mr-composer, .mr-thread'),
-    );
-    if (!view?.rendered || inCard) {
+    const inCard = () =>
+      [range.startContainer, range.endContainer].some((node) => (node instanceof Element ? node : node.parentElement!).closest('.mr-composer, .mr-thread'));
+    if (!view?.rendered || inCard()) {
       this.hideChip();
       return;
     }
@@ -1802,9 +1786,8 @@ class Reader {
   private startComment(target: CommentTarget, elements: HTMLElement[], range?: Range): void {
     this.hideChip();
     this.el.toast.hidden = true;
-    const view = this.views.find((v) => v.doc === target.doc);
-    const anchor = elements.at(-1);
-    if (!view?.rendered || !anchor) return;
+    const view = this.views.find((v) => v.doc === target.doc)!;
+    const anchor = elements.at(-1)!;
     const existing = this.drafts.find((draft) => sameTarget(draft.target, target));
     if (existing) {
       this.focusEditor(existing);
@@ -1814,9 +1797,14 @@ class Reader {
     for (const draft of this.drafts.filter((item) => !item.busy && !hasDraft(item))) this.closeDraft(draft);
     const place = placeName(target.side, target.startLine, target.endLine);
     const path = target.side === 'base' ? target.doc.oldPath : target.doc.path;
-    const editor = this.createEditor('mr-composer', `New comment on ${path}, ${place}`, 'Add a comment…', 'Comment');
+    const editor = this.createEditor(
+      'mr-composer',
+      `New comment on ${path}, ${place}`,
+      'Add a comment…',
+      'Comment',
+      (built) => void this.postDraft(built as Draft),
+    );
     const draft: Draft = Object.assign(editor, { target, view, anchor, range, marks: [...new Set(elements.map(surfaceOf))], plan: null as CommentPlan | null });
-    draft.send = () => void this.postDraft(draft);
     draft.form.prepend(h('p', 'mr-comment-target', `Comment on ${place}`));
     if (range) draft.form.insertBefore(h('blockquote', `mr-comment-quote${target.doc.kind === 'code' ? ' is-code' : ''}`, target.quote), draft.textarea);
     draft.cancel.addEventListener('click', () => this.closeDraft(draft));
@@ -1879,11 +1867,9 @@ class Reader {
       this.setBusy(draft, false);
       this.closeDraft(draft);
       this.attachThreads(draft.view);
-      const card = this.cardOf(thread);
-      if (card) {
-        this.active = card;
-        card.classList.add('is-new');
-      }
+      const card = this.cardOf(thread)!;
+      this.active = card;
+      card.classList.add('is-new');
       this.layoutThreads();
       this.toast('Comment posted', result.url);
     } catch (err) {
@@ -1921,7 +1907,8 @@ class Reader {
     else CSS.highlights?.delete('galley-quote');
   }
 
-  private createEditor(className: string, label: string, placeholder: string, action: string): Editor {
+  /** `send` posts what the editor holds; the editor it is given is the one being built, later extended into a Draft or ReplyEditor. */
+  private createEditor(className: string, label: string, placeholder: string, action: string, send: (editor: Editor) => void): Editor {
     const form = h('form', className);
     form.setAttribute('aria-label', label);
     const textarea = h('textarea');
@@ -1941,7 +1928,7 @@ class Reader {
     const actions = h('div', 'mr-compose-actions');
     actions.append(status, cancel, submit);
     form.append(textarea, actions);
-    const editor: Editor = { form, textarea, status, cancel, submit, ready: false, busy: false, prefill: '', send: () => {} };
+    const editor: Editor = { form, textarea, status, cancel, submit, ready: false, busy: false, prefill: '', send: () => send(editor) };
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       editor.send();
@@ -2018,12 +2005,11 @@ class Reader {
   private replyEditor(thread: Thread): ReplyEditor {
     const existing = this.replyEditors.get(thread);
     if (existing) return existing;
-    const base = this.createEditor('mr-reply', `Reply to ${thread.comments[0]?.author ?? 'this thread'}`, 'Write a reply…', 'Reply');
+    const base = this.createEditor('mr-reply', `Reply to ${thread.comments[0].author}`, 'Write a reply…', 'Reply', () => void this.postReply(thread));
     const editor: ReplyEditor = Object.assign(base, { thread, to: 0, context: h('p', 'mr-reply-context') });
     editor.form.prepend(editor.context);
     editor.form.hidden = true;
     editor.ready = true;
-    editor.send = () => void this.postReply(thread);
     editor.cancel.addEventListener('click', () => this.closeReply(thread));
     editor.textarea.addEventListener('focus', () => {
       if (!editor.status.textContent) editor.status.textContent = `${SUBMIT_KEY} to reply`;
@@ -2037,9 +2023,8 @@ class Reader {
    * to a reply goes to the same thread and names the person it answers.
    */
   private openReply(thread: Thread, index: number): void {
-    const card = this.cardOf(thread);
+    const card = this.cardOf(thread)!;
     const comment = thread.comments[index];
-    if (!card || !comment || !thread.reply) return;
     const editor = this.replyEditor(thread);
     const author = comment.author;
     // Mentions use the username; a display name with spaces would mention nobody.
@@ -2068,7 +2053,7 @@ class Reader {
     editor.status.textContent = '';
     editor.form.hidden = true;
     this.fitEditor(editor);
-    if (focused) (this.cardOf(thread)?.querySelectorAll<HTMLElement>('.mr-reply-to')[editor.to] ?? this.root).focus({ preventScroll: true });
+    if (focused) this.cardOf(thread)!.querySelectorAll<HTMLElement>('.mr-reply-to')[editor.to].focus({ preventScroll: true });
   }
 
   private async postReply(thread: Thread): Promise<void> {
@@ -2089,7 +2074,7 @@ class Reader {
       this.fitEditor(editor);
       this.refreshCard(thread);
       // The conversation continues from the new reply.
-      if (focused) [...(this.cardOf(thread)?.querySelectorAll<HTMLElement>('.mr-reply-to') ?? [])].at(-1)?.focus({ preventScroll: true });
+      if (focused) [...this.cardOf(thread)!.querySelectorAll<HTMLElement>('.mr-reply-to')].at(-1)!.focus({ preventScroll: true });
       this.toast('Reply posted', result.url);
     } catch (err) {
       if (this.closed) return;
@@ -2109,8 +2094,7 @@ class Reader {
 
   /** Redraw a thread in place, keeping its position and the cursor in its reply box. */
   private refreshCard(thread: Thread): void {
-    const old = this.cardOf(thread);
-    if (!old) return;
+    const old = this.cardOf(thread)!;
     const editor = this.replyEditors.get(thread);
     const focused = editor?.form.contains(this.shadow.activeElement);
     const card = this.threadCard(thread);
@@ -2181,10 +2165,7 @@ class Reader {
     const card = h('aside', `mr-thread${own ? ' is-own' : ''}${thread.resolved ? ' is-resolved' : ''}`);
     this.threadByCard.set(card, thread);
     const first = thread.comments[0];
-    card.setAttribute(
-      'aria-label',
-      `Comment by ${first?.author ?? 'unknown'}${thread.line ? ` on ${thread.side === 'base' ? 'old' : 'new'} line ${thread.line}` : ''}`,
-    );
+    card.setAttribute('aria-label', `Comment by ${first.author}${thread.line ? ` on ${thread.side === 'base' ? 'old' : 'new'} line ${thread.line}` : ''}`);
     const fold = thread.comments.length > 3;
     const editor = this.replyEditors.get(thread);
     thread.comments.forEach((comment, i) => {
@@ -2395,10 +2376,10 @@ class Reader {
       const mark = h('div', `mr-mark is-${s.kind}${s.point ? ' is-point' : ''}`);
       mark.style.top = `${s.top}px`;
       mark.style.height = `${Math.max(4, s.bottom - s.top)}px`;
-      mark.dataset.label = label[s.kind] ?? '';
+      mark.dataset.label = label[s.kind];
       mark.dataset.act = 'mark';
       mark.dataset.i = String(i);
-      this.markTargets.push(s.point ? ((nextVisible(s.target, s.target.closest('.mr-content')!) as HTMLElement) ?? s.target) : s.target);
+      this.markTargets.push(s.point ? (nextVisible(s.target, s.target.closest('.mr-content')!) as HTMLElement) : s.target);
       gutter.append(mark);
     });
   }

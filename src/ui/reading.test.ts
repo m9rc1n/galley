@@ -124,3 +124,15 @@ it('one consecutive unchanged stretch spans lists, quotes and prose under one fo
   expect(r.content.querySelectorAll('.mr-context-toggle')).toHaveLength(1);
   r.content.remove();
 });
+
+it('keeps a footnote section only while a visible paragraph cites a footnote', () => {
+  // Empty definitions have no block of their own, so the section follows the paragraphs that cite them.
+  const section = (r: ReturnType<typeof render>) => r.content.querySelector<HTMLElement>('section.footnotes')!;
+  const separator = (r: ReturnType<typeof render>) => r.content.querySelector<HTMLElement>('.footnotes-sep')!;
+  const cited = render('Intro note[^1].\n\nOther.\n\n[^1]:\n', 'Intro note[^1].\n\nOther changed.\n\n[^1]:\n');
+  filterDocument(cited, true);
+  expect([section(cited).hidden, separator(cited).hidden]).toEqual([true, true]);
+  const edited = render('Intro note[^1].\n\nOther.\n\n[^1]:\n', 'Intro note changed[^1].\n\nOther.\n\n[^1]:\n');
+  filterDocument(edited, true);
+  expect([section(edited).hidden, separator(edited).hidden]).toEqual([false, false]);
+});

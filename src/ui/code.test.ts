@@ -58,3 +58,9 @@ it('renders code blocks as one element per line, each tagged with its line for c
   expect(rows.map((el) => el.dataset.line)).toStrictEqual(['h:0', 'h:1', 'h:2']);
   expect(rows[1].style.getPropertyValue('--indent')).toBe('4ch');
 });
+
+it('splits highlighted code in a document that belongs to no window', () => {
+  const detached = document.implementation.createHTMLDocument('');
+  expect(detached.defaultView).toBeNull();
+  expect(splitHighlighted(detached, '<span class="hljs-keyword">const</span> a\nb').map((line) => line.textContent)).toEqual(['const a', 'b']);
+});

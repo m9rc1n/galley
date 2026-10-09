@@ -3,7 +3,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { applyOps } from './highlight.ts';
 import { diffUnits, similarity } from './blockdiff.ts';
 import { reconstructBase } from './patch.ts';
-import { changeRatio, hasVisibleChange, wordDiff } from './worddiff.ts';
+import { isCodePath, resolveHref } from './paths.ts';
+import { changeRatio, factor, hasVisibleChange, wordDiff } from './worddiff.ts';
 import { isBalancedHtml, isCommentOnly, parseDocument, renderFrontMatter, renderUnit, splitFrontMatter } from './markdown.ts';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -165,4 +166,56 @@ it('splits words without Intl.Segmenter, as older browsers need', async () => {
     ['ins', 'big'],
   ]);
   expect(tokenize('')).toEqual([]);
+});
+
+it('declines a patch it cannot parse, however the hunk is broken', () => {
+  expect(reconstructBase('new\n', '@@ -1 +1 @@\n-old\nnot a diff line\n')).toBeNull();
+  expect(reconstructBase('new\n', '@@ nonsense @@\n-old\n+new\n')).toBeNull();
+});
+
+it('keeps a percent-escape it cannot decode as written, in anchors and in paths', () => {
+  expect(resolveHref('docs/a.md', '#caf%E0%A4%A')).toEqual({ type: 'anchor', hash: 'caf%E0%A4%A' });
+  expect(resolveHref('docs/a.md', 'img/%E0%A4%A.png')).toEqual({ type: 'repo', path: 'docs/img/%E0%A4%A.png', suffix: '' });
+});
+
+it('decides from the file name, not from a folder name that looks like a file', () => {
+  expect(isCodePath('src/config.json')).toBe(true);
+  expect(isCodePath('src/config.json/notes')).toBe(false);
+  expect(isCodePath('Makefile')).toBe(true);
+});
+
+it('a list item or quote that starts with markup is neither a task nor an alert', () => {
+  const { html } = parseDocument('- *[x] emphasis* first\n- `[ ]` code first\n\n> *[!NOTE]* not an alert\n\n> `[!TIP]` neither\n');
+  expect(html).not.toContain('mr-task"');
+  expect(html).not.toContain('mr-alert');
+  expect(html).toContain('<em>[x] emphasis</em>');
+});
+
+it('shows a pure insertion when folded whitespace leaves nothing to delete', () => {
+  const ops = wordDiff(', terrible a bad   x', '  , x x , terrible and bad a');
+  const rebuild = (keep: (type: string) => boolean) =>
+    ops
+      .filter((op) => keep(op.type))
+      .map((op) => op.text)
+      .join('');
+  expect(rebuild((type) => type !== 'ins')).toBe(', terrible a bad   x');
+  expect(rebuild((type) => type !== 'del')).toBe('  , x x , terrible and bad a');
+});
+
+it('moves words shared by both ends of a replaced run back out as unchanged text', () => {
+  // A replacement that starts with the same word on both sides; folding (cleanup) never produces this
+  // with the diff library today, but a library update could, so the guard is checked directly.
+  expect(
+    factor([
+      { type: 'eq', text: 'See ' },
+      { type: 'del', text: 'the old plan' },
+      { type: 'ins', text: 'the new plan' },
+      { type: 'eq', text: '.' },
+    ]),
+  ).toEqual([
+    { type: 'eq', text: 'See the ' },
+    { type: 'del', text: 'old' },
+    { type: 'ins', text: 'new' },
+    { type: 'eq', text: ' plan.' },
+  ]);
 });

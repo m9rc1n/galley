@@ -135,3 +135,17 @@ it('reports a network failure as status 0', async () => {
   });
   expect(await send(request(FILES))).toStrictEqual({ status: 0, body: '', headers: {} });
 });
+
+it('starts even when saved tokens cannot be migrated yet', async () => {
+  const get = vi.fn(async () => {
+    throw new Error('storage unavailable');
+  });
+  vi.stubGlobal('chrome', {
+    runtime: { id: EXTENSION_ID, onMessage: { addListener: vi.fn() }, onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } },
+    storage: { local: { get, remove: async () => undefined } },
+  });
+  vi.resetModules();
+  await import('./worker.ts');
+  await vi.waitFor(() => expect(get).toHaveBeenCalledOnce());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+});

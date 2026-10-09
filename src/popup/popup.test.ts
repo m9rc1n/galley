@@ -180,3 +180,9 @@ it('offers guidance when there is no current tab and can enable a site without a
   await vi.waitFor(() => expect(q('#site').textContent).toContain('Enabled on git.example'));
   expect(api.scripting.executeScript).not.toHaveBeenCalled();
 });
+
+it('shows the site even when saved tokens cannot be migrated', async () => {
+  tokens.migrateTokens.mockRejectedValue(new Error('storage unavailable'));
+  await open();
+  expect(q('#site').textContent).not.toBe('');
+});

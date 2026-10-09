@@ -172,9 +172,8 @@ function longestRun(text: string, char: string): number {
   return best;
 }
 
-function inlineText(token: Token | undefined): string {
-  if (!token?.children) return token?.content ?? '';
-  return token.children.map((c) => (c.type === 'text' || c.type === 'code_inline' ? c.content : '')).join('');
+function inlineText(token: Token): string {
+  return token.children!.map((c) => (c.type === 'text' || c.type === 'code_inline' ? c.content : '')).join('');
 }
 
 /** Link and image destinations in tokens[from..to), after reference definitions are resolved. */
@@ -182,8 +181,8 @@ function linkTargets(tokens: Token[], from: number, to: number): string[] {
   const out: string[] = [];
   for (let i = from; i < to; i++) {
     for (const c of tokens[i].children ?? []) {
-      if (c.type === 'link_open') out.push(String(c.attrGet('href') ?? ''));
-      else if (c.type === 'image') out.push(String(c.attrGet('src') ?? ''));
+      if (c.type === 'link_open') out.push(String(c.attrGet('href')));
+      else if (c.type === 'image') out.push(String(c.attrGet('src')));
     }
   }
   return out;
@@ -198,7 +197,7 @@ function addUnit(env: RenderEnv, token: Token, kind: UnitKind, text: string, lev
     kind,
     key: `${kind}${level || ''}:${exact}${links.length ? `\u0000${links.join('\u0001')}` : ''}`,
     text: norm,
-    lines: token.map ? [token.map[0], token.map[1]] : [0, 0],
+    lines: [token.map![0], token.map![1]],
     inList: env.listDepth > 0,
     level,
     source,
@@ -224,7 +223,7 @@ function annotateUnits(state: StateCore): void {
         break;
       case 'heading_open': {
         const level = Number(t.tag.slice(1));
-        const content = tokens[i + 1]?.content ?? '';
+        const content = tokens[i + 1].content;
         addUnit(env, t, 'heading', content, level, `${'#'.repeat(level)} ${content}`, linkTargets(tokens, i + 1, i + 2));
         const base = slugify(inlineText(tokens[i + 1])) || 'section';
         const seen = env.slugs.get(base) ?? 0;
@@ -233,7 +232,7 @@ function annotateUnits(state: StateCore): void {
         break;
       }
       case 'paragraph_open': {
-        const content = tokens[i + 1]?.content ?? '';
+        const content = tokens[i + 1].content;
         addUnit(env, t, 'paragraph', content, 0, content, linkTargets(tokens, i + 1, i + 2));
         break;
       }
@@ -246,7 +245,7 @@ function annotateUnits(state: StateCore): void {
         addUnit(env, t, 'code', t.content, 0, `\`\`\`\n${t.content}\`\`\``);
         break;
       case 'table_open': {
-        const src = t.map ? env.lines.slice(t.map[0], t.map[1]).join('\n') : '';
+        const src = env.lines.slice(t.map![0], t.map![1]).join('\n');
         // Strip blockquote markers and indentation so the table renders on its own.
         const standalone = src
           .split('\n')
@@ -290,10 +289,10 @@ function alerts(state: StateCore): void {
   for (let i = 0; i + 2 < tokens.length; i++) {
     if (tokens[i].type !== 'blockquote_open' || tokens[i + 1].type !== 'paragraph_open') continue;
     const inline = tokens[i + 2];
-    const children = inline.children ?? [];
+    const children = inline.children!;
     const first = children[0];
-    const m = first?.type === 'text' ? /^\[!(note|tip|important|warning|caution)\][ \t]*/i.exec(first.content) : null;
-    if (!first || !m) continue;
+    const m = first.type === 'text' ? /^\[!(note|tip|important|warning|caution)\][ \t]*/i.exec(first.content) : null;
+    if (!m) continue;
     const kind = m[1].toLowerCase();
     // The title ("Note", "Warning"…) comes from the class in CSS, not from an attribute raw HTML could set.
     tokens[i].attrJoin('class', `mr-alert mr-alert-${kind}`);
@@ -312,17 +311,15 @@ function createMarkdown() {
   md.core.ruler.push('mr_units', annotateUnits);
 
   const rules = md.renderer.rules;
-  const unitAttr = (t: Token) => {
-    const id = t.attrGet('data-mr-u');
-    return id === null ? '' : ` data-mr-u="${id}"`;
-  };
+  // annotateUnits gives every block these rules draw a unit id.
+  const unitAttr = (t: Token) => ` data-mr-u="${t.attrGet('data-mr-u')}"`;
   // Tight list items have hidden paragraphs; render them as spans so each item still maps to a unit.
   rules.paragraph_open = (tokens, idx, options, _env, self) =>
     tokens[idx].hidden ? `<span class="mr-tight"${unitAttr(tokens[idx])}>` : self.renderToken(tokens, idx, options);
   rules.paragraph_close = (tokens, idx, options, _env, self) => (tokens[idx].hidden ? '</span>' : self.renderToken(tokens, idx, options));
   rules.fence = (tokens, idx) => {
     const t = tokens[idx];
-    const lang = t.info.trim().split(/\s+/)[0] ?? '';
+    const lang = t.info.trim().split(/\s+/)[0];
     const langAttr = lang ? ` data-lang="${escapeHtml(lang)}"` : '';
     return `<pre${unitAttr(t)}${langAttr}><code>${escapeHtml(t.content)}</code></pre>\n`;
   };

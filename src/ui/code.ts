@@ -108,8 +108,8 @@ const NAMES: Record<string, string> = {
 
 /** Highlighter language for a fence info string ("ts", "yaml title=x") or a file path. */
 export function languageOf(nameOrPath: string): string | null {
-  const word = nameOrPath.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
-  const file = word.split('/').pop() ?? '';
+  const word = nameOrPath.trim().split(/\s+/)[0].toLowerCase();
+  const file = word.slice(word.lastIndexOf('/') + 1);
   if (file === 'dockerfile' || file.startsWith('dockerfile.')) return 'dockerfile';
   if (file === 'makefile' || file === 'gnumakefile') return 'makefile';
   const key = file.includes('.') ? file.slice(file.lastIndexOf('.') + 1) : file;
@@ -158,7 +158,7 @@ export function registerCode(container: HTMLElement, source: CodeSource): void {
 export function lineify(doc: Document, pre: HTMLElement): void {
   const code = pre.querySelector('code') ?? pre;
   if (code.querySelector('[data-line]')) return;
-  const text = (code.textContent ?? '').replace(/\n$/, '');
+  const text = code.textContent!.replace(/\n$/, '');
   code.replaceChildren(...text.split('\n').map((line, i) => lineEl(doc, 'span', 'mr-cl', line, `h:${i}`)));
   registerCode(pre, { language: languageOf(pre.dataset.lang ?? ''), head: text });
 }
@@ -194,7 +194,7 @@ export function splitHighlighted(doc: Document, html: string): DocumentFragment[
   const walk = (node: Node) => {
     for (const child of node.childNodes) {
       if (child.nodeType === 3) {
-        (child.textContent ?? '').split('\n').forEach((part, i) => {
+        child.textContent!.split('\n').forEach((part, i) => {
           if (i) newline();
           if (part) chain[chain.length - 1].appendChild(doc.createTextNode(part));
         });
