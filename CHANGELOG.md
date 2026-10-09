@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/m9rc1n/galley/compare/v0.6.1...v0.7.0) (2026-10-09)
+
+
+### Features
+
+* **reader:** centre the text on wide screens ([45cb7d9](https://github.com/m9rc1n/galley/commit/45cb7d987661a46c9b47874b4d3885e941d7db69))
+* **reader:** centre the text on wide screens ([7896a54](https://github.com/m9rc1n/galley/commit/7896a54c186a948a96439536eca6b99d79ef8650))
+
+
+### Bug Fixes
+
+* **github:** retry file loads that fail for a moment ([985f4ea](https://github.com/m9rc1n/galley/commit/985f4ea8ea381b2c2efb2918028cf6c19e2d8752))
+
 ## [0.6.1](https://github.com/m9rc1n/galley/compare/v0.6.0...v0.6.1) (2026-10-09)
 
 
