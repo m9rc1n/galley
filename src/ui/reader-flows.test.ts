@@ -216,3 +216,12 @@ it('lets an untouched editor make way when a comment is started somewhere else',
   await ui.commentOn('.mr-content p:nth-of-type(2)');
   expect(ui.shadow().querySelectorAll('.mr-composer')).toHaveLength(1);
 });
+
+it('ignores reading shortcuts while the settings sheet is open', async () => {
+  await ui.open(review());
+  ui.click('[data-act="settings"]');
+  ui.scroll.mockClear();
+  ui.key('j');
+  expect(ui.scroll).not.toHaveBeenCalled();
+  expect(ui.q('.mr-settings').hidden).toBe(false);
+});

@@ -8,7 +8,7 @@ it('opens the review, replaces counts, and reattaches when a single-page navigat
   const launcher = new Launcher(),
     open = vi.fn();
   launcher.show('review1', 1, open);
-  expect(button().title).toContain('1 changed text file as');
+  expect(button().title).toContain('1 changed file in Galley');
   button().click();
   expect(open).toHaveBeenCalledOnce();
   const host = document.querySelector('#galley-launcher')!;
@@ -17,7 +17,7 @@ it('opens the review, replaces counts, and reattaches when a single-page navigat
   expect(host.isConnected).toBe(true);
   launcher.show('review2', 3, open);
   expect(host.isConnected).toBe(false);
-  expect(button().title).toContain('3 changed text files');
+  expect(button().title).toContain('3 changed files in Galley');
   launcher.hide();
   launcher.reattach();
   expect(document.querySelector('#galley-launcher')).toBeNull();
@@ -40,7 +40,7 @@ it('offers an error launcher whose click opens details and whose count cannot co
   const launcher = new Launcher(),
     open = vi.fn();
   launcher.show('error', 0, open, true);
-  expect(button().title).toContain('Click for details');
+  expect(button().title).toContain('Click to retry');
   expect(button('.count').textContent).toBe('!');
   expect(button().classList).toContain('is-error');
   button().click();

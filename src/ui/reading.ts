@@ -7,8 +7,10 @@ export const CODE_CONTEXT = 2;
 
 /** Hide unchanged blocks, retain relevant headings, and let every gap reveal its own context. */
 export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
+  r.content.dataset.mrScope = changedOnly ? 'changed' : 'all';
   for (const gap of r.content.querySelectorAll('.mr-context-gap')) gap.remove();
-  for (const el of r.content.querySelectorAll<HTMLElement>('[hidden]')) el.hidden = false;
+  for (const el of r.content.querySelectorAll<HTMLElement>('[hidden]:not([data-mr-comment-view])')) el.hidden = false;
+  const blocks = r.blocks.filter((block) => !block.el.closest('[data-mr-comment-view][hidden]'));
   if (!changedOnly) return;
   let expanded = revealed.get(r);
   if (!expanded) {
@@ -17,7 +19,7 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
   }
   const context = new Set<HTMLElement>();
   const headings: RenderedBlock[] = [];
-  for (const block of r.blocks) {
+  for (const block of blocks) {
     const unit = block.head ?? block.base!;
     if (unit.kind === 'heading' && block.kind !== 'removed') {
       while (headings.length && headings[headings.length - 1].head!.level >= unit.level) headings.pop();
@@ -27,14 +29,15 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
   }
   if (r.lead) context.add(r.lead);
   if (r.isCode) {
-    r.blocks.forEach((block, i) => {
+    for (const block of blocks) if ('mrSpecContext' in block.el.dataset) context.add(block.el);
+    blocks.forEach((block, i) => {
       if (block.kind === 'same') return;
-      for (let j = Math.max(0, i - CODE_CONTEXT); j <= Math.min(r.blocks.length - 1, i + CODE_CONTEXT); j++) context.add(r.blocks[j].el);
+      for (let j = Math.max(0, i - CODE_CONTEXT); j <= Math.min(blocks.length - 1, i + CODE_CONTEXT); j++) context.add(blocks[j].el);
     });
   }
   const gaps: Array<{ blocks: RenderedBlock[]; anchor: HTMLElement; parent: HTMLElement }> = [];
   let previous: (typeof gaps)[number] | undefined;
-  for (const block of r.blocks) {
+  for (const block of blocks) {
     // Blocks with review threads stay in view, like changed ones.
     const unchanged = block.kind === 'same' && !context.has(block.el) && !('mrThreads' in block.el.dataset);
     block.el.hidden = unchanged && !expanded.has(block.el);
@@ -73,9 +76,9 @@ export function filterDocument(r: RenderedDoc, changedOnly: boolean): void {
   }
   // Empty wrappers disappear, except when they contain a context toggle.
   for (const el of [...r.content.querySelectorAll<HTMLElement>('li:not(.mr-context-gap), ul, ol, blockquote, section')].reverse()) {
-    const children = r.blocks.filter((block) => el.contains(block.el));
+    const children = blocks.filter((block) => el.contains(block.el));
     if (children.length) el.hidden = children.every((block) => block.el.hidden) && !el.querySelector('.mr-context-gap');
-    else if (el.matches('section.footnotes')) el.hidden = !r.blocks.some((block) => !block.el.hidden && block.el.querySelector('.footnote-ref'));
+    else if (el.matches('section.footnotes')) el.hidden = !blocks.some((block) => !block.el.hidden && block.el.querySelector('.footnote-ref'));
   }
   const separator = r.content.querySelector<HTMLElement>('.footnotes-sep');
   if (separator) separator.hidden = r.content.querySelector<HTMLElement>('section.footnotes')!.hidden;
@@ -115,7 +118,9 @@ export function selectionTarget(doc: DocRef, blocks: RenderedBlock[], range: Ran
     (block) => range.intersectsNode(block.el) && !block.el.closest('[hidden]') && !(block.el.classList.contains('mr-ghost') && block.el.closest('.mode-clean')),
   );
   if (covered.some((block) => !(side === 'base' ? block.base : block.head))) return null;
-  if (doc.kind === 'code') {
+  const prose = first.el.closest('.mr-source-comment-body');
+  if (doc.kind === 'code' && covered.some((block) => Boolean(block.el.closest('.mr-source-comment-body')) !== Boolean(prose))) return null;
+  if (doc.kind === 'code' && !prose) {
     // DOM ranges include gutters and concatenate rows. Quote only source text, with its newlines.
     const rows = covered.flatMap((block) => {
       // The whole line: once highlighted, its text is split across token spans. Blank lines count too.

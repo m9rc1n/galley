@@ -1,5 +1,6 @@
-// Renders the Chrome Web Store graphics from the real reader (via the demo) into store/assets/:
-//   5 real screenshots, two mission promo tiles, a README hero, and the store icon.
+// Renders the store, README and website graphics into store/assets/:
+//   real reader captures (reader-*.jpg, 2× for sharp screens) taken from the demo, then the artwork
+//   that frames them (captioned store screenshots, before/after) and the typeset promo art.
 //   npm run store-assets        (uses Chrome from CHROME_PATH, or the usual install locations)
 import { existsSync, readdirSync } from 'node:fs';
 import { copyFile, mkdir, rm } from 'node:fs/promises';
@@ -41,27 +42,44 @@ const server = await startDemoServer(0);
 const base = `http://localhost:${server.address().port}`;
 const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true });
 
-/** Open the demo with the given reader settings, optionally scroll to a heading and open a menu. */
-async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
+/**
+ * Open the demo with the given reader settings, optionally scroll to a heading or paragraph, open a
+ * menu, and run `act` in the page (inside the reader's shadow root) before the capture.
+ */
+async function readerShot({ settings, doc = 0, heading, offset = 110, menu, act, scale = 2 }) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: scale });
-  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: settings.appearance === 'dark' ? 'dark' : 'light' }]);
+  await page.emulateMediaFeatures([
+    { name: 'prefers-color-scheme', value: settings.appearance === 'dark' ? 'dark' : 'light' },
+    { name: 'prefers-reduced-motion', value: 'reduce' },
+  ]);
   await page.goto(`${base}/?closed`);
-  await page.evaluate((s) => localStorage.setItem('galley:settings', JSON.stringify(s)), settings);
+  await page.evaluate((s) => {
+    localStorage.setItem('galley:settings', JSON.stringify(s));
+    sessionStorage.clear();
+  }, settings);
   await page.goto(`${base}/?doc=${doc}`, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot?.querySelector('.mr-content'));
   await page.evaluate(() => document.fonts.ready);
-  await sleep(300);
+  await sleep(400);
   if (heading) {
-    await page.evaluate((text) => {
-      const s = document.querySelector('#galley-reader').shadowRoot;
-      const el = [...s.querySelectorAll('.mr-content h1, .mr-content h2, .mr-content h3, .mr-content p')].find((h) => h.textContent.startsWith(text));
-      const scroller = s.querySelector('.mr-root');
-      scroller.scrollTop += el.getBoundingClientRect().top - 100;
-    }, heading);
-    await sleep(300);
+    await page.evaluate(
+      (text, offset) => {
+        const s = document.querySelector('#galley-reader').shadowRoot;
+        const el = [...s.querySelectorAll('.mr-content :is(h1, h2, h3, p, li), .mr-title')].find((h) => h.textContent.trim().startsWith(text));
+        const scroller = s.querySelector('.mr-root');
+        scroller.scrollTop += el.getBoundingClientRect().top - offset;
+      },
+      heading,
+      offset,
+    );
+    await sleep(400);
   }
-  if (menu) await page.evaluate((act) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-act="${act}"]`).click(), menu);
+  if (menu) await page.evaluate((name) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-act="${name}"]`).click(), menu);
+  if (act) {
+    await page.evaluate(act);
+    await sleep(500);
+  }
   await page.waitForFunction(
     () =>
       [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('img')]
@@ -70,39 +88,68 @@ async function readerShot({ settings, doc = 0, heading, menu, scale = 1 }) {
           return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
         })
         .every((img) => img.complete),
-    { timeout: 5000 },
+    { timeout: 8000 },
   );
-  await sleep(700);
+  await sleep(800);
   return page;
 }
 
 async function save(page, name, type = 'jpeg') {
-  await page.screenshot({ path: `${out}/${name}`, type, ...(type === 'jpeg' ? { quality: 92 } : {}) });
+  await page.screenshot({ path: `${out}/${name}`, type, ...(type === 'jpeg' ? { quality: 86 } : {}) });
   await page.close();
   console.log(`  ${name}`);
 }
 
-const light = { theme: 'sage', appearance: 'light', font: 'serif', size: 1, mode: 'changes' };
+/** In the page: point at the block holding `text`, choose its comment control and write a draft. */
+function draftComment(text, comment) {
+  return `(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    const block = [...s.querySelectorAll('.mr-content :is(p, li, .mr-code-line, .mr-tight)')].find((el) => el.textContent.includes(${JSON.stringify(text)}));
+    block.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
+    s.querySelector('[data-act="comment-block"]').click();
+    const area = s.querySelector('.mr-composer textarea');
+    area.value = ${JSON.stringify(comment)};
+    area.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`;
+}
+
+const light = { theme: 'sage', appearance: 'light', font: 'galley', size: 2, mode: 'changes', layout: 'balanced' };
 console.log('store/assets/');
-await save(await readerShot({ settings: light }), 'screenshot-1-changes.jpg');
+await save(await readerShot({ settings: light }), 'reader-changes.jpg');
 
 const entry = await browser.newPage();
-await entry.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 });
+await entry.setViewport({ width: 1280, height: 800, deviceScaleFactor: 2 });
 await entry.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
 await entry.goto(`${base}/?closed`, { waitUntil: 'networkidle0' });
 await entry.waitForFunction(() => document.querySelector('#galley-launcher') && document.querySelectorAll('#diff tr').length > 10);
 await sleep(600);
-await save(entry, 'screenshot-2-entry.jpg');
-
-await save(await readerShot({ settings: light, heading: 'A small browser extension' }), 'screenshot-3-tables.jpg');
-await save(await readerShot({ settings: { ...light, appearance: 'dark', mode: 'clean' }, heading: 'Goals' }), 'screenshot-4-clean-dark.jpg');
+await save(entry, 'reader-diff.jpg');
 
 await save(
-  await readerShot({ settings: { ...light, theme: 'sepia' }, heading: 'A small browser extension', menu: 'settings' }),
-  'screenshot-5-sepia-settings.jpg',
+  await readerShot({
+    settings: light,
+    heading: 'Most of our design work',
+    offset: 260,
+    act: draftComment('Reviewers see the source', 'This is the paragraph that sold me. Can we lead with it?'),
+  }),
+  'reader-comments.jpg',
 );
+await save(
+  await readerShot({
+    settings: { ...light, codeFiles: true },
+    doc: 3,
+    heading: 'src/review',
+    offset: 96,
+    act: draftComment('includeCodeFiles', 'Should code files stay off for first-time reviewers?'),
+  }),
+  'reader-code.jpg',
+);
+await save(await readerShot({ settings: light, heading: 'A small browser extension' }), 'reader-tables.jpg');
+await save(await readerShot({ settings: light, doc: 1, heading: 'Review sequence' }), 'reader-diagram.jpg');
+await save(await readerShot({ settings: { ...light, theme: 'night', appearance: 'dark', mode: 'clean' }, heading: 'Goals' }), 'reader-dark.jpg');
+await save(await readerShot({ settings: { ...light, theme: 'sepia' }, heading: 'A small browser extension', menu: 'settings' }), 'reader-settings.jpg');
 
-// The mission illustration is separate from real product screenshots, shared with the README.
+// Artwork, including the captioned store screenshots and the before/after, built from the captures above.
 for (const artwork of ARTWORK) {
   const page = await browser.newPage();
   await page.setViewport({ width: artwork.width, height: artwork.height, deviceScaleFactor: 1 });

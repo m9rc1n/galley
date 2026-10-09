@@ -20,7 +20,7 @@ const pointer = (target: Element, type: string, x = 400, y = 80, pointerType = '
 
 it.each([new Error('Offline'), 'Network unavailable'])('shows unexpected review failures as text: %s', async (err) => {
   await ui.open(Promise.reject(err));
-  expect(ui.q('.mr-message').textContent).toContain('Something went wrong');
+  expect(ui.q('.mr-message').textContent).toContain('Galley could not load this review');
   expect(ui.q('.mr-message').textContent).toContain(err instanceof Error ? err.message : err);
 });
 
@@ -190,11 +190,11 @@ it('chooses palette pages directly and stops the next-change button at the final
   await ui.open(review());
   ui.key(',');
   ui.scroll.mockClear();
-  ui.click('.mr-carousel-dot[data-page="1"]');
-  expect(ui.q('.mr-carousel-dot[data-page="1"]').getAttribute('aria-current')).toBe('true');
+  ui.click('.mr-carousel-dot[data-page="2"]');
+  expect(ui.q('.mr-carousel-dot[data-page="2"]').getAttribute('aria-current')).toBe('true');
   expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
   expect(ui.q<HTMLButtonElement>('[data-act="palette-prev"]').disabled).toBe(false);
-  expect(ui.scroll).toHaveBeenLastCalledWith({ left: 1280, behavior: 'smooth' });
+  expect(ui.scroll).toHaveBeenLastCalledWith({ left: 2560, behavior: 'smooth' });
   ui.key('Escape');
   ui.scroll.mockClear();
   ui.bounds(ui.q('[data-mr-change="modified"]'), 300);
@@ -343,11 +343,11 @@ it('uses natural or fallback diagram dimensions and safely ignores an empty zoom
   image.src = 'data:image/svg+xml,%3Csvg/%3E';
   zoom.append(image);
   zoom.click();
-  expect(ui.q('.mr-lightbox img').style.width).toBe('900px');
+  expect(ui.q('.mr-lightbox img').style.width).toBe('996px');
   ui.click('[data-act="close-lightbox"]');
   Object.defineProperties(image, { naturalWidth: { value: 700 }, naturalHeight: { value: 400 } });
   zoom.click();
-  expect(ui.q('.mr-lightbox img').style.width).toBe('1050px');
+  expect(ui.q('.mr-lightbox img').style.width).toBe('1162px');
 });
 
 it('shows compact comment controls outside the rail and suppresses them when the margin is too narrow', async () => {
@@ -452,7 +452,7 @@ it('ignores late comment-preparation failures after cancellation and reports non
 it('renders an empty request description and toggles it off again', async () => {
   await ui.open(review({ overview: { kind: 'Pull request', title: 'Guide', author: 'Dana', description: ' ', url: '#pr' } }));
   ui.click('[data-act="overview"]');
-  expect(ui.q('.mr-overview-empty').textContent).toBe('No description.');
+  expect(ui.q('.mr-overview-empty').textContent).toBe('No description was added to this request.');
   expect(ui.q<HTMLAnchorElement>('.mr-overview-link').getAttribute('href')).toBe('#pr');
   ui.click('[data-act="overview"]');
   expect(ui.q('.mr-overview').hidden).toBe(true);

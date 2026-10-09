@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>The same review, before and after Galley</title>
+    <!-- README and website: the same merge request in the platform diff and in Galley, both real captures. -->
+    <style>
+      html, body { width: 1600px; height: 640px; margin: 0; overflow: hidden; }
+      body { position: relative; background: #f6f5ef; color: #243e32; font-family: var(--sans); font-optical-sizing: auto; font-kerning: normal; -webkit-font-smoothing: antialiased; }
+      .side { position: absolute; top: 40px; width: 720px; }
+      .before { left: 56px; }
+      .after { right: 56px; }
+      .label { display: flex; align-items: baseline; gap: 14px; margin: 0 0 18px; }
+      .label b { padding: 6px 11px; border-radius: 999px; background: #fffefa; color: #895d50; font: 600 12px/1 var(--sans); letter-spacing: 1.2px; text-transform: uppercase; box-shadow: 0 2px 8px #243e3214; }
+      .after .label b { background: #243e32; color: #f6f5ef; }
+      .label span { font: italic 400 26px/1.2 var(--serif); letter-spacing: -.4px; }
+      .shot { width: 720px; height: 450px; overflow: hidden; border-radius: 12px; border: 1px solid #dfe3d8; box-shadow: 0 18px 44px #243e3222; }
+      .shot img { display: block; width: 720px; height: 450px; }
+      .note { margin: 18px 0 0; color: #657469; font-size: 16px; line-height: 1.5; }
+      .arrow { position: absolute; left: 786px; top: 296px; width: 28px; color: #5b7b3f; font: 400 40px/1 var(--serif); text-align: center; }
+    </style>
+  </head>
+  <body>
+    <section class="side before"><p class="label"><b>Before</b><span>The sample review as a diff.</span></p><div class="shot"><img src="{{BEFORE}}" alt=""></div><p class="note">Document changes shown as source lines. Follow additions and removals in the diff.</p></section>
+    <span class="arrow" aria-hidden="true">→</span>
+    <section class="side after"><p class="label"><b>After</b><span>The same review in Galley.</span></p><div class="shot"><img src="{{AFTER}}" alt=""></div><p class="note">Readable documents, edits in context and comments beside the text they discuss.</p></section>
+  </body>
+</html>

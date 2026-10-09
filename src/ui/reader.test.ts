@@ -342,16 +342,22 @@ it('shows the palettes six to a page, turns the pages, and opens on the page of 
   await ui.open(review());
   ui.click('[data-act="settings"]');
   const pages = [...ui.shadow().querySelectorAll('.mr-palette-page')];
-  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6]);
+  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6, 4]);
   // Nord is on the second page, so the settings open there.
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'auto' });
-  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(false);
   expect(ui.q('.mr-carousel-dot[data-page="1"]').getAttribute('aria-current')).toBe('true');
   ui.click('[data-act="palette-prev"]');
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 0, behavior: 'smooth' });
   expect(ui.q<HTMLButtonElement>('[data-act="palette-prev"]').disabled).toBe(true);
   ui.click('.mr-carousel-dot[data-page="1"]');
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'smooth' });
+  ui.q('.mr-palette-track').scrollLeft = 1280;
+  ui.click('[data-act="palette-next"]');
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 2560, behavior: 'smooth' });
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
+  ui.click('[data-setting="theme"] [data-value="ocean"]');
+  expect(ui.q('.mr-root').dataset.theme).toBe('ocean');
   // A palette inside a page is chosen like any other setting.
   ui.click('[data-setting="theme"] [data-value="night"]');
   expect(ui.q('.mr-root').dataset.theme).toBe('night');
@@ -398,7 +404,7 @@ it("offers the request's own title and description as a first document, sanitise
   ui.close();
   await ui.open(review({ overview: { ...overview, description: '  ' } }));
   expect(ui.q('.mr-overview').hidden).toBe(false);
-  expect(ui.q('.mr-overview-empty').textContent).toBe('No description.');
+  expect(ui.q('.mr-overview-empty').textContent).toBe('No description was added to this request.');
 });
 
 it('hides the description switch when the platform has no description to show', async () => {
@@ -760,11 +766,13 @@ it('uses the old path and source coordinates when commenting on a removed file',
   expect(composer.getAttribute('aria-label')).toBe('New comment on docs/old.md, old line 3');
 });
 
-it('reflects renamed and unchanged documents and warns about edits that Markdown cannot show', async () => {
+it('folds renamed, unchanged documents until asked, and warns about edits that Markdown cannot show', async () => {
   const renamed = { ...guide, oldPath: 'old.md', status: 'renamed' as const };
   await ui.open(review({ docs: [renamed], load: async () => ({ base: 'Same.', head: 'Same.' }) }));
   expect(ui.q('.mr-file-btn').title).toBe('Renamed: old.md → docs/guide.md');
-  expect(ui.q('.mr-byline').textContent).toContain('Moved, text unchanged');
+  expect(ui.q('.mr-quiet-reason').textContent).toBe('Renamed from old.md, text unchanged.');
+  ui.click('[data-act="show-quiet"]');
+  await vi.waitFor(() => expect(ui.q('.mr-byline')?.textContent).toContain('Moved, text unchanged'));
   expect(ui.q('.mr-empty-changes')).toBeTruthy();
   await ui.open(review({ load: async () => ({ base: 'Text.\n\n<!-- old -->', head: 'Text.\n\n<!-- changed -->' }) }));
   expect(ui.q('.mr-chip.is-hidden').textContent).toContain('2 lines not shown');
@@ -1069,19 +1077,23 @@ it('enlarges a diagram in a dialog, pauses reading shortcuts, and returns focus 
   expect(box.hidden).toBe(false);
   expect(enlarged.getAttribute('src')).toBe(image.getAttribute('src'));
   expect(enlarged.alt).toBe(image.alt);
-  expect(enlarged.style.width).toBe('1120px');
+  // The whole diagram fits the window: 900 × 300 grows until its width meets the margins.
+  expect(enlarged.style.width).toBe('1216px');
   expect(ui.shadow().activeElement).toBe(ui.q('.mr-lightbox-close'));
   ui.scroll.mockClear();
   ui.key('j');
   expect(ui.scroll).not.toHaveBeenCalled();
   ui.key('Tab');
-  expect(ui.shadow().activeElement).toBe(ui.q('.mr-lightbox-close'));
+  expect(ui.shadow().activeElement!.closest('.mr-lightbox')).toBe(box);
   ui.key('Escape');
   expect(box.hidden).toBe(true);
   expect(enlarged.getAttribute('src')).toBeNull();
   expect(ui.shadow().activeElement).toBe(zoom);
   expect(document.querySelector('#galley-reader')).toBeTruthy();
+  // Clicking the diagram itself keeps it open; the backdrop around it closes it.
   zoom.click();
   enlarged.click();
+  expect(box.hidden).toBe(false);
+  ui.click('.mr-lightbox-stage');
   expect(box.hidden).toBe(true);
 });

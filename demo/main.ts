@@ -1,10 +1,12 @@
 // The demo runs the real reader against sample files, so it can be tried without the extension.
 // The page itself imitates a merge request: the raw diff reviewers read today, and the Read button.
 //   ?closed  start closed   ?doc=N  start at file N   ?code-only / ?diagram-error  exercise fallbacks
+//   ?spec  a test file   ?comments  code comments   ?large  folded files, moved code and a map of changed declarations
 import { structuredPatch } from 'diff';
 import type { DocRef, ReviewSource, Thread } from '../src/platforms/types.ts';
 import { Launcher } from '../src/ui/launcher.ts';
 import { openReader } from '../src/ui/reader.ts';
+import { loadSettings, saveSettings } from '../src/ui/settings.ts';
 
 const params = new URLSearchParams(location.search);
 
@@ -18,6 +20,19 @@ const codeDocs: DocRef[] = [
   { path: 'src/review.ts', oldPath: 'src/review.ts', status: 'modified', kind: 'code' },
   { path: 'src/options.json', oldPath: 'src/options.json', status: 'added', kind: 'code' },
 ];
+const spec: DocRef = { path: 'src/rate-limits.spec.ts', oldPath: 'src/rate-limits.spec.ts', status: 'modified', kind: 'code' };
+const notes: DocRef = { path: 'src/review-notes.ts', oldPath: 'src/review-notes.ts', status: 'modified', kind: 'code' };
+/** A larger review: a refactor that moves a function to a new file, beside files most reviewers skip. */
+const largeDocs: DocRef[] = [{ path: 'docs/guides/limits.md', oldPath: 'docs/guides/rate-limits.md', status: 'renamed' }];
+const largeCode: DocRef[] = [
+  { path: 'src/limits/rate-limiter.ts', oldPath: 'src/limits/rate-limiter.ts', status: 'modified', kind: 'code' },
+  { path: 'src/limits/quota.ts', oldPath: 'src/limits/quota.ts', status: 'added', kind: 'code' },
+  { path: 'package-lock.json', oldPath: 'package-lock.json', status: 'modified', kind: 'code' },
+  { path: 'src/legacy/format.ts', oldPath: 'src/legacy/format.ts', status: 'modified', kind: 'code' },
+  { path: 'dist/limits.min.js', oldPath: 'dist/limits.min.js', status: 'modified', kind: 'code' },
+];
+/** Samples that would otherwise be type-checked, linted or run as tests are stored as text. */
+const asText = new Set<DocRef>([spec, notes, ...largeCode]);
 
 async function text(url: string): Promise<string> {
   const res = await fetch(url);
@@ -27,8 +42,8 @@ async function text(url: string): Promise<string> {
 
 async function contents(doc: DocRef) {
   const [base, head] = await Promise.all([
-    doc.status === 'added' ? '' : text(`samples/base/${doc.oldPath}`),
-    doc.status === 'removed' ? '' : text(`samples/head/${doc.path}`),
+    doc.status === 'added' ? '' : text(`samples/base/${doc.oldPath}${asText.has(doc) ? '.txt' : ''}`),
+    doc.status === 'removed' ? '' : text(`samples/head/${doc.path}${asText.has(doc) ? '.txt' : ''}`),
   ]);
   return { base, head: params.has('diagram-error') && doc === docs[0] ? head.replace(/```mermaid[\s\S]*?```/, '```mermaid\nnot a valid diagram\n```') : head };
 }
@@ -52,13 +67,13 @@ const source: ReviewSource = {
       'Closes #311.',
     ].join('\n'),
   },
-  docs: params.has('code-only') ? [] : docs,
-  codeDocs,
+  docs: params.has('large') ? largeDocs : params.has('code-only') || params.has('spec') || params.has('comments') ? [] : docs,
+  codeDocs: params.has('large') ? largeCode : params.has('spec') ? [spec] : params.has('comments') ? [notes] : codeDocs,
   load: contents,
   async prepareComment(target) {
     return {
       kind: 'inline',
-      label: 'Post demo comment (stays in this browser)',
+      label: 'Save demo comment (only in this browser session)',
       async post(body) {
         const comments = JSON.parse(sessionStorage.getItem('galley:demo-comments') ?? '[]');
         comments.push({ ...target, body });
@@ -68,7 +83,42 @@ const source: ReviewSource = {
     };
   },
   async loadThreads() {
-    if (!source.docs.length) return [];
+    if (params.has('comments'))
+      return [
+        {
+          doc: notes,
+          side: 'head',
+          line: 4,
+          url: '#notes-thread',
+          comments: [
+            {
+              author: 'Dana Whitfield',
+              body: 'This explains the change clearly. Can we also describe the reset behavior?',
+              createdAt: new Date().toISOString(),
+              url: '#notes-thread',
+            },
+          ],
+        },
+      ];
+    if (params.has('spec'))
+      return [
+        {
+          doc: spec,
+          side: 'head',
+          line: 29,
+          url: '#spec-thread',
+          comments: [
+            {
+              author: 'Dana Whitfield',
+              handle: 'dana',
+              body: 'Good change. Could we also check that client A still has its own remaining quota?',
+              createdAt: new Date().toISOString(),
+              url: '#spec-thread',
+            },
+          ],
+        },
+      ];
+    if (!source.docs.length || params.has('large')) return [];
     const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
     const [rfc, readme] = docs;
     const threads: Thread[] = [
@@ -198,7 +248,15 @@ async function drawDiff(): Promise<void> {
   }
 }
 
-const open = () => openReader(source, { start: Number(params.get('doc') ?? 0) });
-new Launcher().show('demo', source.docs.length || codeDocs.length, open);
+const open = () => {
+  const show = () => openReader(source, { start: Number(params.get('doc') ?? 0) });
+  if (params.has('spec') || params.has('comments'))
+    void loadSettings().then(async (settings) => {
+      await saveSettings({ ...settings, codeFiles: true });
+      show();
+    });
+  else show();
+};
+new Launcher().show('demo', source.docs.length || source.codeDocs!.length, open);
 void drawDiff();
 if (!params.has('closed')) open();

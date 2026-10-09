@@ -82,7 +82,7 @@ it('keeps a GitHub token out of the input and scopes saving and removal to the d
 
 it('shows built-in GitLab support without requesting a GitHub token', async () => {
   await open('https://gitlab.com/team/repo/-/merge_requests/7');
-  expect(q('#site').textContent).toContain('Works on gitlab.com out of the box');
+  expect(q('#site').textContent).toContain('Ready to use on gitlab.com');
   expect(q('#token').hidden).toBe(true);
   expect(tokens.getToken).not.toHaveBeenCalled();
   expect(api.permissions.request).not.toHaveBeenCalled();

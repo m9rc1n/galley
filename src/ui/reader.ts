@@ -11,6 +11,11 @@ import {
 } from '../platforms/types.ts';
 import { highlightCode, languageName, languageOf } from './code.ts';
 import { renderCodeFile } from './code-files.ts';
+import { quietFile, type QuietFile } from '../core/quiet.ts';
+import { MoveFinder, showMove } from './moves.ts';
+import { enhanceSymbols, refreshSymbols } from './symbols.ts';
+import { enhanceSpecs } from './specs.ts';
+import { renderSourceComments, showCommentSource } from './source-comments.ts';
 import { isPalette, PALETTE_KEYS, type DiagramPalette } from './diagram-palette.ts';
 import { renderDiagrams } from './diagrams.ts';
 import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
@@ -40,6 +45,10 @@ const PALETTES: Array<[Theme, string, string]> = [
   ['nord', 'Nord', 'Arctic blue'],
   ['dusk', 'Dusk', 'Soft violet'],
   ['contrast', 'Contrast', 'Crisp ink'],
+  ['ocean', 'Ocean', 'Ink · sea glass'],
+  ['clay', 'Clay', 'Stone · terracotta'],
+  ['orchid', 'Orchid', 'Stone · lavender'],
+  ['graphite', 'Graphite', 'Charcoal · blue'],
 ];
 const PALETTES_PER_PAGE = 6;
 const paletteButton = ([value, name, caption]: [Theme, string, string]) => `
@@ -66,10 +75,10 @@ const PALETTE_DOTS = Array.from(
  */
 const LAYOUT_CHOICES: Array<[Layout, string, string]> = [
   ['balanced', 'Balanced', 'Contents, text and comments side by side'],
-  ['review', 'Review', 'Room for the conversation'],
+  ['review', 'Review', 'More space for review comments'],
   ['wide', 'Wide text', 'For tables, code and diagrams'],
-  ['focus', 'Focus', 'The text alone; comments below it'],
-  ['fit', 'Fit to screen', 'Everything grows with the window'],
+  ['focus', 'Focus', 'Text in one column, with comments below'],
+  ['fit', 'Fit to screen', 'Uses the full window width'],
 ];
 const LAYOUT_NAMES = Object.fromEntries(LAYOUT_CHOICES.map(([value, name]) => [value, name])) as Record<Layout, string>;
 const LAYOUT_OPTIONS = LAYOUT_CHOICES.map(
@@ -132,7 +141,7 @@ const KEY_GROUPS = SHORTCUTS.map(
 ).join('');
 
 /** Settings chosen from a group of buttons in the settings sheet (data-setting / data-value). */
-type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'comments' | 'layout' | 'density';
+type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'comments' | 'tests' | 'codeComments' | 'layout' | 'density';
 
 const TEMPLATE = `
 <div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley reader">
@@ -153,11 +162,11 @@ const TEMPLATE = `
     </div>
   </header>
   <p class="mr-viewed-feedback" role="status" hidden></p>
-  <div class="mr-menu mr-files" role="menu" aria-label="Changed documents" hidden></div>
+  <div class="mr-menu mr-files" role="menu" aria-label="Changed files" hidden></div>
   <div class="mr-settings" hidden>
     <div class="mr-settings-backdrop" data-act="close-settings"></div>
     <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
-      <header class="mr-settings-heading"><div><h2 id="mr-settings-title">Reading settings</h2><p>Make yourself comfortable.</p></div><button class="mr-btn mr-icon-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
+      <header class="mr-settings-heading"><div><h2 id="mr-settings-title">Reading settings</h2><p>Choose a view that helps you follow the changes.</p></div><button class="mr-btn mr-icon-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
       <div class="mr-settings-tabs" role="tablist" aria-label="Settings category">
         <button id="mr-reading-tab" role="tab" data-settings-tab="reading" aria-selected="true" aria-controls="mr-reading-panel" tabindex="0">${icons.book}Reading</button>
         <button id="mr-layout-tab" role="tab" data-settings-tab="layout" aria-selected="false" aria-controls="mr-layout-panel" tabindex="-1">${icons.layout}Layout</button>
@@ -182,27 +191,29 @@ const TEMPLATE = `
       <section class="mr-settings-section" aria-label="Typography">
         <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="galley">Galley</option><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
         <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite">20 px</output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
-        <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>A little room to read.</p><span>Follow the idea. Notice what changed.</span></div>
+        <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>Understand changes. Review together.</p><span>Read the context. See the edits. Ask a question.</span></div>
       </section>
-      <p class="mr-settings-note">Your document updates as you choose.</p>
+      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>
       </div>
       <div id="mr-layout-panel" role="tabpanel" aria-labelledby="mr-layout-tab" hidden>
       <section class="mr-settings-section" aria-label="Layout">
-        <div class="mr-set-row mr-theme-row"><span>Layout<small>How a wide window is shared. Narrow windows read in one column.</small></span>
+        <div class="mr-set-row mr-theme-row"><span>Layout<small>Arrange text and comments on wide screens. Narrow screens use one column.</small></span>
           <div class="mr-theme-options mr-layout-options" data-setting="layout" role="group" aria-label="Layout">${LAYOUT_OPTIONS}</div>
         </div>
         <div class="mr-set-row"><span>Density<small>Compact fits more on the screen</small></span><div class="mr-seg" data-setting="density" role="group" aria-label="Density"><button data-value="comfortable">Comfortable</button><button data-value="compact">Compact</button></div></div>
       </section>
-      <p class="mr-settings-note">Your document updates as you choose.</p>
+      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>
       </div>
       <div id="mr-review-panel" role="tabpanel" aria-labelledby="mr-review-tab" hidden>
       <section class="mr-settings-section" aria-label="Review">
         <div class="mr-set-row"><span>Change marks<small>Highlight inserted and removed text</small></span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Marked</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
-        <div class="mr-set-row"><span>Context<small>Keep the focus on edits or read everything</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
-        <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Read the request's own title and description first</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
+        <div class="mr-set-row"><span>Context<small>Show changed sections or read the full files</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
+        <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Show the request’s title and description before the files</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
         <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
+        <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
+        <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
         <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-        <div class="mr-set-row"><span>Comment cards<small>A soft shadow and tone, or an outline</small></span><div class="mr-seg" data-setting="comments" role="group" aria-label="Comment cards"><button data-value="shaded">Shaded</button><button data-value="outlined">Outlined</button></div></div>
+        <div class="mr-set-row"><span>Comment cards<small>Choose a shaded background or a border</small></span><div class="mr-seg" data-setting="comments" role="group" aria-label="Comment cards"><button data-value="shaded">Shaded</button><button data-value="outlined">Outlined</button></div></div>
       </section>
       <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>
       </div>
@@ -221,9 +232,15 @@ const TEMPLATE = `
     </article>
   </main>
   <button type="button" class="mr-select-chip" data-act="comment-selection" hidden>${icons.comment}<span>Comment</span></button>
-  <div class="mr-lightbox" role="dialog" aria-modal="true" aria-label="Enlarged diagram" data-act="close-lightbox" hidden>
+  <div class="mr-lightbox" role="dialog" aria-modal="true" aria-label="Enlarged diagram" hidden>
+    <div class="mr-lightbox-stage" data-act="close-lightbox"><img alt="" draggable="false" data-act="diagram-canvas"></div>
+    <div class="mr-lightbox-bar" role="toolbar" aria-label="Zoom">
+      <button class="mr-btn mr-icon-btn" data-act="zoom-out" aria-label="Zoom out (−)" title="Zoom out (−)">${icons.minus}</button>
+      <button class="mr-btn mr-zoom-level" data-act="zoom-fit" aria-label="Fit the diagram to the window (0)" title="Fit to the window (0)">100%</button>
+      <button class="mr-btn mr-icon-btn" data-act="zoom-in" aria-label="Zoom in (+)" title="Zoom in (+)">${icons.plus}</button>
+      <span class="mr-lightbox-hint">Pinch or ⌘/Ctrl + scroll to zoom · drag to move</span>
+    </div>
     <button class="mr-btn mr-icon-btn mr-lightbox-close" data-act="close-lightbox" aria-label="Close diagram (Esc)" title="Close (Esc)">${icons.close}</button>
-    <figure class="mr-lightbox-figure"><img alt=""></figure>
   </div>
   <p class="mr-toast" role="status" aria-live="polite" hidden></p>
   <div class="mr-pill" hidden>
@@ -244,7 +261,7 @@ function baseName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
 
-function chip(kind: 'added' | 'modified' | 'removed', text: string): HTMLElement {
+function chip(kind: 'added' | 'modified' | 'removed' | 'moved', text: string): HTMLElement {
   const el = h('span', `mr-chip is-${kind}`);
   el.append(h('span', 'mr-dot'), text);
   return el;
@@ -306,6 +323,18 @@ function placeName(side: 'base' | 'head', start: number, end: number): string {
   return `${side === 'base' ? 'old ' : ''}${start === end ? `line ${start}` : `lines ${start}–${end}`}`;
 }
 
+/** The block a comment on `line` belongs to, in whichever view of a code comment the reader shows. */
+function blockAt(r: RenderedDoc, side: 'base' | 'head', line: number): RenderedBlock | undefined {
+  return r.blocks.find((block) => {
+    const unit = block[side];
+    return unit && !block.el.closest('[data-mr-comment-view][hidden]') && line - 1 >= unit.lines[0] && line - 1 < Math.max(unit.lines[1], unit.lines[0] + 1);
+  });
+}
+
+/** The enlarged diagram keeps this much space around it, and leaves room for the zoom bar along the bottom. */
+const ZOOM_MARGIN = 32;
+const ZOOM_BAR = 72;
+
 const SUBMIT_KEY = `${typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}↵`;
 
 /** Where a hidden element (a removed block in Clean mode) would be: the next visible element. */
@@ -340,6 +369,9 @@ interface View {
   doc: DocRef;
   section: HTMLElement;
   rendered: RenderedDoc | null;
+  /** Folded as noise (a lockfile, generated code, a whitespace-only edit) until the reviewer opens it. */
+  quiet?: QuietFile;
+  open?: boolean;
 }
 
 interface Hit {
@@ -432,6 +464,11 @@ class Reader {
   private readonly viewed = new Map<DocRef, { value: boolean; ready: boolean; busy: boolean; key?: string; error?: string }>();
   private drawerFocus: HTMLElement | null = null;
   private zoomFrom: HTMLElement | null = null;
+  /** The enlarged diagram: its laid-out size, the scale that fits the window, and what is in view. */
+  private readonly diagramView = { width: 0, height: 0, fit: 1, scale: 1, x: 0, y: 0 };
+  /** Pointers on the enlarged diagram: one drags it, two pinch it. */
+  private readonly pointers = new Map<number, { x: number; y: number }>();
+  private dragged = false;
   private readonly blockOf = new WeakMap<Element, { view: View; block: RenderedBlock }>();
   private hover: Hit | null = null;
   /** Text marked because the pointer is on its card or on the comment control. */
@@ -444,6 +481,7 @@ class Reader {
   private readonly replyEditors = new Map<Thread, ReplyEditor>();
   private readonly editorOf = new WeakMap<Element, Editor>();
   private drafts: Draft[] = [];
+  private readonly moves = new MoveFinder();
   /** The card the comments column is arranged around: the one being written in, or the last one used. */
   private active: HTMLElement | null = null;
   private threadEls: Array<{ view: View; card: HTMLElement; anchor: HTMLElement }> = [];
@@ -520,12 +558,33 @@ class Reader {
     this.root.focus({ preventScroll: true });
 
     this.root.addEventListener('click', (e) => this.onClick(e));
+    const stage = this.stage();
+    stage.addEventListener('wheel', this.onStageWheel, { passive: false });
+    for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'] as const) stage.addEventListener(type, this.onStagePointer);
+    // A drag that ends on the backdrop is not a click on it.
+    stage.addEventListener(
+      'click',
+      (e) => {
+        if (this.dragged) e.stopPropagation();
+        this.dragged = false;
+      },
+      true,
+    );
+    stage.querySelector('img')!.addEventListener('dblclick', (e) => {
+      const box = stage.getBoundingClientRect();
+      this.zoomDiagram(2, e.clientX - box.left, e.clientY - box.top);
+    });
     this.paletteTrack().addEventListener('scroll', () => this.updatePaletteNav(), { passive: true });
     this.shadow.querySelector<HTMLSelectElement>('#mr-typeface')!.addEventListener('change', (e) => {
       this.update({ font: (e.target as HTMLSelectElement).value as Settings['font'] });
     });
     this.root.addEventListener('galley:context', () => {
       if (this.rendered) this.buildToc(this.rendered);
+      this.schedule(true);
+    });
+    this.root.addEventListener('galley:code-view', (event) => {
+      const view = this.views.find((view) => view.rendered?.content === event.target);
+      if (view?.rendered?.content.querySelector('.mr-source-comment')) this.reanchorCodeComments(view);
       this.schedule(true);
     });
     this.root.addEventListener(
@@ -597,8 +656,7 @@ class Reader {
 
   showError(err: unknown): void {
     if (this.closed) return;
-    const e =
-      err instanceof ReaderError ? err : new ReaderError('Something went wrong while loading this document.', err instanceof Error ? err.message : String(err));
+    const e = err instanceof ReaderError ? err : new ReaderError('Galley could not load this review.', err instanceof Error ? err.message : String(err));
     const extra: Node[] = [];
     if (e.needsToken) {
       const p = h('p');
@@ -630,7 +688,8 @@ class Reader {
     const worker = async () => {
       while (cursor < this.views.length && !this.closed) {
         const index = cursor++;
-        if (!this.views[index].section.hidden && !this.views[index].rendered) await this.loadView(index);
+        const view = this.views[index];
+        if (!view.section.hidden && !view.rendered && !view.quiet) await this.loadView(index);
       }
     };
     await Promise.all(Array.from({ length: Math.min(3, this.views.length) }, worker));
@@ -644,6 +703,19 @@ class Reader {
     try {
       const contents = await this.load(view.doc);
       if (this.closed) return;
+      // Files most reviewers skip start folded, one click away. A file with a discussion on it never does.
+      const quiet = view.open || this.threads.some((thread) => thread.doc === view.doc) ? null : quietFile(view.doc, contents);
+      if (quiet) {
+        view.quiet = quiet;
+        view.section.classList.add('is-quiet');
+        view.section.replaceChildren(this.quietCard(view, index));
+        this.schedule(true);
+        // Release the loading slot before progress storage resolves: a newly arrived discussion
+        // may need to open this folded file immediately.
+        if (!this.source!.viewed) void this.initLocalViewed(view.doc, contents);
+        else this.updateViewed();
+        return;
+      }
       const r =
         view.doc.kind === 'code'
           ? renderCodeFile(document, view.doc, contents)
@@ -658,11 +730,40 @@ class Reader {
       view.rendered = r;
       view.section.replaceChildren(this.buildArticle(view.doc, r));
       for (const block of r.blocks) this.blockOf.set(block.el, { view, block });
+      if (r.isCode) await enhanceSpecs(r, view.doc, contents);
+      if (this.closed) return;
+      if (r.isCode) {
+        this.applyCodeView(view);
+        this.showMoves(view);
+        void enhanceSymbols(r, view.doc, contents).then(() => this.schedule(true));
+      }
       for (const img of r.content.querySelectorAll('img')) img.addEventListener('load', () => this.schedule(true), { once: true });
       this.attachThreads(view);
       filterDocument(r, this.settings.scope === 'changed');
-      renderDiagrams(r.diagrams, this.root.classList.contains('is-dark'), () => this.schedule(true), this.palette());
-      void highlightCode(r.content).then(() => this.schedule(true));
+      const drawDiagrams = () => renderDiagrams(r.diagrams, this.root.classList.contains('is-dark'), () => this.schedule(true), this.palette());
+      drawDiagrams();
+      void highlightCode(r.content).then(() => {
+        if (
+          r.isCode &&
+          !this.closed &&
+          renderSourceComments(r, {
+            path: view.doc.status === 'removed' ? view.doc.oldPath : view.doc.path,
+            status: view.doc.status,
+            ...contents,
+            links: this.source!.links(view.doc),
+            origin: location.origin,
+            images: this.settings.images,
+          })
+        ) {
+          for (const block of r.blocks) this.blockOf.set(block.el, { view, block });
+          // The notes start formatted; show them as the setting says.
+          delete r.content.dataset.mrView;
+          this.applyCodeView(view);
+          drawDiagrams();
+          void highlightCode(r.content).then(() => this.schedule(true));
+        }
+        this.schedule(true);
+      });
       if (index === this.index) {
         this.rendered = r;
         this.buildToc(r);
@@ -687,6 +788,50 @@ class Reader {
     } finally {
       this.loading.delete(view.doc);
     }
+  }
+
+  /** Code moved within or between source files reads as moved, not as removed here and added there. */
+  private showMoves(view: View): void {
+    const moves = this.moves.add(view.doc, view.rendered!);
+    for (const move of moves) showMove(move);
+    const touched = new Set(moves.flatMap((move) => [move.from.ref, move.to.ref]));
+    for (const other of this.views) {
+      if (!touched.has(other.doc)) continue;
+      const moved = other.rendered!.blocks.filter((block) => 'mrMoved' in block.el.dataset).length;
+      const byline = other.section.querySelector('.mr-byline')!;
+      byline.querySelector('.is-moved')?.remove();
+      byline.append(chip('moved', `${moved} moved`));
+      refreshSymbols(other.rendered!);
+    }
+    this.schedule(true);
+  }
+
+  private quietCard(view: View, index: number): HTMLElement {
+    const { doc, quiet } = view;
+    const card = h('div', 'mr-quiet');
+    const name = h('p', 'mr-quiet-name');
+    const slash = doc.path.lastIndexOf('/');
+    if (slash > 0) name.append(h('span', 'mr-code-dir', doc.path.slice(0, slash + 1)));
+    name.append(doc.path.slice(slash + 1));
+    const meta = h('p', 'mr-quiet-meta');
+    meta.append(h('span', 'mr-quiet-label', quiet!.label), h('span', 'mr-quiet-reason', quiet!.reason));
+    if (quiet!.added) meta.append(chip('added', `${quiet!.added.toLocaleString('en-US')} added`));
+    if (quiet!.removed) meta.append(chip('removed', `${quiet!.removed.toLocaleString('en-US')} removed`));
+    const show = actionButton('Show changes', 'show-quiet', 'mr-outline mr-quiet-show');
+    show.dataset.doc = String(index);
+    show.setAttribute('aria-label', `Show changes in ${doc.path}`);
+    const text = h('div', 'mr-quiet-text');
+    text.append(name, meta);
+    card.append(text, show);
+    return card;
+  }
+
+  private openQuiet(index: number): void {
+    const view = this.views[index];
+    view.open = true;
+    view.section.classList.remove('is-quiet');
+    view.section.replaceChildren(this.skeleton());
+    void this.loadView(index);
   }
 
   private show(index: number): void {
@@ -723,7 +868,8 @@ class Reader {
       frag.append(h('h1', 'mr-title', r.title ?? prettyName(doc.path)), ...intro);
     }
     frag.append(r.content);
-    if (!r.blocks.some((block) => block.kind !== 'same')) frag.append(h('p', 'mr-empty-changes', 'No visible changes. Choose Entire files to read this file.'));
+    if (!r.blocks.some((block) => block.kind !== 'same'))
+      frag.append(h('p', 'mr-empty-changes', 'No visible text changes. Choose Whole files in Reading settings → Review → Context to read this file.'));
     return frag;
   }
 
@@ -759,7 +905,7 @@ class Reader {
     if (r.heldImages) {
       const load = actionButton(`Load ${r.heldImages} external image${r.heldImages === 1 ? '' : 's'}`, 'load-images', 'mr-chip is-images');
       load.title =
-        'Images hosted outside this site were not loaded, so their hosts cannot see that you are reading. Choose Always in reading settings to skip this.';
+        'Images hosted outside this site were not loaded, so their hosts cannot see that you are reading. To load them automatically, choose Load in Reading settings → Review → External images.';
       line.append(load);
     }
     return line;
@@ -816,7 +962,7 @@ class Reader {
     this.el.fileBtn.dataset.path = doc.path;
     this.el.fileCount.textContent = docs.length > 1 ? `${position + 1} of ${docs.length}` : '';
     this.el.fileBtn.title = `${STATUS_LABEL[doc.status]}: ${doc.status === 'renamed' ? `${doc.oldPath} → ` : ''}${doc.path}`;
-    this.el.fileBtn.setAttribute('aria-label', `Browse documents: ${STATUS_LABEL[doc.status].toLowerCase()} ${doc.path}, ${position + 1} of ${docs.length}`);
+    this.el.fileBtn.setAttribute('aria-label', `Browse files: ${STATUS_LABEL[doc.status].toLowerCase()} ${doc.path}, ${position + 1} of ${docs.length}`);
     this.el.fileStatus.className = `mr-status-dot is-${doc.status}`;
     this.el.fileName.textContent = baseName(doc.path);
     const menu = this.el.files;
@@ -827,6 +973,8 @@ class Reader {
     const meta = h('p', 'mr-files-meta');
     if (this.source!.subtitle) meta.append(h('span', 'mr-files-source', this.source!.subtitle));
     meta.append(h('span', 'mr-files-progress', `${docs.filter((doc) => this.viewed.get(doc)?.value).length} of ${docs.length} viewed`));
+    const folded = this.views.filter((view) => !view.section.hidden && view.quiet && !view.open).length;
+    if (folded) meta.append(h('span', 'mr-files-folded', `${folded} folded`));
     head.append(meta);
     menu.append(head);
     docs.forEach((d) => {
@@ -843,7 +991,10 @@ class Reader {
       const dir = d.path.slice(0, d.path.length - baseName(d.path).length);
       name.append(h('span', 'mr-path-name', baseName(d.path)));
       if (dir) name.append(h('span', 'mr-path-dir', dir));
-      item.append(dot, name, h('span', 'mr-menu-status', STATUS_LABEL[d.status]));
+      item.append(dot, name);
+      const { quiet, open } = this.views[i];
+      if (quiet && !open) item.append(h('span', 'mr-menu-quiet', quiet.label));
+      item.append(h('span', 'mr-menu-status', STATUS_LABEL[d.status]));
       if (this.viewed.get(d)?.value) {
         const check = h('span', 'mr-file-check');
         // biome-ignore lint/plugin: a bundled icon constant.
@@ -970,7 +1121,7 @@ class Reader {
     const button = this.el.viewed as HTMLButtonElement;
     button.hidden = false;
     button.dataset.doc = String(this.index);
-    button.disabled = !view.rendered || state.busy || (!state.ready && !state.error);
+    button.disabled = !(view.rendered || view.quiet) || state.busy || (!state.ready && !state.error);
     button.setAttribute('aria-pressed', String(state.value));
     button.setAttribute('aria-label', `${state.value ? 'Unmark' : 'Mark'} ${view.doc.path} as viewed`);
     const label = state.busy
@@ -1076,10 +1227,25 @@ class Reader {
       const value = s[group.dataset.setting as SettingKey];
       for (const b of group.querySelectorAll<HTMLElement>('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === value));
     }
+    for (const view of this.views) if (view.rendered?.isCode) this.applyCodeView(view);
     const palette = this.palette();
     for (const view of this.views)
       if (view.rendered) renderDiagrams(view.rendered.diagrams, r.classList.contains('is-dark'), () => this.schedule(true), palette);
     this.schedule(true);
+  }
+
+  /** Test files and code comments as Reading settings → Review asks: a test plan and notes, or the source. */
+  private applyCodeView(view: View): void {
+    const r = view.rendered!;
+    for (const button of r.content.querySelectorAll<HTMLElement>('.mr-spec-view-options [data-value]'))
+      button.setAttribute('aria-pressed', String(button.dataset.value === this.settings.tests));
+    const tests = r.content.classList.contains('mr-spec-file') && this.settings.tests === 'source';
+    const comments = tests || this.settings.codeComments === 'source';
+    const state = `${tests} ${comments}`;
+    if (r.content.dataset.mrView === state) return;
+    r.content.dataset.mrView = state;
+    r.content.classList.toggle('is-spec-source', tests);
+    showCommentSource(r, comments);
   }
 
   /**
@@ -1105,25 +1271,125 @@ class Reader {
     return isPalette(palette) ? palette : undefined;
   }
 
-  /** A diagram at its full size, or larger when the window has room, over a quiet backdrop. */
+  /**
+   * A diagram over the whole window: first all of it, as large as the window allows (up to twice the
+   * size it was laid out at), then as close as the reader wants to look.
+   */
   private openLightbox(button: HTMLElement): void {
     const source = button.querySelector('img');
     if (!source) return;
     const image = this.el.lightbox.querySelector('img')!;
     image.src = source.src;
     image.alt = source.alt;
-    const width = source.width || source.naturalWidth || 600,
-      height = source.height || source.naturalHeight || 400;
-    const room = Math.min((this.root.clientWidth - 160) / width, (this.root.clientHeight - 200) / height);
-    image.style.width = `${Math.round(width * Math.min(1.6, Math.max(1, room)))}px`;
+    this.diagramView.width = source.width || source.naturalWidth || 600;
+    this.diagramView.height = source.height || source.naturalHeight || 400;
     this.el.lightbox.hidden = false;
     this.zoomFrom = button;
+    this.fitDiagram();
     this.el.lightbox.querySelector<HTMLElement>('.mr-lightbox-close')!.focus({ preventScroll: true });
   }
+
+  private stage(): HTMLElement {
+    return this.el.lightbox.querySelector<HTMLElement>('.mr-lightbox-stage')!;
+  }
+
+  /** The space the diagram can use: the stage, less a margin and the zoom bar along its bottom. */
+  private stageRoom(): { width: number; height: number } {
+    const stage = this.stage();
+    return { width: stage.clientWidth, height: stage.clientHeight - ZOOM_BAR };
+  }
+
+  /** Smallest and largest scale: never smaller than the whole diagram in view, and up to four times its size. */
+  private zoomLimits(): [number, number] {
+    const fit = this.diagramView.fit;
+    return [Math.min(fit, 1), Math.max(4, fit * 2)];
+  }
+
+  private fitDiagram(): void {
+    const view = this.diagramView;
+    const room = this.stageRoom();
+    view.fit = Math.min((room.width - 2 * ZOOM_MARGIN) / view.width, (room.height - 2 * ZOOM_MARGIN) / view.height, 2);
+    this.showDiagram(view.fit, 0, 0);
+  }
+
+  /** Draw the diagram at `scale` with its corner at (x, y): centred on an axis where it fits, kept in reach where it does not. */
+  private showDiagram(scale: number, x: number, y: number): void {
+    const view = this.diagramView;
+    const room = this.stageRoom();
+    const width = view.width * scale,
+      height = view.height * scale;
+    const place = (offset: number, size: number, space: number) =>
+      size + 2 * ZOOM_MARGIN <= space ? (space - size) / 2 : Math.min(ZOOM_MARGIN, Math.max(space - size - ZOOM_MARGIN, offset));
+    Object.assign(view, { scale, x: place(x, width, room.width), y: place(y, height, room.height) });
+    // Sizing the image, not scaling it, keeps the drawing sharp at every zoom.
+    const image = this.el.lightbox.querySelector('img')!;
+    image.style.width = `${Math.round(width)}px`;
+    image.style.height = `${Math.round(height)}px`;
+    image.style.transform = `translate(${Math.round(view.x)}px, ${Math.round(view.y)}px)`;
+    const [min, max] = this.zoomLimits();
+    this.el.lightbox.querySelector('.mr-zoom-level')!.textContent = `${Math.round(scale * 100)}%`;
+    this.el.lightbox.querySelector<HTMLButtonElement>('[data-act="zoom-out"]')!.disabled = scale <= min + 0.001;
+    this.el.lightbox.querySelector<HTMLButtonElement>('[data-act="zoom-in"]')!.disabled = scale >= max - 0.001;
+    this.stage().classList.toggle('is-movable', width + 2 * ZOOM_MARGIN > room.width || height + 2 * ZOOM_MARGIN > room.height);
+  }
+
+  /** Zoom by `factor`, keeping the point under (px, py) in place: the pointer, or the middle of the stage. */
+  private zoomDiagram(factor: number, px = this.stageRoom().width / 2, py = this.stageRoom().height / 2): void {
+    const view = this.diagramView;
+    const [min, max] = this.zoomLimits();
+    const scale = Math.min(max, Math.max(min, view.scale * factor));
+    const k = scale / view.scale;
+    this.showDiagram(scale, px - (px - view.x) * k, py - (py - view.y) * k);
+  }
+
+  private moveDiagram(dx: number, dy: number): void {
+    const view = this.diagramView;
+    this.showDiagram(view.scale, view.x + dx, view.y + dy);
+  }
+
+  /** Wheel and trackpad: scrolling moves the diagram; pinching (or ⌘/Ctrl + scroll) zooms where the pointer is. */
+  private readonly onStageWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    const box = this.stage().getBoundingClientRect();
+    if (e.ctrlKey || e.metaKey) this.zoomDiagram(Math.exp(-e.deltaY / 100), e.clientX - box.left, e.clientY - box.top);
+    else this.moveDiagram(-e.deltaX, -e.deltaY);
+  };
+
+  private readonly onStagePointer = (e: PointerEvent) => {
+    const stage = this.stage();
+    if (e.type === 'pointerdown') {
+      stage.setPointerCapture(e.pointerId);
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this.dragged = false;
+      return;
+    }
+    if (e.type !== 'pointermove') {
+      this.pointers.delete(e.pointerId);
+      stage.classList.remove('is-dragging');
+      return;
+    }
+    const last = this.pointers.get(e.pointerId);
+    if (!last) return;
+    const next = { x: e.clientX, y: e.clientY };
+    const other = [...this.pointers].find(([id]) => id !== e.pointerId)?.[1];
+    if (other) {
+      // Two fingers: zoom by how far they moved apart, around the point between them.
+      const box = stage.getBoundingClientRect();
+      const before = Math.max(1, Math.hypot(last.x - other.x, last.y - other.y));
+      this.zoomDiagram(Math.hypot(next.x - other.x, next.y - other.y) / before, (next.x + other.x) / 2 - box.left, (next.y + other.y) / 2 - box.top);
+    } else this.moveDiagram(next.x - last.x, next.y - last.y);
+    // A press that moved is a drag, not a click on the backdrop.
+    if (Math.abs(next.x - last.x) + Math.abs(next.y - last.y) > 2) {
+      this.dragged = true;
+      stage.classList.add('is-dragging');
+    }
+    this.pointers.set(e.pointerId, next);
+  };
 
   private closeLightbox(): boolean {
     if (this.el.lightbox.hidden) return false;
     this.el.lightbox.hidden = true;
+    this.pointers.clear();
     this.el.lightbox.querySelector('img')!.removeAttribute('src');
     this.zoomFrom?.focus({ preventScroll: true });
     this.zoomFrom = null;
@@ -1229,7 +1495,7 @@ class Reader {
     body.open = true;
     const content = h('div', 'mr-content');
     if (overview.description.trim()) content.append(renderSnippet(document, overview.description, location.origin, this.settings.images));
-    else content.append(h('p', 'mr-overview-empty', 'No description.'));
+    else content.append(h('p', 'mr-overview-empty', 'No description was added to this request.'));
     body.append(h('summary', '', 'Description'), content);
     section.append(h('p', 'mr-overview-kind', overview.kind), h('h1', 'mr-title', overview.title), byline, body);
     return section;
@@ -1347,7 +1613,25 @@ class Reader {
       e.preventDefault();
       return;
     }
-    if (!this.el.settings.hidden || !this.el.lightbox.hidden) return;
+    if (!this.el.lightbox.hidden) {
+      const step = 80;
+      const keys: Record<string, () => void> = {
+        '+': () => this.zoomDiagram(1.25),
+        '=': () => this.zoomDiagram(1.25),
+        '-': () => this.zoomDiagram(0.8),
+        '0': () => this.fitDiagram(),
+        ArrowLeft: () => this.moveDiagram(step, 0),
+        ArrowRight: () => this.moveDiagram(-step, 0),
+        ArrowUp: () => this.moveDiagram(0, step),
+        ArrowDown: () => this.moveDiagram(0, -step),
+      };
+      if (keys[e.key]) {
+        e.preventDefault();
+        keys[e.key]();
+      }
+      return;
+    }
+    if (!this.el.settings.hidden) return;
     if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable]')) return;
     switch (e.key) {
       case 'j':
@@ -1495,6 +1779,15 @@ class Reader {
       case 'close-lightbox':
         this.closeLightbox();
         return;
+      case 'zoom-in':
+        this.zoomDiagram(1.25);
+        return;
+      case 'zoom-out':
+        this.zoomDiagram(0.8);
+        return;
+      case 'zoom-fit':
+        this.fitDiagram();
+        return;
       case 'close-settings':
         this.closeMenus();
         return;
@@ -1518,6 +1811,9 @@ class Reader {
         return;
       case 'retry-doc':
         void this.loadView(Number(action.dataset.doc));
+        return;
+      case 'show-quiet':
+        this.openQuiet(Number(action.dataset.doc));
         return;
       case 'comment-block':
         this.commentOn(this.hover!);
@@ -1581,7 +1877,9 @@ class Reader {
   private onHover(node: Element): void {
     const hit = this.blockAt(node);
     if (!hit || (hit.el === this.hover?.el && hit.side === this.hover.side)) return;
+    if (this.hover) surfaceOf(this.hover.el).classList.remove('mr-hovered');
     this.hover = hit;
+    surfaceOf(hit.el).classList.toggle('mr-hovered', hit.view.doc.kind === 'code');
     this.placeCommentButton();
     this.heatMark(hit.el);
   }
@@ -1603,13 +1901,21 @@ class Reader {
     if (!this.hover || e.pointerType === 'touch' || !(node instanceof Element)) return;
     if (node.closest('.mr-comment-btn') || this.blockAt(node)?.el === this.hover.el) return;
     const block = surfaceOf(this.hover.el).getBoundingClientRect();
-    const reach = (this.commentBtn.hidden ? this.el.article : this.commentBtn).getBoundingClientRect().right;
-    const across = e.clientY >= block.top - 4 && e.clientY <= block.bottom + 24 && e.clientX >= block.left - 4 && e.clientX <= reach + 8;
+    const control = this.commentBtn.hidden ? block : this.commentBtn.getBoundingClientRect();
+    const reach = this.commentBtn.hidden ? this.el.article.getBoundingClientRect().right : control.right;
+    // A one-line target can be shorter than its comment control. Include both in the bridge so the
+    // control and the target highlight survive a diagonal move into the input invitation.
+    const across =
+      e.clientY >= Math.min(block.top, control.top) - 8 &&
+      e.clientY <= Math.max(block.bottom, control.bottom) + 8 &&
+      e.clientX >= block.left - 8 &&
+      e.clientX <= reach + 8;
     if (!across || node.closest('.mr-thread, .mr-composer, .mr-topbar')) this.clearHover();
   }
 
   private clearHover(): void {
     if (!this.hover) return;
+    surfaceOf(this.hover.el).classList.remove('mr-hovered');
     this.hover = null;
     this.commentBtn.hidden = true;
     this.heatMark(null);
@@ -1680,8 +1986,9 @@ class Reader {
     for (const card of cards) {
       if (top < card.offsetTop + card.offsetHeight + 8 && top + height > card.offsetTop - 8) top = card.offsetTop + card.offsetHeight + 8;
     }
-    // When conversations fill the column beside this block, a small button waits in the gap instead.
-    const gap = top > surfaceOf(el).getBoundingClientRect().bottom - article.top;
+    // Code keeps the full invitation below any existing discussion. Its line stays highlighted and
+    // the pointer bridge reaches the control even when the discussion pushes it down.
+    const gap = hover.view.doc.kind !== 'code' && top > surfaceOf(el).getBoundingClientRect().bottom - article.top;
     button.classList.toggle('is-gap', gap);
     button.style.top = `${gap ? middle : top}px`;
   }
@@ -1826,10 +2133,10 @@ class Reader {
   private prepareDraft(draft: Draft): void {
     const prepare = this.source?.prepareComment;
     if (!prepare) {
-      draft.status.textContent = 'Commenting is unavailable for this source.';
+      draft.status.textContent = 'Commenting is unavailable in this review. Open it on GitHub or GitLab to comment.';
       return;
     }
-    draft.status.textContent = 'Preparing…';
+    draft.status.textContent = 'Checking where to post your comment…';
     void prepare(draft.target).then(
       (plan) => {
         if (this.closed || !this.drafts.includes(draft)) return;
@@ -2120,7 +2427,11 @@ class Reader {
       // Threads are context; a failure must not get in the way of reading.
       return;
     }
-    for (const view of this.views) if (view.rendered) this.attachThreads(view);
+    this.views.forEach((view, index) => {
+      if (view.rendered) this.attachThreads(view);
+      // A folded file that turns out to have a discussion opens, so the discussion is not missed.
+      else if (view.quiet && !view.open && this.threads.some((thread) => thread.doc === view.doc)) this.openQuiet(index);
+    });
     this.schedule(true);
   }
 
@@ -2136,13 +2447,7 @@ class Reader {
       if (thread.doc !== view.doc) continue;
       const card = this.threadCard(thread);
       const line = thread.line;
-      const block =
-        line === null
-          ? undefined
-          : r.blocks.find((b) => {
-              const unit = thread.side === 'base' ? b.base : b.head;
-              return unit && line - 1 >= unit.lines[0] && line - 1 < Math.max(unit.lines[1], unit.lines[0] + 1);
-            });
+      const block = line === null ? undefined : blockAt(r, thread.side, line);
       if (!block) {
         fileLevel.push(card);
         continue;
@@ -2158,6 +2463,22 @@ class Reader {
     }
     filterDocument(r, this.settings.scope === 'changed');
     this.schedule(true);
+  }
+
+  /** A draft's text and posting target survive switching between formatted notes and comments as written. */
+  private reanchorCodeComments(view: View): void {
+    for (const draft of this.drafts) {
+      if (draft.view !== view || !draft.anchor.closest('[data-mr-comment-view][hidden]')) continue;
+      // A line the note leaves out, such as an opening /**, keeps the draft beside its note.
+      draft.anchor =
+        blockAt(view.rendered!, draft.target.side, draft.target.startLine)?.el ??
+        draft.anchor.closest('.mr-source-comment')!.querySelector<HTMLElement>('[data-mr-comment-view]:not([hidden])')!;
+      draft.range = undefined;
+      draft.marks = [draft.anchor];
+      draft.anchor.dataset.mrSpecContext = '';
+    }
+    this.attachThreads(view);
+    this.refreshMarks();
   }
 
   private threadCard(thread: Thread): HTMLElement {

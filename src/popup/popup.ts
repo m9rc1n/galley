@@ -34,11 +34,11 @@ async function renderSite(origin: string | null, tabId: number | undefined): Pro
   }
   const host = new URL(origin).host;
   if (BUILT_IN_ORIGINS.has(origin)) {
-    section.append(statusLine(true, `Works on ${host} out of the box.`));
+    section.append(statusLine(true, `Ready to use on ${host}.`));
     return;
   }
   if (await isEnabled(origin)) {
-    const off = el('button', 'Disable', 'secondary');
+    const off = el('button', 'Disable on this site', 'secondary');
     off.addEventListener('click', async () => {
       await chrome.scripting.unregisterContentScripts({ ids: [siteScriptId(origin)] }).catch(() => {});
       await chrome.permissions.remove({ origins: [`${origin}/*`] });
@@ -68,7 +68,7 @@ async function checkEnterprise(origin: string): Promise<string | null> {
   } catch {
     // Treated as "not GitHub Enterprise" below.
   }
-  return `${new URL(origin).host} did not answer like a GitHub Enterprise Server, so the token was not saved.`;
+  return `${new URL(origin).host} could not be verified as a GitHub Enterprise Server. The token was not saved. Check the site address before trying again.`;
 }
 
 async function renderToken(origin: string): Promise<void> {
@@ -87,7 +87,7 @@ async function renderToken(origin: string): Promise<void> {
   if (!origin.startsWith('https://')) {
     input.disabled = true;
     $<HTMLButtonElement>('#token-form button').disabled = true;
-    status.replaceChildren(statusLine(false, 'Tokens can only be saved for sites served over https.'));
+    status.replaceChildren(statusLine(false, 'To save a token, open this site using HTTPS.'));
     return;
   }
   const refresh = async () => {
@@ -96,7 +96,7 @@ async function renderToken(origin: string): Promise<void> {
     input.value = '';
     input.placeholder = saved ? 'Replace the saved token…' : 'github_pat_…';
     if (saved) {
-      const remove = el('button', 'Remove', 'secondary');
+      const remove = el('button', 'Remove token', 'secondary');
       remove.addEventListener('click', async () => {
         await setToken(origin, null);
         await refresh();

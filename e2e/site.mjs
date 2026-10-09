@@ -80,7 +80,21 @@ try {
   assert.equal(await page.$eval('[data-mode="clean"]', (element) => element.getAttribute('aria-pressed')), 'true');
   await page.click('[data-mode="changes"]');
   assert.notEqual(await page.$eval('#illustrated-reader del', (element) => getComputedStyle(element).display), 'none');
-  for (const preview of ['tables', 'dark', 'changes']) {
+  // The same change as a raw diff, in a card that keeps its size, so the page never jumps.
+  const cardHeight = () => page.$eval('#illustrated-reader', (card) => card.getBoundingClientRect().height);
+  const galleyHeight = await cardHeight();
+  await page.click('[data-mode="diff"]');
+  assert.equal(await page.$eval('.reader-diff', (diff) => getComputedStyle(diff).visibility), 'visible');
+  assert.equal(await page.$eval('#illustrated-reader .reader-paper', (paper) => getComputedStyle(paper).visibility), 'hidden');
+  assert.equal(await cardHeight(), galleyHeight, 'Switching modes keeps the illustrated card the same height');
+  await page.click('[data-mode="changes"]');
+  // Before / after: the divider follows the range input.
+  await page.$eval('.compare-range', (range) => {
+    range.value = '20';
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  assert.equal(await page.$eval('.compare-frame', (frame) => frame.style.getPropertyValue('--split')), '20%');
+  for (const preview of ['comments', 'code', 'tables', 'diagram', 'dark', 'changes']) {
     await page.click(`[data-preview="${preview}"]`);
     await page.waitForFunction(() => document.querySelector('#preview-image').complete && document.querySelector('#preview-image').naturalWidth > 0);
     assert.equal(await page.$$eval('[data-preview][aria-pressed="true"]', (buttons) => buttons.length), 1);

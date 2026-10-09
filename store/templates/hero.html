@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Galley — Understand changes. Review together.</title>
+    <!-- Drawn at 1400 × 560 and scaled by --artwork-scale: the store marquee and the README hero. -->
+    <style>
+      html, body { width: var(--artwork-width, 1400px); height: var(--artwork-height, 560px); margin: 0; overflow: hidden; }
+      body { background: #f6f5ef; color: #243e32; font-family: var(--sans); font-optical-sizing: auto; font-kerning: normal; -webkit-font-smoothing: antialiased; }
+      * { box-sizing: border-box; }
+      .canvas { position: relative; width: 1400px; height: 560px; transform: scale(var(--artwork-scale, 1)); transform-origin: top left; overflow: hidden; }
+      .copy { position: absolute; left: 64px; top: 48px; width: 560px; }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand svg { width: 38px; height: 38px; }
+      .word { font: 600 33px/1 var(--serif); letter-spacing: -1.4px; }
+      .platforms { margin-left: 18px; color: #67756a; font: 11px/1.4 var(--sans); letter-spacing: 1.3px; text-transform: uppercase; }
+      h1 { margin: 50px 0 22px; font: 400 68px/1.02 var(--serif); letter-spacing: -3.8px; }
+      h1 em { color: #5b7b3f; font-style: italic; }
+      .description { margin: 0; max-width: 500px; color: #55645a; font-size: 19px; line-height: 1.5; }
+      .promise { position: absolute; left: 64px; bottom: 44px; margin: 0; color: #657469; font-size: 13px; letter-spacing: .2px; }
+      .promise strong { color: #243e32; font-weight: 550; }
+      .scene { position: absolute; left: 660px; top: 0; width: 740px; height: 560px; }
+      .scene::before { content: ""; position: absolute; inset: 0; background: #e4eadc; border-radius: 190px 0 0 0; }
+      .tag { position: absolute; z-index: 5; padding: 6px 11px; border-radius: 999px; background: #243e32; color: #f6f5ef; font: 600 10.5px/1 var(--sans); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+      .tag.is-light { background: #fffefa; color: #895d50; box-shadow: 0 2px 8px #243e3214; }
+      /* Before: everything in one cramped monospace column. */
+      .diff { position: absolute; left: 26px; top: 66px; width: 330px; padding: 12px 0 14px; background: #fbfbf8; border: 1px solid #dfe2d8; border-radius: 9px; transform: rotate(-5deg); box-shadow: 0 10px 30px #243e3212; font: 10.5px/1.7 ui-monospace, "SF Mono", Menlo, monospace; color: #5e665e; }
+      .diff span { display: block; padding: 0 14px; white-space: pre; overflow: hidden; }
+      .diff .file { margin: 6px 0 4px; color: #3b463e; font-weight: 600; }
+      .diff .hunk { color: #6b7d9a; background: #eef1f6; }
+      .diff .del { background: #fbe6e2; color: #8c4a40; }
+      .diff .add { background: #e4f1dc; color: #3f6334; }
+      .diff .more { margin-top: 6px; color: #9aa196; font-family: var(--sans); }
+      .before { left: 56px; top: 40px; transform: rotate(-5deg); }
+      /* After: the same review as one calm reading stream. */
+      .paper { position: absolute; z-index: 2; left: 172px; top: 96px; width: 404px; padding: 0 28px 22px; background: #fffefa; border: 1px solid #e3e5dc; border-radius: 10px; box-shadow: 0 18px 44px #243e321c; }
+      .after { left: 194px; top: 76px; }
+      .bar { display: flex; align-items: center; gap: 8px; margin: 0 -28px 18px; padding: 12px 16px; border-bottom: 1px solid #eceee6; color: #3b463e; font: 600 11px/1 var(--sans); }
+      .bar .dot { width: 7px; height: 7px; border-radius: 50%; background: #b2894a; }
+      .bar .of { color: #8a9385; font-weight: 400; }
+      .bar .viewed { margin-left: auto; padding: 5px 9px; border-radius: 999px; background: #e7eedd; color: #46613b; font-weight: 600; font-size: 10px; }
+      h2 { margin: 0 0 10px; font: 400 27px/1.1 var(--serif); letter-spacing: -.7px; }
+      .paragraph { position: relative; margin: 0; font: 16px/1.55 var(--serif); }
+      .paragraph::before { content: ""; position: absolute; left: -15px; top: 5px; bottom: 5px; width: 2px; background: #b9a05f; border-radius: 2px; }
+      ins { padding: 1px 2px; background: #e1ebd0; text-decoration: none; }
+      del { color: #895d50; background: #f5e9df; text-decoration-color: #ac796d; text-decoration-thickness: 1.5px; }
+      del + ins { margin-inline-start: .18em; }
+      .dinkus { margin: 14px 0 10px; color: #a3ab9c; font: 13px/1 var(--serif); letter-spacing: 8px; text-align: center; }
+      .code-title { margin: 0 0 8px; font: 400 18px/1.2 var(--serif); }
+      .code-title span { color: #8a9385; }
+      .code { margin: 0; padding: 8px 0; border-radius: 7px; background: #f4f5ef; font: 11.5px/1.75 ui-monospace, "SF Mono", Menlo, monospace; color: #3b463e; }
+      .code .row { display: grid; grid-template-columns: 22px 22px 14px 1fr; padding: 0 10px; white-space: pre; }
+      .code i { color: #a3ab9c; font-style: normal; text-align: right; padding-right: 6px; }
+      .code .row.del { background: #fbebe6; box-shadow: inset 2px 0 #d39888; }
+      .code .row.add { background: #e8f1df; box-shadow: inset 2px 0 #8fb07a; }
+      .code b { font-weight: 400; } .code code { font: inherit; } .k { color: #8a5a8f; } .n { color: #3f6e9a; }
+      .thread { position: absolute; z-index: 4; left: 594px; top: 196px; width: 124px; padding: 11px 12px 12px; border-radius: 10px; background: #f0f3e9; box-shadow: 0 1px 2px #243e320d, 0 10px 24px -12px #243e3240; font: 13px/1.35 var(--serif); }
+      .thread::after { content: ""; position: absolute; left: -16px; top: 20px; width: 16px; height: 1px; background: #b6c3ac; }
+      .who { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; color: #42563b; font: 600 9.5px/1 var(--sans); }
+      .avatar { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #dce6d0; color: #4b6241; font-size: 8px; }
+      .reply { margin-top: 9px; padding-left: 9px; border-left: 1px solid #c4cfba; }
+      .keys { position: absolute; z-index: 5; left: 172px; top: 494px; display: flex; gap: 10px; }
+      .keys span { display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 7px; border-radius: 999px; background: #fffefa; color: #55645a; font: 500 11px/1 var(--sans); box-shadow: 0 2px 8px #243e3214; }
+      kbd { display: inline-grid; place-items: center; min-width: 19px; height: 19px; padding: 0 5px; border: 1px solid #d5dbcd; border-bottom-width: 2px; border-radius: 5px; background: #f6f5ef; color: #243e32; font: 600 10px/1 var(--sans); }
+    </style>
+  </head>
+  <body>
+    <main class="canvas">
+      <div class="copy">
+        <div class="brand">{{ICON}}<span class="word">galley</span><span class="platforms">GitHub + GitLab</span></div>
+        <h1>Understand changes.<br /><em>Review together.</em></h1>
+        <p class="description">Help your team understand GitHub and GitLab changes with readable documents and code, edits in context, and comments beside the text.</p>
+      </div>
+      <p class="promise"><strong>Open source.</strong> Renders in your browser. No account, no analytics.</p>
+      <section class="scene" aria-label="The same review before and after Galley">
+        <span class="tag is-light before">Before · the diff</span>
+        <div class="diff" aria-hidden="true">
+          <span class="file">docs/rfcs/0042-limits.md</span>
+          <span class="hunk">@@ -11,6 +11,7 @@</span>
+          <span class="del">-## Limits</span>
+          <span class="add">+## Rate limits</span>
+          <span class="del">-The limit is **10** requests a minute,</span>
+          <span class="add">+The limit is **100** requests a</span>
+          <span class="add">+minute, per client.</span>
+          <span>  | Mode    | Shows          |</span>
+          <span class="del">- |---------|----------------|</span>
+          <span class="add">+ | ------- | -------------- |</span>
+          <span class="file">src/limits.ts</span>
+          <span class="hunk">@@ -12,3 +12,3 @@ export const limit = {</span>
+          <span class="del">-  perMinute: 10,</span>
+          <span class="add">+  perMinute: 100,</span>
+          <span class="more">… and 36 more files</span>
+        </div>
+        <span class="tag after">After · Galley</span>
+        <article class="paper">
+          <div class="bar"><span class="dot"></span>0042-limits.md <span class="of">2 of 5</span><span class="viewed">✓ Viewed</span></div>
+          <h2>Rate limits</h2>
+          <p class="paragraph">The limit is <del>10</del><ins>100</ins> requests a minute, per client.</p>
+          <p class="dinkus" aria-hidden="true">***</p>
+          <p class="code-title"><span>src/</span>limits.ts</p>
+          <div class="code">
+            <div class="row"><i>12</i><i>12</i><b> </b><code><b class="k">export const</b> limit = {</code></div>
+            <div class="row del"><i>13</i><i></i><b>−</b><code>  perMinute: <b class="n">10</b>,</code></div>
+            <div class="row add"><i></i><i>13</i><b>+</b><code>  perMinute: <b class="n">100</b>,</code></div>
+            <div class="row"><i>14</i><i>14</i><b> </b><code>};</code></div>
+          </div>
+        </article>
+        <aside class="thread">
+          <div class="who"><span class="avatar">D</span>Dana</div>
+          Does this cover batch uploads?
+          <div class="reply"><div class="who"><span class="avatar">L</span>Lee</div>Yes. Example added.</div>
+        </aside>
+        <div class="keys" aria-hidden="true"><span><kbd>J</kbd><kbd>K</kbd> changes</span><span><kbd>R</kbd> comment</span><span><kbd>V</kbd> viewed</span></div>
+      </section>
+    </main>
+  </body>
+</html>

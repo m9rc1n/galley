@@ -18,7 +18,7 @@ It declares `data_collection_permissions: none`, which Firefox reads from versio
 
 The validator turns two things into errors, and the Firefox build now fails if either is broken, so they cannot reach an upload again:
 
-- **Name:** at most 45 characters. The Firefox package is named `Galley: Markdown for pull & merge requests` (42); Chrome keeps the longer `Galley: Markdown reader for pull & merge requests`.
+- **Name:** at most 45 characters. The Firefox package is named `Galley: Understand pull request changes` (39); Chrome uses `Galley: Clearer reviews for GitHub & GitLab`.
 - **File size:** a file over 5 MB is not scanned. Mermaid is minified, and its layout engine ships as a second script, `elk.js`, so the largest file is about 3.6 MB.
 
 ## First submission
@@ -31,9 +31,9 @@ The validator turns two things into errors, and the Firefox build now fails if e
 
 | Field | Value |
 | --- | --- |
-| Name | `Galley: Markdown for pull & merge requests` |
+| Name | `Galley: Understand pull request changes` |
 | Add-on URL | `galley` |
-| Summary (250 characters) | `Make room for better reviews. A free, open-source browser extension that turns Markdown changes in GitHub pull requests and GitLab merge requests into clear, typeset articles you can discuss in place.` |
+| Summary (250 characters) | `Galley helps teams understand GitHub pull requests and GitLab merge requests with readable documents and code, edits shown in context, and comments beside the text. Free and open source.` |
 | Description | The **Description** block in [`LISTING.md`](LISTING.md), pasted as is |
 | Categories | Web Development (check the names offered in the form) |
 | License | GNU General Public License v3.0 |
@@ -41,9 +41,9 @@ The validator turns two things into errors, and the Firefox build now fails if e
 | Support site | `https://github.com/m9rc1n/galley/issues` |
 | Support email | **You** (shown publicly) |
 | Privacy policy | `https://github.com/m9rc1n/galley/blob/main/PRIVACY.md` |
-| Screenshots | `assets/screenshot-1-changes.jpg` to `assets/screenshot-5-sepia-settings.jpg` |
+| Screenshots | `assets/screenshot-1-read.jpg` to `assets/screenshot-5-comfort.jpg` |
 
-The summary is the same wording as the GitHub project description, the website and `package.json`. The manifest `description` (132 characters at most, shown in Firefox's add-on manager) is shorter and stays: `Read markdown changes in GitHub pull requests and GitLab merge requests as typeset articles, with every edit marked in the text.`
+The summary follows the product positioning in the website and `package.json`. The manifest `description` (132 characters at most, shown in Firefox's add-on manager) is shorter: `Understand GitHub and GitLab changes: readable docs and code, edits in context, and comments beside the text.`
 
 6. Paste the reviewer notes below into **Notes to Reviewer**, then **Submit Version**.
 7. Review is by a person for a listed add-on, so it can take days. Mozilla emails the result.
@@ -51,7 +51,7 @@ The summary is the same wording as the GitHub project description, the website a
 ## Notes to reviewer
 
 ```
-Galley is a reader for markdown changes in GitHub pull requests and GitLab merge requests. It is open source (GPL-3.0-or-later): https://github.com/m9rc1n/galley
+Galley is a reader for GitHub pull requests and GitLab merge requests: changed documents render as articles, source files with syntax colours, and review comments sit beside the text. It is open source (GPL-3.0-or-later): https://github.com/m9rc1n/galley
 
 BUILD. The package is bundled with esbuild from TypeScript. Galley's own code is not minified, so content.js, highlight-frame.js, popup.js and background.js can be read as written. Only the bundled third-party diagram engine is minified: Mermaid (diagram-frame.js, about 3.6 MB) and its layout engine elkjs (elk.js, about 1.4 MB), which is a separate file because addons.mozilla.org does not scan a file over 5 MB. elk.js is loaded by a script element, from the same sandboxed frame, the first time a diagram is laid out (src/ui/elk-shim.ts).
 The source package contains everything needed:

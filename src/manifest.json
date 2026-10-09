@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Galley: Markdown reader for pull & merge requests",
+  "name": "Galley: Clearer reviews for GitHub & GitLab",
   "short_name": "Galley",
-  "description": "Read markdown changes in GitHub pull requests and GitLab merge requests as typeset articles, with every edit marked in the text.",
+  "description": "Understand GitHub and GitLab changes: readable docs and code, edits in context, and comments beside the text.",
   "homepage_url": "https://github.com/m9rc1n/galley",
   "version": "0.0.0",
   "minimum_chrome_version": "111",
@@ -31,14 +31,14 @@
     }
   ],
   "sandbox": {
-    "pages": ["diagram-frame.html", "highlight-frame.html"]
+    "pages": ["diagram-frame.html", "highlight-frame.html", "spec-frame.html"]
   },
   "content_security_policy": {
     "sandbox": "sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'unsafe-inline'"
   },
   "web_accessible_resources": [
     {
-      "resources": ["diagram-frame.html", "highlight-frame.html"],
+      "resources": ["diagram-frame.html", "highlight-frame.html", "spec-frame.html"],
       "matches": ["https://*/*", "http://*/*"],
       "use_dynamic_url": true
     }

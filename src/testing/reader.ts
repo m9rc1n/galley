@@ -103,7 +103,7 @@ export function readerHarness() {
     q(selector).dispatchEvent(new Event('pointerover', { bubbles: true }));
     click('[data-act="comment-block"]');
     const composer = () => shadow().activeElement?.closest<HTMLFormElement>('.mr-composer');
-    await vi.waitFor(() => expect(composer()?.querySelector('.mr-comment-status')?.textContent).not.toBe('Preparing…'));
+    await vi.waitFor(() => expect(composer()?.querySelector('.mr-comment-status')?.textContent).not.toBe('Checking where to post your comment…'));
     flushFrame();
     return composer()!;
   }

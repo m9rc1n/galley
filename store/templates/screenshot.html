@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{{CAPTION}}</title>
+    <!-- A Chrome Web Store screenshot, 1280 × 800: one line of copy over a real reader capture. -->
+    <style>
+      html, body { width: 1280px; height: 800px; margin: 0; overflow: hidden; }
+      body { position: relative; background: #e9eee1; color: #243e32; font-family: var(--sans); font-optical-sizing: auto; font-kerning: normal; -webkit-font-smoothing: antialiased; }
+      header { position: absolute; left: 0; right: 0; top: 34px; text-align: center; }
+      .kicker { margin: 0 0 10px; color: #5b6d52; font: 600 13px/1 var(--sans); letter-spacing: 1.6px; text-transform: uppercase; }
+      h1 { margin: 0; font: 400 46px/1.05 var(--serif); letter-spacing: -1.4px; }
+      .frame { position: absolute; left: 120px; top: 156px; width: 1040px; height: 650px; overflow: hidden; border-radius: 14px 14px 0 0; background: #fffefa; box-shadow: 0 -1px 0 #243e3214, 0 24px 60px #243e3238; }
+      .frame img { display: block; width: 1040px; height: 650px; }
+    </style>
+  </head>
+  <body>
+    <header><p class="kicker">{{KICKER}}</p><h1>{{CAPTION}}</h1></header>
+    <div class="frame"><img src="{{IMAGE}}" alt=""></div>
+  </body>
+</html>

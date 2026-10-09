@@ -2,65 +2,66 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Galley — Make room for better reviews</title>
+    <title>Galley — Understand changes. Review together.</title>
+    <!-- GitHub's social preview, 1280 × 640: the hero, rearranged for a 2:1 card. -->
     <style>
       html, body { width: 1280px; height: 640px; margin: 0; overflow: hidden; }
-      body { background: #f6f5ef; color: #243e32; font-family: var(--sans); }
-      body { font-optical-sizing: auto; font-kerning: normal; -webkit-font-smoothing: antialiased; }
+      body { background: #f6f5ef; color: #243e32; font-family: var(--sans); font-optical-sizing: auto; font-kerning: normal; -webkit-font-smoothing: antialiased; }
       * { box-sizing: border-box; }
       .canvas { position: relative; width: 1280px; height: 640px; overflow: hidden; }
-      .copy { position: absolute; left: 72px; top: 64px; width: 560px; }
+      .copy { position: absolute; left: 72px; top: 64px; width: 600px; }
       .brand { display: flex; align-items: center; gap: 14px; }
       .brand svg { width: 44px; height: 44px; }
       .word { font: 600 38px/1 var(--serif); letter-spacing: -1.6px; }
       .platforms { margin-left: 18px; color: #67756a; font: 12px/1.4 var(--sans); letter-spacing: 1.4px; text-transform: uppercase; }
-      h1 { margin: 66px 0 26px; font: 400 76px/1.03 var(--serif); letter-spacing: -3.2px; }
-      .description { margin: 0; color: #55645a; font-size: 23px; line-height: 1.5; }
-      .promise { position: absolute; left: 72px; bottom: 56px; }
-      .promise strong { display: block; margin-bottom: 9px; font-size: 16px; font-weight: 550; }
-      .promise p { margin: 0; color: #657469; font-size: 13px; letter-spacing: .25px; }
-      .scene { position: absolute; left: 664px; top: 0; width: 616px; height: 640px; }
-      .scene::before { content: ""; position: absolute; inset: 0; background: #e4eadc; border-radius: 180px 0 0 0; }
-      .paper { position: absolute; left: 40px; top: 70px; width: 536px; height: 500px; padding: 32px 44px; background: #fffefa; border: 1px solid #e3e5dc; border-radius: 8px; box-shadow: 0 12px 36px #243e320d; }
-      .meta { display: flex; justify-content: space-between; gap: 15px; color: #81897d; font: 11px/1.4 ui-monospace, monospace; }
-      .meta span:last-child { font: 10px/1.4 var(--sans); letter-spacing: .6px; text-transform: uppercase; }
-      h2 { margin: 34px 0 22px; font: 400 44px/1.08 var(--serif); letter-spacing: -1.1px; }
-      .paragraph { position: relative; margin: 0; font: 22px/1.5 var(--serif); text-wrap: balance; }
-      .paragraph::before { content: ""; position: absolute; left: -22px; top: 5px; bottom: 5px; width: 2px; background: #9caf91; border-radius: 2px; }
-      ins { padding: 1px 2px; background: #e1ebd0; text-decoration: none; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-      del { color: #895d50; background: #f5e9df; text-decoration-color: #ac796d; text-decoration-thickness: 1.5px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-      del { white-space: nowrap; }
+      h1 { margin: 56px 0 26px; font: 400 76px/1.02 var(--serif); letter-spacing: -4.2px; }
+      .description { margin: 0; max-width: 540px; color: #55645a; font-size: 22px; line-height: 1.5; }
+      h1 em { color: #5b7b3f; font-style: italic; }
+      .promise { position: absolute; left: 72px; bottom: 58px; margin: 0; color: #657469; font-size: 15px; }
+      .promise strong { color: #243e32; font-weight: 550; }
+      .scene { position: absolute; left: 700px; top: 0; width: 580px; height: 640px; }
+      .scene::before { content: ""; position: absolute; inset: 0; background: #e4eadc; border-radius: 190px 0 0 0; }
+      .diff { position: absolute; left: 40px; top: 96px; width: 380px; padding: 16px 0 18px; background: #fbfbf8; border: 1px solid #dfe2d8; border-radius: 9px; transform: rotate(-4deg); box-shadow: 0 10px 30px #243e3212; font: 12px/1.8 ui-monospace, "SF Mono", Menlo, monospace; color: #5e665e; }
+      .diff span { display: block; padding: 0 16px; white-space: pre; overflow: hidden; }
+      .diff .del { background: #fbe6e2; color: #8c4a40; }
+      .diff .add { background: #e4f1dc; color: #3f6334; }
+      .paper { position: absolute; left: 150px; top: 196px; width: 390px; padding: 28px 32px 26px; background: #fffefa; border: 1px solid #e3e5dc; border-radius: 10px; box-shadow: 0 18px 44px #243e321c; }
+      h2 { margin: 0 0 14px; font: 400 34px/1.1 var(--serif); letter-spacing: -.8px; }
+      .paragraph { position: relative; margin: 0; font: 19px/1.55 var(--serif); }
+      .paragraph::before { content: ""; position: absolute; left: -16px; top: 5px; bottom: 5px; width: 2px; background: #9caf91; border-radius: 2px; }
+      ins { padding: 1px 2px; background: #e1ebd0; text-decoration: none; }
+      del { color: #895d50; background: #f5e9df; text-decoration-color: #ac796d; text-decoration-thickness: 1.5px; }
       del + ins { margin-inline-start: .18em; }
-      .context { margin: 16px 0 0; color: #7a8276; font: 17px/1.5 var(--serif); text-wrap: balance; }
-      .thread { position: relative; margin-top: 26px; padding: 17px 20px 18px; border-radius: 8px; background: #f0f3e9; }
-      .thread::before { content: ""; position: absolute; top: -13px; left: 26px; height: 13px; width: 1px; background: #b6c3ac; }
-      .thread-heading { display: flex; align-items: center; gap: 8px; color: #64735d; font-size: 11px; }
-      .avatar { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #dce6d0; color: #4b6241; font-size: 10px; font-weight: 600; }
-      .thread-heading strong { font-weight: 600; color: #42563b; }
-      .thread p { margin: 10px 0 0; font: 19px/1.4 var(--serif); }
-      .thread .reply { margin-top: 12px; color: #697760; font: 13px/1.4 var(--sans); }
-      .thread .reply strong { color: #42563b; font-weight: 550; }
+      .thread { margin: 20px 0 0; padding: 12px 14px; border-radius: 10px; background: #f0f3e9; font: 16px/1.4 var(--serif); }
+      .thread.reply { margin: 10px 0 0 22px; }
+      .thread strong { display: block; margin-bottom: 4px; color: #42563b; font: 600 11px/1.4 var(--sans); }
     </style>
   </head>
   <body>
     <main class="canvas">
       <div class="copy">
         <div class="brand">{{ICON}}<span class="word">galley</span><span class="platforms">GitHub + GitLab</span></div>
-        <h1>Make room for<br />better reviews.</h1>
-        <p class="description">A calmer way to read changes,<br />understand ideas and review together.</p>
+        <h1>Understand changes.<br /><em>Review together.</em></h1>
+        <p class="description">Help your team follow GitHub and GitLab changes with readable content, edits in context and comments beside the text.</p>
       </div>
-      <footer class="promise"><strong>Built in the open. Rendered in your browser.</strong><p>Open source · No analytics · No Galley server</p></footer>
-      <section class="scene" aria-label="An illustrated document review">
+      <p class="promise"><strong>Open source.</strong> Renders in your browser. No account, no analytics.</p>
+      <section class="scene" aria-hidden="true">
+        <div class="diff">
+          <span class="del">-## Goals</span>
+          <span class="add">+## Goals and limits</span>
+          <span class="del">-The limit is **10** requests a minute,</span>
+          <span class="add">+The limit is **100** requests a</span>
+          <span>  | Mode    | Shows          |</span>
+          <span class="del">- |---------|----------------|</span>
+          <span class="add">+ | ------- | -------------- |</span>
+          <span class="del">-  perMinute: 10,</span>
+          <span class="add">+  perMinute: 100,</span>
+        </div>
         <article class="paper">
-          <div class="meta"><span>team / review-culture.md</span><span>Illustrated review</span></div>
-          <h2>A little room to think.</h2>
-          <p class="paragraph">Give every reviewer <del>just the diff</del><ins>time to understand the change</ins> before asking for an approval.</p>
-          <p class="context">Keep the context close, so the conversation can move the idea forward.</p>
-          <aside class="thread">
-            <div class="thread-heading"><span class="avatar">D</span><strong>Dana</strong><span>on this paragraph</span></div>
-            <p>Could we add an example of who this helps?</p>
-            <p class="reply"><strong>Lee</strong> &nbsp;Yes — I’ll add one to the next revision.</p>
-          </aside>
+          <h2><ins>Rate</ins> limits</h2>
+          <p class="paragraph">The limit is <del>10</del><ins>100</ins> requests a minute, per client.</p>
+          <p class="thread"><strong>Dana · just now</strong>Does this cover batch uploads?</p>
+          <p class="thread reply"><strong>Lee · just now</strong>Yes. Example added.</p>
         </article>
       </section>
     </main>
