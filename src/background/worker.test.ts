@@ -15,8 +15,10 @@ let listener: Listener;
 beforeEach(async () => {
   const addListener = vi.fn();
   vi.stubGlobal('chrome', {
-    runtime: { id: EXTENSION_ID, onMessage: { addListener } },
+    runtime: { id: EXTENSION_ID, onMessage: { addListener }, onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } },
     storage: { local: { get: async () => ({}), remove: async () => undefined } },
+    permissions: { getAll: vi.fn(async () => ({ origins: ['https://gitlab.com/*', 'https://git.example.com/*'] })) },
+    scripting: { getRegisteredContentScripts: vi.fn(async () => []), registerContentScripts: vi.fn(async () => undefined) },
   });
   vi.resetModules();
   await import('./worker.ts');
@@ -32,6 +34,23 @@ async function send(message: unknown, from: unknown = sender()): Promise<unknown
 }
 
 const request = (url: string, method = 'GET', body?: string) => ({ type: 'galley:github', url, method, ...(body === undefined ? {} : { body }) });
+
+it('restores enabled sites when the extension is installed or updated, and when the browser starts', async () => {
+  const { runtime, permissions, scripting } = (globalThis as unknown as { chrome: {
+    runtime: Record<'onInstalled' | 'onStartup', { addListener: ReturnType<typeof vi.fn> }>;
+    permissions: { getAll: ReturnType<typeof vi.fn> };
+    scripting: { registerContentScripts: ReturnType<typeof vi.fn> };
+  } }).chrome;
+  const [[onInstalled]] = runtime.onInstalled.addListener.mock.calls, [[onStartup]] = runtime.onStartup.addListener.mock.calls;
+  expect(onStartup).toBe(onInstalled);
+  onInstalled();
+  await vi.waitFor(() => expect(scripting.registerContentScripts).toHaveBeenCalledOnce());
+  expect(scripting.registerContentScripts.mock.calls[0][0].map((script: { matches: string[] }) => script.matches)).toEqual([['https://git.example.com/*']]);
+  // A failure leaves the site off in the popup, where it can be enabled again; it never surfaces as an error.
+  permissions.getAll.mockRejectedValueOnce(new Error('unavailable'));
+  expect(() => onStartup()).not.toThrow();
+  await vi.waitFor(() => expect(permissions.getAll).toHaveBeenCalledTimes(2));
+});
 
 it('leaves messages it does not own to other listeners', () => {
   expect(listener({ type: 'something-else' }, sender(), vi.fn())).toBe(false);

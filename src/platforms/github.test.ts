@@ -22,9 +22,11 @@ it('GitHub posts ordinary inline/file comments, keeps the reviewed head, and che
       return response({ html_url: 'https://github.com/acme/docs/pull/1#discussion-1' }, 201);
     }
     if (String(url).includes('/files?')) return response([{ filename: 'new.md', previous_filename: 'old.md', status: 'renamed', changes: 2, patch, raw_url: 'https://github.com/acme/docs/raw/base-sha/new.md' }]);
-    return response({ head: { sha: head }, base: { sha: 'base-sha' } });
+    return response({ head: { sha: head }, base: { sha: 'base-sha' }, title: 'Docs: reading first', body: 'Adds **RFC 42**.', user: { login: 'dana' } });
   });
   const source = await loadGitHub({ platform: 'github', key: '', origin: 'https://github.com', apiBase: 'https://api.github.com', owner: 'acme', repo: 'docs', number: 1, title: 'Docs' }, directApi('https://github.com', getToken));
+  // The pull request's own title and description come with it, for the optional first document.
+  expect(source.overview).toEqual({ kind: 'Pull request', title: 'Docs: reading first', description: 'Adds **RFC 42**.', author: 'dana', url: 'https://github.com/acme/docs/pull/1' });
   const selected = { ...target, doc: source.docs[0] };
   const inline = await source.prepareComment!(selected);
   expect(inline.kind).toBe('inline');

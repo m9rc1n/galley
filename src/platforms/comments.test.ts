@@ -47,6 +47,22 @@ it('GitLab diff discussions become threads; system notes and general discussions
   ]);
 });
 
+it('GitLab participants appear by their display name; the username is kept for mentions', () => {
+  const doc = { path: 'README.md', oldPath: 'README.md', status: 'modified' as const };
+  const at = '2026-10-01T10:00:00Z';
+  const position = { new_path: 'README.md', old_path: 'README.md', new_line: 7, old_line: 7 };
+  const [thread] = gitlabThreads([doc], [{ notes: [
+    { id: 1, body: 'Hi', created_at: at, author: { username: 'dana', name: 'Dana Whitfield' }, position },
+    { id: 2, body: 'Blank name', created_at: at, author: { username: 'lee', name: '  ' } },
+    { id: 3, body: 'Deleted account', created_at: at, author: null },
+  ] }], (id) => `#note_${id}`);
+  expect(thread.comments.map(({ author, handle }) => ({ author, handle }))).toStrictEqual([
+    { author: 'Dana Whitfield', handle: 'dana' },
+    { author: 'lee', handle: 'lee' },
+    { author: 'unknown', handle: undefined },
+  ]);
+});
+
 it('pull request text in a posted comment stays code: no mentions, references, links or images', () => {
   const md = new MarkdownIt({ linkify: true });
   const hostile = {

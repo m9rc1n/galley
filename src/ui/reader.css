@@ -43,7 +43,7 @@
   /* Columns: contents, document, comments. Wide screens lay them out from the left (see the end). */
   --edge: 24px;
   --toc-width: 176px;
-  --toc-gap: 64px;
+  --toc-gap: 80px;
   --rail-width: 240px;
   --rail-gap: 56px;
   --left: 0px;
@@ -55,6 +55,17 @@
   --body-size: 20px;
   --size-scale: 1;
   --measure: 680px;
+  /* Layouts (Settings, Layout) set these; see the end of this file. */
+  --frame-max: 1480px;
+  --measure-max: 680px;
+  --fit: 1;
+  --text-scale: 1;
+  /* Titles, standfirsts, bylines, contents and comments follow the text size (reader.ts sets the parts). */
+  --type: calc(var(--text-scale) * var(--fit));
+  --comment-size: calc(13.5px * var(--type));
+  --card-max: 100%;
+  --select: var(--accent);
+  --select-ink: var(--bg);
 
   position: fixed;
   inset: 0;
@@ -78,6 +89,15 @@
 .mr-root[data-font="sans"] {
   --body-font: var(--sans);
 }
+
+/* Galley, chosen for long reviews on screen: Newsreader sets titles, headings and quotations, where its
+   display cut gives the page a voice; DM Sans sets the running text, where its large x-height and open
+   letters stay clear at reading sizes and beside code; code keeps the system monospace. */
+.mr-root[data-font="galley"] {
+  --body-font: var(--sans);
+  --heading-font: var(--serif);
+}
+.mr-root[data-font="galley"] .mr-content blockquote:not(.mr-alert) { font-family: var(--serif); }
 
 .mr-root[data-font="georgia"] { --body-font: Georgia, "Times New Roman", serif; }
 .mr-root[data-font="system"] { --body-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -205,8 +225,149 @@
   --code-del: #fbdfdf;
 }
 
+/* Reading palettes added for long reviews; their contrast is checked by e2e/reader.mjs like the rest. */
+.mr-root[data-theme="cream"],
+.mr-theme-options [data-value="cream"] {
+  --bg: #fbf6e9;
+  --fg: #2e2a24;
+  --muted: #5f574a;
+  --soft: #f2ebd9;
+  --rule: #e3dac4;
+  --code-bg: #f5eedc;
+  --add: #2f6b33;
+  --add-bg: #dcebc9;
+  --add-wash: #eef4e2;
+  --mod: #855a00;
+  --del: #9e3b2e;
+  --del-bg: #f7ded3;
+  --del-strike: #c0705f;
+  --ins-band: #dcebc9;
+  --gutter-added: #4a8a3c;
+  --gutter-modified: #b07a12;
+  --gutter-removed: #c0574a;
+  --code-add: #e9f0d9;
+  --code-del: #f8e6dc;
+}
+
+.mr-root[data-theme="eink"],
+.mr-theme-options [data-value="eink"] {
+  --bg: #efeee9;
+  --fg: #1e1e1c;
+  --muted: #53524d;
+  --soft: #e5e4de;
+  --rule: #d3d2cb;
+  --code-bg: #e8e7e1;
+  --add: #2e6534;
+  --add-bg: #d3e3cf;
+  --add-wash: #e6ede2;
+  --mod: #7d5a0b;
+  --del: #973a35;
+  --del-bg: #efd9d4;
+  --del-strike: #b86d66;
+  --ins-band: #d3e3cf;
+  --gutter-added: #4f8150;
+  --gutter-modified: #a27a1b;
+  --gutter-removed: #b65b52;
+  --code-add: #dfe7da;
+  --code-del: #eedfda;
+}
+
+.mr-root[data-theme="night"],
+.mr-theme-options [data-value="night"] {
+  --bg: #f6ead3;
+  --fg: #3a2a17;
+  --muted: #685234;
+  --soft: #eedfc3;
+  --rule: #e0cdab;
+  --code-bg: #f1e3c8;
+  --accent: #7a5214;
+  --add: #3d6420;
+  --add-bg: #dde5be;
+  --add-wash: #ecebd2;
+  --mod: #8a5300;
+  --del: #9a3523;
+  --del-bg: #f3d2c2;
+  --del-strike: #bb6b52;
+  --ins-band: #dde5be;
+  --gutter-added: #5e8a36;
+  --gutter-modified: #a8710f;
+  --gutter-removed: #be5a3e;
+  --code-add: #e7e6c6;
+  --code-del: #f3dac8;
+}
+
+.mr-root[data-theme="seafoam"],
+.mr-theme-options [data-value="seafoam"] {
+  --bg: #eef5f2;
+  --fg: #1f302b;
+  --muted: #4a5d57;
+  --soft: #e2ece8;
+  --rule: #cfddd7;
+  --code-bg: #e6efeb;
+  --add: #22663f;
+  --add-bg: #cde8d6;
+  --add-wash: #e3f1e8;
+  --mod: #7e5800;
+  --del: #9b3a3e;
+  --del-bg: #f3dcdc;
+  --del-strike: #bc6a6c;
+  --ins-band: #cde8d6;
+  --gutter-added: #3e8a5e;
+  --gutter-modified: #a9790e;
+  --gutter-removed: #be5257;
+  --code-add: #dcede2;
+  --code-del: #f2e1e1;
+}
+
+.mr-root[data-theme="blush"],
+.mr-theme-options [data-value="blush"] {
+  --bg: #fbf1ee;
+  --fg: #33262a;
+  --muted: #645258;
+  --soft: #f3e5e1;
+  --rule: #e6d3ce;
+  --code-bg: #f6eae6;
+  --add: #2e6a3a;
+  --add-bg: #dcead3;
+  --add-wash: #eef3e7;
+  --mod: #865700;
+  --del: #a0323f;
+  --del-bg: #f6d9dc;
+  --del-strike: #c26573;
+  --ins-band: #dcead3;
+  --gutter-added: #4b8a51;
+  --gutter-modified: #ae7a13;
+  --gutter-removed: #c24e5e;
+  --code-add: #e8eedc;
+  --code-del: #f8e2e3;
+}
+
+.mr-root[data-theme="nord"],
+.mr-theme-options [data-value="nord"] {
+  --bg: #eceff4;
+  --fg: #2e3440;
+  --muted: #4c566a;
+  --soft: #e3e8ef;
+  --rule: #d3dae4;
+  --code-bg: #e5e9f0;
+  --accent: #4c6a92;
+  --add: #2f6b3e;
+  --add-bg: #d3e5d3;
+  --add-wash: #e4eee6;
+  --mod: #7a5a10;
+  --del: #9c3d45;
+  --del-bg: #f0d9dc;
+  --del-strike: #bf616a;
+  --ins-band: #d3e5d3;
+  --gutter-added: #4f8a5b;
+  --gutter-modified: #a57a14;
+  --gutter-removed: #b8545e;
+  --code-add: #dce9de;
+  --code-del: #f0dfe2;
+}
+
 .mr-root.is-dark,
-.is-dark .mr-theme-options button {
+.is-dark .mr-theme-options:where(:not(.mr-layout-options)) button {
   --bg: #19231e;
   --fg: #e6ebdd;
   --muted: #bbc6b8;
@@ -286,6 +447,68 @@
   --rule: #787f90;
   --code-bg: #191d25;
   --accent: #a6ccff;
+}
+
+.mr-root.is-dark[data-theme="cream"],
+.is-dark .mr-theme-options [data-value="cream"] {
+  --bg: #1d1a15;
+  --fg: #ede5d3;
+  --muted: #beb4a0;
+  --soft: #28241d;
+  --rule: #3b352b;
+  --code-bg: #23201a;
+}
+
+.mr-root.is-dark[data-theme="eink"],
+.is-dark .mr-theme-options [data-value="eink"] {
+  --bg: #1e1e1d;
+  --fg: #e4e3de;
+  --muted: #bbbab4;
+  --soft: #292928;
+  --rule: #3a3a38;
+  --code-bg: #242423;
+}
+
+.mr-root.is-dark[data-theme="night"],
+.is-dark .mr-theme-options [data-value="night"] {
+  --bg: #17120c;
+  --fg: #ebd9b6;
+  --muted: #cdb78f;
+  --soft: #221a11;
+  --rule: #372b1c;
+  --code-bg: #1c160e;
+  --accent: #e2b86f;
+}
+
+.mr-root.is-dark[data-theme="seafoam"],
+.is-dark .mr-theme-options [data-value="seafoam"] {
+  --bg: #15201d;
+  --fg: #ddebe6;
+  --muted: #a9bdb6;
+  --soft: #1e2b27;
+  --rule: #2f3f3a;
+  --code-bg: #1a2622;
+}
+
+.mr-root.is-dark[data-theme="blush"],
+.is-dark .mr-theme-options [data-value="blush"] {
+  --bg: #211a1c;
+  --fg: #f0e3e6;
+  --muted: #c3afb4;
+  --soft: #2c2326;
+  --rule: #3f3337;
+  --code-bg: #261e21;
+}
+
+.mr-root.is-dark[data-theme="nord"],
+.is-dark .mr-theme-options [data-value="nord"] {
+  --bg: #242933;
+  --fg: #e5e9f0;
+  --muted: #aeb7c6;
+  --soft: #2e3440;
+  --rule: #3b4252;
+  --code-bg: #2a303b;
+  --accent: #88c0d0;
 }
 
 .mr-root ::selection {
@@ -425,8 +648,8 @@
 .mr-content > h1.mr-lead {
   margin: 0;
   color: var(--fg);
-  font-family: var(--body-font);
-  font-size: 52px;
+  font-family: var(--heading-font, var(--body-font));
+  font-size: calc(52px * var(--type));
   font-weight: 400;
   line-height: 1.08;
   letter-spacing: -0.028em;
@@ -435,8 +658,8 @@
 .mr-subtitle {
   margin: 14px 0 0;
   color: var(--muted);
-  font-family: var(--body-font);
-  font-size: 22px;
+  font-family: var(--heading-font, var(--body-font));
+  font-size: calc(22px * var(--type));
   line-height: 1.45;
 }
 
@@ -452,7 +675,7 @@
   border-bottom: 1px solid var(--rule);
   color: var(--muted);
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: calc(14px * var(--type));
   line-height: 1.4;
 }
 
@@ -494,19 +717,19 @@
   font-size: calc(var(--body-size) * var(--size-scale));
   font-kerning: normal;
   font-variant-ligatures: common-ligatures;
-  line-height: 1.58;
+  line-height: var(--leading, 1.58);
   letter-spacing: -0.003em;
   overflow-wrap: break-word;
 }
 
 .mr-content :where(p, ul, ol, dl, pre, blockquote, figure, details, table, .mr-table, .mr-html, .mr-ghost, hr, section) {
-  margin: 1.5em 0 0;
+  margin: var(--block-gap, 1.5em) 0 0;
 }
 
 .mr-content :where(h1, h2, h3, h4, h5, h6) {
-  margin: 1.95em 0 0;
+  margin: var(--heading-gap, 1.95em) 0 0;
   color: var(--fg);
-  font-family: var(--body-font);
+  font-family: var(--heading-font, var(--body-font));
   font-weight: 400;
   letter-spacing: -0.02em;
   scroll-margin-top: 84px;
@@ -551,7 +774,7 @@
 }
 
 .mr-content li {
-  margin-top: 0.55em;
+  margin-top: var(--item-gap, 0.55em);
   padding-left: 0.2em;
 }
 
@@ -692,14 +915,15 @@
   border-radius: 6px;
   background: var(--code-bg);
   font-family: var(--mono);
-  font-size: calc(15px * var(--size-scale));
+  /* The same size as source files, so 120 characters fit the same width in both. */
+  font-size: var(--code-size);
   font-style: normal;
-  line-height: 1.6;
+  line-height: 1.7;
   letter-spacing: 0;
   tab-size: 4;
 }
 
-/* Code stays in the reading column and scrolls sideways; the margins belong to changes and comments. */
+/* Narrow windows keep code in the reading column; wide ones give it up to 120 characters (end of file). */
 .mr-content pre {
   box-sizing: border-box;
   width: 100%;
@@ -874,7 +1098,7 @@
 }
 
 /* Separate the old and new wording of a replacement without adding spaces to the document. */
-.mode-changes .mr-content :is(del.mr-del + ins.mr-ins, ins.mr-ins + del.mr-del) {
+.mode-changes .mr-content :is(del.mr-del + ins.mr-ins, ins.mr-ins + del.mr-del):not(.mr-line) {
   margin-inline-start: 0.18em;
 }
 
@@ -1012,13 +1236,17 @@
   height: 100%;
 }
 
+/* Change markers stay quiet while reading: thin, half-strength bars that still tell added, edited and
+   removed apart. Pointing at one, or at the text beside it, brings it to full strength; the words
+   themselves carry the detail. */
 .mr-mark {
   position: absolute;
   left: 0;
-  width: 3px;
+  width: 2px;
   border-radius: 2px;
-  background: var(--gutter-modified);
+  background: color-mix(in srgb, var(--gutter-modified) 50%, var(--bg));
   cursor: pointer;
+  transition: background-color 0.15s ease, width 0.15s ease, left 0.15s ease;
 }
 
 .mr-mark::before {
@@ -1028,11 +1256,20 @@
 }
 
 .mr-mark.is-added {
-  background: var(--gutter-added);
+  background: color-mix(in srgb, var(--gutter-added) 50%, var(--bg));
 }
 
 .mr-mark.is-removed {
-  background: var(--gutter-removed);
+  background: color-mix(in srgb, var(--gutter-removed) 50%, var(--bg));
+}
+
+.mr-mark:is(:hover, .is-hot) { left: -0.5px; width: 3px; background: var(--gutter-modified); }
+.mr-mark.is-added:is(:hover, .is-hot) { background: var(--gutter-added); }
+.mr-mark.is-removed:is(:hover, .is-hot) { background: var(--gutter-removed); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .mr-mark { transition: none; }
 }
 
 .mr-mark.is-point {
@@ -1056,9 +1293,10 @@
   box-sizing: border-box;
   width: var(--toc-width);
   height: 0;
+  padding-right: 16px;
   margin: 0 0 0 calc(var(--left) + var(--edge));
   overflow: visible;
-  font-size: 13px;
+  font-size: calc(13px * var(--type));
   line-height: 1.35;
 }
 
@@ -1254,15 +1492,15 @@
 /* biome-ignore lint/complexity/noImportantStyles: `hidden` must hide whatever display rule an element otherwise has */
 .mr-root [hidden] { display: none !important; }
 /* Documents follow one another like chapters: a long pause, marked by a dinkus. */
-.mr-document + .mr-document::before {
+.mr-document:not([hidden]) ~ .mr-document::before {
   content: "*\2002*\2002*";
   display: block;
-  margin: 104px 0 88px;
+  margin-block: 104px 88px;
   color: var(--muted);
   font: 400 26px/1 var(--serif);
   text-align: center;
 }
-@media (max-width: 760px) { .mr-document + .mr-document::before { margin: 72px 0 60px; } }
+@media (max-width: 760px) { .mr-document:not([hidden]) ~ .mr-document::before { margin-block: 72px 60px; } }
 .mr-article { isolation: isolate; }
 .mr-doc { position: relative; z-index: 1; }
 .mr-gutter { z-index: 2; }
@@ -1341,16 +1579,17 @@
 .mode-changes .mr-document:not(.doc-added, .doc-removed) .mr-code-lines:has(> :first-child[data-mr-change="removed"]) { --lead-bg: var(--code-del); --lead-bar: inset 3px 0 0 var(--gutter-removed); }
 .mode-changes .mr-document:not(.doc-added, .doc-removed) .mr-code-lines:has(> :last-child[data-mr-change="added"]) { --tail-bg: var(--code-add); --tail-bar: inset 3px 0 0 var(--gutter-added); }
 .mode-changes .mr-document:not(.doc-added, .doc-removed) .mr-code-lines:has(> :last-child[data-mr-change="removed"]) { --tail-bg: var(--code-del); --tail-bar: inset 3px 0 0 var(--gutter-removed); }
-.mr-code-line { display: grid; grid-template-columns: 42px 42px 20px minmax(0, 1fr); width: 100%; box-sizing: border-box; min-height: 24px; padding-right: 16px; font: var(--code-size)/1.8 var(--mono); white-space: pre-wrap; }
-.mr-code-text { --hang: calc(var(--indent, 0ch) + 2ch); padding-left: var(--hang); text-indent: calc(-1 * var(--hang)); overflow-wrap: anywhere; }
-.mr-code-number { color: var(--muted); text-align: right; padding-right: 10px; user-select: none; }
+/* The gutter keeps old number, new number and sign close together, set apart from the code by space and a hairline. */
+.mr-code-lines { --gutter: calc((var(--digits, 3) * 2 + 3.4) * 0.6 * var(--code-size) + 27px); }
+.mr-code-line { display: grid; grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) 2.2ch minmax(0, 1fr); width: 100%; box-sizing: border-box; min-height: 24px; padding-right: 16px; padding-left: 12px; font: var(--code-size)/1.8 var(--mono); white-space: pre-wrap; }
+.mr-code-text { --hang: calc(var(--indent, 0ch) + 2ch); padding-left: calc(var(--hang) + 14px); border-left: 1px solid color-mix(in srgb, var(--fg) 12%, transparent); text-indent: calc(-1 * var(--hang)); overflow-wrap: anywhere; }
+.mr-code-number { color: var(--muted); text-align: right; padding-right: 0.6ch; user-select: none; }
 .mr-code-sign { color: var(--muted); text-align: center; user-select: none; }
 .mr-code-line[data-mr-change="added"] { background: var(--code-add); box-shadow: inset 3px 0 0 var(--gutter-added); }
 .mr-code-line[data-mr-change="removed"] { background: var(--code-del); box-shadow: inset 3px 0 0 var(--gutter-removed); color: color-mix(in srgb, var(--del) 60%, var(--fg)); }
 .mr-content .mr-code-line.mr-ghost { margin: 0; padding-top: 0; padding-bottom: 0; border: 0; text-decoration: none; }
 .mr-code-lines .mr-context-gap { padding: 0 12px; }
 .mode-clean .mr-code-line[data-mr-change="added"] { background: transparent; box-shadow: none; }
-@media (max-width: 760px) { .mr-code-line { grid-template-columns: 32px 32px 18px minmax(0, 1fr); } }
 
 /* ------------------------------------------------------------------ top bar */
 /* One quiet row: close and wordmark, the current document, change navigation and two icon buttons.
@@ -1829,7 +2068,7 @@
   gap: 3px;
   min-width: 0;
   padding: 12px 10px 10px;
-  border: 1px solid var(--muted);
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
   border-radius: 12px;
   background: var(--bg);
   color: var(--fg);
@@ -1838,13 +2077,34 @@
   cursor: pointer;
 }
 
+/* Palettes come six to a page; the arrows, the dots or a swipe turn the pages. */
+.mr-palette-carousel { display: grid; gap: 8px; width: 100%; min-width: 0; }
+.mr-theme-options.mr-palette-track {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.mr-palette-track::-webkit-scrollbar { display: none; }
+/* Padding keeps the selection ring inside the scrolled area. */
+.mr-palette-page { display: grid; flex: 0 0 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; box-sizing: border-box; padding: 3px; scroll-snap-align: start; }
+@media (max-width: 380px) { .mr-palette-page { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mr-carousel-nav { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.mr-carousel-nav .mr-btn:disabled { opacity: 0.35; cursor: default; }
+.mr-carousel-dots { display: flex; }
+.mr-carousel-dot { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
+.mr-carousel-dot::before { content: ""; width: 7px; height: 7px; border-radius: 4px; background: color-mix(in srgb, var(--fg) 24%, transparent); transition: width 0.2s ease, background 0.2s ease; }
+.mr-carousel-dot[aria-current="true"]::before { width: 18px; background: var(--select); }
+
 .mr-theme-options button:hover {
-  box-shadow: 0 0 0 1px var(--muted);
+  border-color: color-mix(in srgb, var(--fg) 32%, transparent);
 }
 
 .mr-theme-options button[aria-pressed="true"] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--select);
+  box-shadow: 0 0 0 1.5px var(--select), 0 10px 24px -14px var(--select);
 }
 
 .mr-theme-preview {
@@ -1873,7 +2133,7 @@
 .mr-theme-lines i:nth-child(2) { height: 7px; background: var(--ins-band); border-left: 2px solid var(--gutter-added); }
 .mr-theme-lines i:last-child { width: 70%; }
 .mr-theme-label { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.mr-theme-label .mr-icon { width: 15px; height: 15px; color: var(--accent); visibility: hidden; }
+.mr-theme-label .mr-icon { box-sizing: border-box; width: 18px; height: 18px; padding: 3px; border-radius: 50%; background: var(--select); color: var(--select-ink); stroke-width: 3; visibility: hidden; }
 .mr-theme-options button[aria-pressed="true"] .mr-theme-label .mr-icon { visibility: visible; }
 
 .mr-theme-name {
@@ -1928,8 +2188,19 @@
   transform: translateX(16px);
 }
 
-.mr-keys-section {
-  border-bottom: 0;
+/* The Keys tab: shortcuts in groups, each under a quiet label. */
+.mr-keys-title {
+  margin: 0;
+  color: var(--muted);
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mr-keys-group .mr-keys {
+  /* One key column for every group, so all descriptions start on the same line. */
+  grid-template-columns: 9.5em minmax(0, 1fr);
+  padding-top: 10px;
 }
 
 .mr-keys-section summary {
@@ -2396,6 +2667,7 @@
   position: absolute;
   right: 0;
   left: 0;
+  max-width: var(--card-max);
 }
 
 .mr-thread {
@@ -2404,7 +2676,7 @@
   border-radius: 14px;
   background: var(--card);
   color: var(--fg);
-  font: 13.5px/1.5 var(--sans);
+  font: var(--comment-size)/1.5 var(--sans);
   letter-spacing: 0;
   box-shadow: var(--card-shadow);
   transition: box-shadow 0.15s ease;
@@ -2437,7 +2709,7 @@
 /* Narrow screens put comments between source lines, aligned with the code. */
 .mr-content .mr-code-lines > :is(.mr-thread, .mr-composer) {
   max-width: 720px;
-  margin: 10px 16px 16px 104px;
+  margin: 10px 16px 16px var(--gutter);
 }
 
 @media (max-width: 760px) {
@@ -2472,6 +2744,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   margin-bottom: 4px;
 }
 
@@ -2489,12 +2762,18 @@
 }
 
 .mr-thread-author {
+  min-width: 0;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mr-thread-time {
+  flex: none;
   color: var(--muted);
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .mr-thread-body {
@@ -2649,6 +2928,9 @@
 
 .mr-reply-context {
   margin: 0 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font: 600 11px/1.4 var(--sans);
   letter-spacing: 0.06em;
@@ -2809,6 +3091,31 @@
   --hl-meta: #9ea7b3;
 }
 
+/* Night keeps code warm too: no cold blues on an amber page. */
+.mr-root[data-theme="night"] {
+  --hl-comment: #6b5638;
+  --hl-keyword: #9b3a26;
+  --hl-string: #4f6b1d;
+  --hl-number: #2b5a85;
+  --hl-title: #74468f;
+  --hl-attr: #2b5a85;
+  --hl-builtin: #7a4d0c;
+  --hl-tag: #4f6b1d;
+  --hl-meta: #6b5638;
+}
+
+.mr-root.is-dark[data-theme="night"] {
+  --hl-comment: #b3a07f;
+  --hl-keyword: #f2a27d;
+  --hl-string: #c7d08a;
+  --hl-number: #e8c17a;
+  --hl-title: #e3a9c9;
+  --hl-attr: #e8c17a;
+  --hl-builtin: #f0b36b;
+  --hl-tag: #c7d08a;
+  --hl-meta: #a89677;
+}
+
 .mr-root :is(.hljs-comment, .hljs-quote) {
   color: var(--hl-comment);
   font-style: italic;
@@ -2856,12 +3163,10 @@
 
 /* Source files are titled by path, in the code face. */
 .mr-content .mr-code-title,
+/* A source file is titled like a document: the same face and weight, a size a long path can carry. */
 .mr-title.mr-code-title {
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.35;
+  font-size: calc(36px * var(--type));
+  line-height: 1.18;
   overflow-wrap: anywhere;
 }
 
@@ -2889,8 +3194,8 @@
 .mr-size-control .mr-btn:disabled { color: var(--muted); cursor: default; }
 .mr-text-size { min-width: 62px; color: var(--fg); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
 .mr-type-preview { margin: 16px 0 12px; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 12px; background: var(--soft); }
-.mr-type-preview p { margin: 0 0 6px; font: calc(var(--body-size) * 1.15)/1.3 var(--body-font); overflow-wrap: anywhere; }
-.mr-type-preview span { color: var(--muted); font: 13px/1.5 var(--sans); }
+.mr-type-preview p { margin: 0 0 6px; font: calc(var(--body-size) * 1.15)/1.3 var(--heading-font, var(--body-font)); overflow-wrap: anywhere; }
+.mr-type-preview span { color: var(--muted); font: 13px/1.5 var(--body-font); }
 .mr-context-toggle { min-height: 44px; }
 
 @media (min-width: 761px) and (max-width: 1279px) {
@@ -2907,9 +3212,9 @@
    comments column starts where the code ends, so commenting works the same everywhere. */
 @media (min-width: 1280px) {
   .mr-root {
-    --frame: min(100vw, 1480px);
+    --frame: min(100vw, var(--frame-max));
     --left: calc((100vw - var(--frame)) / 2);
-    --measure: min(680px, calc(var(--frame) - 2 * var(--edge) - var(--toc-width) - var(--toc-gap) - var(--rail-gap) - 320px));
+    --measure: min(var(--measure-max), calc(var(--frame) - 2 * var(--edge) - var(--toc-width) - var(--toc-gap) - var(--rail-gap) - 320px));
     --rail-width: calc(var(--frame) - 2 * var(--edge) - var(--toc-width) - var(--toc-gap) - var(--measure) - var(--rail-gap));
     --code-span: min(var(--code-width), calc(var(--frame) - 2 * var(--edge) - var(--rail-gap) - 300px));
   }
@@ -2925,3 +3230,141 @@
   .mr-comment-btn.is-lane.is-beside-code { left: calc(var(--code-span) - var(--toc-width) - var(--toc-gap) + var(--rail-gap)); width: calc(var(--frame) - 2 * var(--edge) - var(--code-span) - var(--rail-gap)); }
   .mr-comment-btn.is-lane.is-beside-code.is-gap { left: calc(var(--code-span) - var(--toc-width) - var(--toc-gap) + (var(--rail-gap) - 34px) / 2); width: 34px; }
 }
+
+/* ---------------------------------------------------------------- layouts and density (Settings, Layout)
+   A layout sets how far the wide-screen composition may grow (--frame-max), how long the lines of text
+   run (--measure-max), the contents column and how comments are set. The wide-screen rules above share
+   the window out from those: contents, text, then a comments column with what is left. Below 1280px
+   every layout reads in one column. */
+
+/* Balanced: contents, text and comments, free to grow so a large screen gives the comments more room. */
+.mr-root[data-layout="balanced"] { --frame-max: 1680px; }
+
+/* Review: the conversation first. A slimmer contents column and text, a wide comments column with
+   larger comment text; cards stop at a comfortable line length. */
+.mr-root[data-layout="review"] {
+  --frame-max: 1640px;
+  --measure-max: 640px;
+  --toc-width: 150px;
+  --toc-gap: 64px;
+  --comment-size: calc(15px * var(--type));
+  --card-max: 680px;
+}
+
+/* Wide text: longer lines for documents full of tables, code and diagrams. */
+.mr-root[data-layout="wide"] { --frame-max: 1760px; --measure-max: 920px; --card-max: 520px; }
+
+/* Code blocks in a document are as wide as their longest line (--chars, set by render.ts), up to
+   120 characters. They grow to the left, into the contents column and the margin beyond it, so the
+   comments column beside the text stays clear; the contents step aside while one passes. */
+@media (min-width: 1280px) {
+  .mr-root {
+    --code-md-width: calc(var(--code-size) * 73.2 + 52px);
+    --code-md-span: min(var(--code-md-width), calc(var(--measure) + var(--toc-width) + var(--toc-gap) + var(--left)));
+  }
+  .mr-content > pre {
+    width: clamp(100%, calc(var(--chars, 0) * 1ch + 2ch + 52px), var(--code-md-span));
+    margin-left: calc(100% - clamp(100%, calc(var(--chars, 0) * 1ch + 2ch + 52px), var(--code-md-span)));
+  }
+}
+
+/* Fit to screen: the balanced composition for a 1440px window, scaled by --fit (set by reader.ts). */
+.mr-root[data-layout="fit"] {
+  --frame-max: calc(1440px * var(--fit));
+  --measure-max: calc(680px * var(--fit));
+  --toc-width: calc(176px * var(--fit));
+  --toc-gap: calc(80px * var(--fit));
+  --rail-gap: calc(56px * var(--fit));
+}
+
+@media (min-width: 1280px) {
+  /* Focus: the text alone and centred; reader.ts keeps comments below the text they discuss. */
+  .mr-root[data-layout="focus"] {
+    --toc-width: 0px;
+    --toc-gap: 0px;
+    --measure: min(720px, calc(100vw - 2 * var(--edge)));
+    --frame: calc(var(--measure) + 2 * var(--edge));
+  }
+  .mr-root[data-layout="focus"] .mr-toc { display: none; }
+  /* Source files and code blocks still run to 120 characters, centred on the text. */
+  .mr-root[data-layout="focus"] {
+    --code-span: min(var(--code-width), calc(100vw - 2 * var(--edge)));
+    --code-md-span: min(var(--code-md-width), calc(100vw - 2 * var(--edge)));
+  }
+  .mr-root[data-layout="focus"] .mr-document.is-code { margin-left: calc((var(--measure) - var(--code-span)) / 2); }
+  .mr-root[data-layout="focus"] .mr-document.is-code::before { margin-left: calc((var(--code-span) - var(--measure)) / 2); }
+  .mr-root[data-layout="focus"] .mr-content > pre { margin-left: calc((100% - clamp(100%, calc(var(--chars, 0) * 1ch + 2ch + 52px), var(--code-md-span))) / 2); }
+}
+
+/* Compact: tighter lines and less space between blocks, files and comments, for long reviews and
+   smaller screens. Proportions stay the same, so it works at every text size and with every layout. */
+.mr-root[data-density="compact"] {
+  --leading: 1.46;
+  --block-gap: 0.9em;
+  --heading-gap: 1.35em;
+  --item-gap: 0.25em;
+}
+.mr-root[data-density="compact"] .mr-main { padding-top: 56px; }
+@media (max-width: 760px) { .mr-root[data-density="compact"] .mr-main { padding-top: 32px; } }
+.mr-root[data-density="compact"] :is(.mr-title, .mr-content > h1.mr-lead):not(.mr-code-title) { font-size: calc(40px * var(--type)); }
+.mr-root[data-density="compact"] .mr-title.mr-code-title { font-size: calc(28px * var(--type)); }
+.mr-root[data-density="compact"] .mr-byline {
+  /* biome-ignore lint/complexity/noImportantStyles: the byline's own margin is !important for the same reason */
+  margin: 20px 0 28px !important;
+  padding: 10px 0;
+}
+.mr-root[data-density="compact"] .mr-document:not([hidden]) ~ .mr-document::before { margin-block: 56px 44px; }
+.mr-root[data-density="compact"] .mr-content .mr-diagram { margin: 22px 0; }
+.mr-root[data-density="compact"] .mr-toc a { padding-top: 3px; padding-bottom: 3px; }
+.mr-root[data-density="compact"] .mr-code-line { min-height: 20px; line-height: 1.55; }
+.mr-root[data-density="compact"] .mr-thread { padding: 10px 12px; border-radius: 10px; }
+.mr-root[data-density="compact"] .mr-content :is(.mr-thread, .mr-composer) { margin: 8px 0 16px; }
+
+/* Layout choices are drawn as pages: contents (c), text with its lines (t) and comments (m). */
+.mr-layout-preview {
+  display: flex;
+  gap: 3px;
+  height: 40px;
+  margin-bottom: 8px;
+  padding: 5px;
+  border-radius: 6px;
+  background: var(--soft);
+}
+.mr-layout-preview i { display: flex; flex-direction: column; gap: 3px; border-radius: 3px; }
+.mr-layout-preview .c { flex: 0 0 14%; background: linear-gradient(var(--rule) 0 0) 2px 3px / 60% 2px no-repeat, linear-gradient(var(--rule) 0 0) 2px 8px / 50% 2px no-repeat; }
+.mr-layout-preview .t { flex: 0 0 44%; padding: 3px 4px; box-sizing: border-box; background: var(--bg); }
+.mr-layout-preview .t b { height: 2px; border-radius: 1px; background: var(--muted); opacity: 0.55; }
+.mr-layout-preview .t b:nth-child(2n) { width: 82%; }
+.mr-layout-preview .m { flex: 1 1 auto; padding: 3px; box-sizing: border-box; }
+.mr-layout-preview .m b { height: 9px; border-radius: 2px; background: var(--card); box-shadow: 0 0 0 1px var(--rule); }
+[data-value="review"] .mr-layout-preview .c { flex-basis: 10%; }
+[data-value="review"] .mr-layout-preview .t { flex-basis: 38%; }
+[data-value="review"] .mr-layout-preview .m b { height: 13px; }
+[data-value="wide"] .mr-layout-preview .t { flex-basis: 58%; }
+[data-value="focus"] .mr-layout-preview { justify-content: center; }
+[data-value="focus"] .mr-layout-preview :is(.c, .m) { display: none; }
+[data-value="focus"] .mr-layout-preview .t { flex-basis: 52%; }
+[data-value="fit"] .mr-layout-preview .t b { height: 3px; }
+
+/* The pull or merge request's own description: the first document when chosen in the Review settings.
+   Its title is a size smaller than a document's, and the description folds under a quiet label. */
+.mr-overview-kind {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mr-overview .mr-title { font-size: calc(40px * var(--type)); }
+.mr-overview .mr-byline a { color: inherit; text-underline-offset: 3px; }
+.mr-overview-body > summary {
+  width: max-content;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mr-overview-body[open] > summary { margin-bottom: 18px; }
+.mr-overview-empty { color: var(--muted); font-style: italic; }

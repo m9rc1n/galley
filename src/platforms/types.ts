@@ -25,7 +25,10 @@ export interface CommentTarget {
 }
 
 export interface ThreadComment {
+  /** The name people know them by: GitLab's display name, or the GitHub login (the API gives no name). */
   author: string;
+  /** Their username, for @mentions in replies. */
+  handle?: string;
   /** Markdown, written by any participant; rendered through the same sanitiser as documents. */
   body: string;
   createdAt: string;
@@ -53,6 +56,16 @@ export interface CommentPlan {
   post(body: string): Promise<{ url: string; reply?: Thread['reply'] }>;
 }
 
+/** The pull or merge request itself: what its author wrote about the change. */
+export interface ReviewOverview {
+  kind: 'Pull request' | 'Merge request';
+  title: string;
+  /** Markdown, rendered through the same sanitiser as documents and comments. */
+  description: string;
+  author: string;
+  url: string;
+}
+
 /** Everything the reader needs about one pull/merge request. */
 export interface ReviewSource {
   title: string;
@@ -73,6 +86,8 @@ export interface ReviewSource {
   prepareComment?(target: CommentTarget): Promise<CommentPlan>;
   /** Review threads already on the pull or merge request. */
   loadThreads?(): Promise<Thread[]>;
+  /** Its title and description, shown as the first document when the reader chooses (Review settings). */
+  overview?: ReviewOverview;
 }
 
 /** An error with a human explanation of what to do about it. */

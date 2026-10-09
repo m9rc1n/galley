@@ -37,6 +37,21 @@ const source: ReviewSource = {
   title: 'Docs: reading-first reviews',
   subtitle: 'acme/handbook · !128',
   diffUrl: location.href,
+  overview: {
+    kind: 'Merge request',
+    title: 'Docs: reading-first reviews',
+    author: 'Dana Whitfield',
+    url: `${location.origin}/merge_requests/128`,
+    description: [
+      'Adds **RFC 0042**, which proposes reviewing documentation changes as readable articles instead of raw diffs.',
+      '',
+      '### What to look at',
+      '- The goals and non-goals: are they the right scope for this quarter?',
+      '- The rollout plan, especially the two-week dogfood.',
+      '',
+      'Closes #311.',
+    ].join('\n'),
+  },
   docs: params.has('code-only') ? [] : docs,
   codeDocs,
   load: contents,
@@ -60,17 +75,17 @@ const source: ReviewSource = {
       {
         doc: rfc, side: 'head', line: 13, url: '#thread-1',
         comments: [
-          { author: 'dana', body: 'Love this framing. Could we link the **skim-reading** study here?', createdAt: ago(26), url: '#thread-1' },
-          { author: 'lee', body: 'Good idea, I will add it as a footnote in the next revision.', createdAt: ago(3), url: '#thread-1-reply' },
+          { author: 'Dana Whitfield', handle: 'dana', body: 'Love this framing. Could we link the **skim-reading** study here?', createdAt: ago(26), url: '#thread-1' },
+          { author: 'Lee Okafor', handle: 'lee', body: 'Good idea, I will add it as a footnote in the next revision.', createdAt: ago(3), url: '#thread-1-reply' },
         ],
       },
       {
         doc: rfc, side: 'head', line: 21, url: '#thread-2',
-        comments: [{ author: 'sam', body: 'Does “source of truth” also cover comments written in the reader?', createdAt: ago(5), url: '#thread-2' }],
+        comments: [{ author: 'Samantha Konstantinopoulou-Reyes', handle: 'sam', body: 'Does “source of truth” also cover comments written in the reader?', createdAt: ago(5), url: '#thread-2' }],
       },
       {
         doc: readme, side: 'head', line: null, url: '#thread-3',
-        comments: [{ author: 'kim', body: 'The install section reads much better now.', createdAt: ago(50), url: '#thread-3' }],
+        comments: [{ author: 'Kim Park', handle: 'kim', body: 'The install section reads much better now.', createdAt: ago(50), url: '#thread-3' }],
       },
     ];
     const replies: Array<{ thread: string; body: string; createdAt: string }> = JSON.parse(sessionStorage.getItem('galley:demo-replies') ?? '[]');

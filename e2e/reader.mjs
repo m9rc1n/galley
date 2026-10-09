@@ -57,7 +57,7 @@ try {
   await page.setViewport({ width: 1440, height: 1000 });
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'light' }]);
   await page.goto(demoUrl, { waitUntil: 'networkidle0' });
-  await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('.mr-content').length === 3);
+  await page.waitForFunction(() => document.querySelector('#galley-reader')?.shadowRoot.querySelectorAll('[data-document] .mr-content').length === 3);
   await page.waitForFunction(() => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'));
   const inspect = (fn, ...args) => page.evaluate(fn, ...args);
   const selectFont = (font) => inspect((font) => {
@@ -143,6 +143,11 @@ try {
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.act), 'close-settings');
   await page.keyboard.press('Tab');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.settingsTab), 'reading');
+  await page.keyboard.press('ArrowRight');
+  // Layout sits between reading and review: five layouts drawn as pages, and a density choice.
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-layout-panel').hidden), false);
+  assert.deepEqual(await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="layout"] [data-value]')].map((b) => [b.dataset.value, b.getAttribute('aria-pressed')])),
+    [['balanced', 'true'], ['review', 'false'], ['wide', 'false'], ['focus', 'false'], ['fit', 'false']]);
   await page.keyboard.press('ArrowRight');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-review-panel').hidden), false);
   await page.keyboard.press('Tab');
@@ -232,10 +237,12 @@ try {
     const rect = code.getBoundingClientRect();
     s.querySelector('.mr-root').scrollTop += rect.top - 220;
     s.getSelection().removeAllRanges();
-    return { width: rect.width, prose: article.getBoundingClientRect().width, left: rect.left, right: rect.right };
+    return { width: rect.width, prose: article.getBoundingClientRect().width, left: rect.left, right: rect.right, articleRight: article.getBoundingClientRect().right };
   });
-  // Code stays inside the reading column; the margins belong to changes and comments.
-  assert.ok(codeLayout.width <= codeLayout.prose + 1, JSON.stringify(codeLayout));
+  // A code block runs as wide as its longest line, up to 120 characters, growing to the left: its right
+  // edge stays level with the text, so the comments column beside it stays clear.
+  assert.ok(codeLayout.width >= codeLayout.prose - 1 && codeLayout.width <= 1100, JSON.stringify(codeLayout));
+  assert.ok(Math.abs(codeLayout.right - codeLayout.articleRight) <= 1, JSON.stringify(codeLayout));
   assert.ok(codeLayout.left >= 0 && codeLayout.right <= 1440, JSON.stringify(codeLayout));
   const nestedCode = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot, quote = s.querySelector('.mr-content blockquote');
@@ -257,7 +264,7 @@ try {
     s.querySelector('[data-act="doc"][data-doc="1"]').click();
   });
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path === 'README.md');
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-content').length), 3);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-document] .mr-content').length), 3);
   // Mobile layout must not extend past either side of the viewport.
   assert.equal(await inspect(() => getComputedStyle(document.querySelector('#galley-reader').shadowRoot.querySelector('p del.mr-del + ins.mr-ins')).marginInlineStart), '0px', 'Clean reading must retain the document’s original spacing');
   await page.setViewport({ width: 390, height: 844 });
@@ -384,14 +391,17 @@ try {
   assert.equal(codePosted.doc.path, 'src/review.ts'); assert.equal(codePosted.startLine, 6); assert.equal(codePosted.quote, 'export const changedOnly = true;');
   const sourceSizes = await inspect(() => {
     const s = document.querySelector('#galley-reader').shadowRoot;
-    const line = s.querySelector('.mr-code-line');
-    const before = parseFloat(getComputedStyle(line).fontSize);
+    const line = s.querySelector('.mr-code-line'), title = s.querySelector('.mr-document[data-document] .mr-content > h1, .mr-document[data-document] .mr-title');
+    const sizes = () => ({ code: parseFloat(getComputedStyle(line).fontSize), title: parseFloat(getComputedStyle(title).fontSize), byline: parseFloat(getComputedStyle(s.querySelector('.mr-byline')).fontSize) });
+    const before = sizes();
     s.querySelector('[data-act="larger"]').click();
-    const after = parseFloat(getComputedStyle(line).fontSize);
+    const after = sizes();
     s.querySelector('[data-act="smaller"]').click();
     return { before, after };
   });
-  assert.ok(sourceSizes.after > sourceSizes.before, 'Source text respects the reading size setting');
+  assert.ok(sourceSizes.after.code > sourceSizes.before.code, 'Source text respects the reading size setting');
+  // The text size is the whole reading surface's, not the body's alone.
+  assert.ok(sourceSizes.after.title > sourceSizes.before.title && sourceSizes.after.byline > sourceSizes.before.byline, JSON.stringify(sourceSizes));
   for (const width of [1280, 1100, 900, 768, 760, 390, 320]) {
     await page.setViewport({ width, height: 844 });
     const source = await inspect(() => {
@@ -411,7 +421,7 @@ try {
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-document:not([hidden])').length), 3);
   // The single sticky bar follows the file in view and its Viewed button targets that file.
   await inspect(() => {
-    const s = document.querySelector('#galley-reader').shadowRoot, root = s.querySelector('.mr-root'), section = s.querySelectorAll('.mr-document')[1];
+    const s = document.querySelector('#galley-reader').shadowRoot, root = s.querySelector('.mr-root'), section = s.querySelectorAll('.mr-document[data-document]')[1];
     root.scrollTop += section.getBoundingClientRect().top + 200 - 56;
   });
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path === 'README.md');
@@ -478,7 +488,8 @@ try {
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
   const backgrounds = { light: new Set(), dark: new Set() };
   const contrastReport = [], contrastFailures = [];
-  for (const theme of ['paper', 'sage', 'sepia', 'slate', 'dusk', 'contrast']) {
+  const palettes = ['paper', 'eink', 'cream', 'sepia', 'night', 'blush', 'sage', 'seafoam', 'slate', 'nord', 'dusk', 'contrast'];
+  for (const theme of palettes) {
     await inspect((theme) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-setting="theme"] [data-value="${theme}"]`).click(), theme);
     for (const appearance of ['light', 'dark']) {
       const colours = await inspect((appearance) => {
@@ -510,13 +521,13 @@ try {
           probe.style.color = `var(${token})`;
           samples.push({ name: token, fg: opaque(style.backgroundColor, getComputedStyle(probe).color), bg: style.backgroundColor, minimum: 3 });
         }
-        const card = s.querySelector('.mr-theme-options button[aria-pressed="true"]');
+        const card = s.querySelector('[data-setting="theme"] button[aria-pressed="true"]');
         const cardStyle = getComputedStyle(card);
         for (const selector of ['.mr-theme-name', '.mr-theme-caption', '.mr-theme-preview']) {
           samples.push({ name: `palette ${selector}`, fg: getComputedStyle(card.querySelector(selector)).color, bg: cardStyle.backgroundColor, minimum: 4.5 });
         }
         probe.remove();
-        return { theme: root.dataset.theme, dark: root.classList.contains('is-dark'), background: style.backgroundColor, foreground: style.color, muted: getComputedStyle(s.querySelector('.mr-settings-note')).color, previewBackground: cardStyle.backgroundColor, previewForeground: cardStyle.color, selectedChecks: [...s.querySelectorAll('.mr-theme-label .mr-icon')].filter((icon) => getComputedStyle(icon).visibility === 'visible').length, samples };
+        return { theme: root.dataset.theme, dark: root.classList.contains('is-dark'), background: style.backgroundColor, foreground: style.color, muted: getComputedStyle(s.querySelector('.mr-settings-note')).color, previewBackground: cardStyle.backgroundColor, previewForeground: cardStyle.color, selectedChecks: [...s.querySelectorAll('[data-setting="theme"] .mr-theme-label .mr-icon')].filter((icon) => getComputedStyle(icon).visibility === 'visible').length, samples };
       }, appearance);
       assert.equal(colours.theme, theme, 'Appearance must not replace the palette');
       assert.equal(colours.dark, appearance === 'dark');
@@ -533,7 +544,7 @@ try {
       backgrounds[appearance].add(colours.background);
     }
   }
-  assert.equal(backgrounds.light.size, 6); assert.equal(backgrounds.dark.size, 6);
+  assert.equal(backgrounds.light.size, palettes.length); assert.equal(backgrounds.dark.size, palettes.length);
   await writeFile(join(screenshots, 'contrast.json'), JSON.stringify(contrastReport, null, 2));
   assert.deepEqual(contrastFailures, [], 'Every reading and syntax colour must meet its contrast minimum');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-value="auto"]').click());
@@ -542,7 +553,7 @@ try {
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark'));
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').dataset.theme), 'contrast');
-  for (const [font, family] of [['serif', 'Galley Newsreader'], ['sans', 'Galley DM Sans'], ['georgia', 'Georgia'], ['system', 'system-ui'], ['mono', 'monospace']]) {
+  for (const [font, family] of [['galley', 'Galley Newsreader'], ['serif', 'Galley Newsreader'], ['sans', 'Galley DM Sans'], ['georgia', 'Georgia'], ['system', 'system-ui'], ['mono', 'monospace']]) {
     await selectFont(font);
     const actual = await inspect(() => {
       const s = document.querySelector('#galley-reader').shadowRoot;
@@ -550,10 +561,17 @@ try {
     });
     assert.ok(actual.includes(family), `${font}: ${actual}`);
   }
+  // Galley pairs two faces: Newsreader for headings, DM Sans for the text beneath them.
+  await selectFont('galley');
+  const pairing = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    return { standfirst: getComputedStyle(s.querySelector('.mr-subtitle')).fontFamily, text: getComputedStyle(s.querySelector('.mr-content p:not(.mr-subtitle)')).fontFamily };
+  });
+  assert.ok(pairing.standfirst.includes('Galley Newsreader') && pairing.text.includes('Galley DM Sans'), JSON.stringify(pairing));
   await selectFont('serif');
   for (const width of [390, 320]) {
     await page.setViewport({ width, height: 844 });
-    const cards = await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-theme-options button, .mr-font-select select')].map((button) => {
+    const cards = await inspect(() => [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="theme"] .mr-palette-page:first-child button, .mr-font-select select')].map((button) => {
       const rect = button.getBoundingClientRect(); return { left: rect.left, right: rect.right, height: rect.height, client: button.clientWidth, scroll: button.scrollWidth };
     }));
     for (const card of cards) assert.ok(card.left >= 0 && card.right <= width && card.height >= 44 && card.scroll <= card.client + 1, JSON.stringify({ width, card }));
@@ -579,8 +597,18 @@ try {
     document.head.append(policy);
     document.querySelector('#galley-launcher').shadowRoot.querySelector('button').click();
   });
+  // The merge request's own description is an optional first document, off until chosen.
+  const overview = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot, section = s.querySelector('.mr-overview');
+    const before = section.hidden;
+    s.querySelector('[data-act="overview"]').click();
+    const shown = { before, after: section.hidden, first: section === s.querySelector('.mr-document:not([hidden])'), title: section.querySelector('.mr-title').textContent, list: section.querySelectorAll('.mr-content li').length };
+    s.querySelector('[data-act="overview"]').click();
+    return shown;
+  });
+  assert.deepEqual(overview, { before: true, after: false, first: true, title: 'Docs: reading-first reviews', list: 2 });
   await page.waitForFunction(() => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'));
-  console.log('Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, six light/dark palettes, text and syntax contrast, five typefaces, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, Escape layers.');
+  console.log('Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, twelve light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, Escape layers, the optional request description.');
 } finally {
   await browser.close();
   server?.close();
