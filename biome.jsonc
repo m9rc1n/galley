@@ -2,19 +2,14 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": [
-      "**",
-      "!**/dist",
-      "!**/coverage",
-      "!**/reports",
-      "!demo/build",
-      "!demo/samples",
-      "!store/assets",
-      "!package-lock.json"
-    ]
+    "includes": ["**", "!**/dist", "!**/coverage", "!**/reports", "!demo/build", "!demo/samples", "!store/assets", "!package-lock.json"]
   },
-  // Linting only. Formatting is left alone on purpose, so this setup does not rewrite the codebase.
-  "formatter": { "enabled": false },
+  // Wide lines on purpose: much of this code reads best as one statement per line.
+  // `npm run format` applies it; CI and the pre-push hook fail on unformatted files.
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 160 },
+  "javascript": { "formatter": { "quoteStyle": "single", "trailingCommas": "all" } },
+  // The custom lint rule is laid out by hand, and GritQL formatting is still experimental.
+  "grit": { "formatter": { "enabled": false } },
   "assist": { "enabled": false },
   // A custom rule for the one risk an extension that renders pull request content cannot take.
   "plugins": ["./lint/no-unsanitized-html.grit"],

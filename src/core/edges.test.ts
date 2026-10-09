@@ -25,14 +25,29 @@ it('leaves an empty patch unchanged and declines multi-file patches', () => {
 });
 
 it.each([
-  ['', ''], ['old', ''], ['', 'new'], ['one two', 'one two'],
-  ['a b c d', 'x b c y'], ['first and last', 'new and different'],
+  ['', ''],
+  ['old', ''],
+  ['', 'new'],
+  ['one two', 'one two'],
+  ['a b c d', 'x b c y'],
+  ['first and last', 'new and different'],
   ['alpha beta gamma delta', 'alpha gamma beta delta'],
-  ['  old value  ', '  new value  '], ['one, two and three', 'one and three, two'],
+  ['  old value  ', '  new value  '],
+  ['one, two and three', 'one and three, two'],
 ])('word edits preserve both complete versions for %j → %j', (base, head) => {
   const ops = wordDiff(base, head);
-  expect(ops.filter((o) => o.type !== 'ins').map((o) => o.text).join('')).toBe(base);
-  expect(ops.filter((o) => o.type !== 'del').map((o) => o.text).join('')).toBe(head);
+  expect(
+    ops
+      .filter((o) => o.type !== 'ins')
+      .map((o) => o.text)
+      .join(''),
+  ).toBe(base);
+  expect(
+    ops
+      .filter((o) => o.type !== 'del')
+      .map((o) => o.text)
+      .join(''),
+  ).toBe(head);
   expect(changeRatio(ops)).toBeGreaterThanOrEqual(0);
   expect(changeRatio(ops)).toBeLessThanOrEqual(1);
   expect(hasVisibleChange(ops)).toBe(base.replace(/\s/g, '') !== head.replace(/\s/g, ''));
@@ -41,13 +56,26 @@ it.each([
 it('keeps structural whitespace out of deletion marks and leaves inserted padding unmarked', () => {
   const el = document.createElement('ul');
   el.innerHTML = '<li>Keep</li>\n<li>Next</li>';
-  expect(applyOps(el, [{ type: 'eq', text: 'Keep' }, { type: 'del', text: ' removed' }, { type: 'eq', text: '\nNext' }])).toBe(true);
+  expect(
+    applyOps(el, [
+      { type: 'eq', text: 'Keep' },
+      { type: 'del', text: ' removed' },
+      { type: 'eq', text: '\nNext' },
+    ]),
+  ).toBe(true);
   expect(el.querySelector('li')!.innerHTML).toBe('Keep<del class="mr-del"> removed</del>');
-  const p = document.createElement('p'); p.textContent = '  added  ';
+  const p = document.createElement('p');
+  p.textContent = '  added  ';
   expect(applyOps(p, [{ type: 'ins', text: '  added  ' }])).toBe(true);
   expect(p.innerHTML).toBe('  <ins class="mr-ins">added</ins>  ');
-  const spaces = document.createElement('p'); spaces.append(document.createComment('invisible'), ' ');
-  expect(applyOps(spaces, [{ type: 'del', text: '  ' }, { type: 'ins', text: ' ' }])).toBe(true);
+  const spaces = document.createElement('p');
+  spaces.append(document.createComment('invisible'), ' ');
+  expect(
+    applyOps(spaces, [
+      { type: 'del', text: '  ' },
+      { type: 'ins', text: ' ' },
+    ]),
+  ).toBe(true);
   expect(spaces.querySelector('ins, del')).toBeNull();
 });
 
@@ -63,7 +91,10 @@ it('renders empty task items, alert titles with and without a following line, an
 
 it('reads TOML front matter, front matter at the very end of a file, and front matter that is not key-value', () => {
   const toml = splitFrontMatter('+++\ntitle = "RFC"\ntags = ["a"]\n+++\n# Body\n');
-  expect(toml.frontmatter?.fields).toEqual([['title', 'RFC'], ['tags', '["a"]']]);
+  expect(toml.frontmatter?.fields).toEqual([
+    ['title', 'RFC'],
+    ['tags', '["a"]'],
+  ]);
   const atEnd = splitFrontMatter('---\ntitle: Only\n---');
   expect(atEnd.lineCount).toBe(3);
   expect(atEnd.body).toBe('\n\n\n');
@@ -125,6 +156,13 @@ it('splits words without Intl.Segmenter, as older browsers need', async () => {
   const { tokenize, wordDiff } = await import('./worddiff.ts');
   vi.unstubAllGlobals();
   expect(tokenize('Hello, wide  world!')).toEqual(['Hello', ',', ' ', 'wide', '  ', 'world', '!']);
-  expect(wordDiff('a small change', 'a big change').filter((op) => op.type !== 'eq').map((op) => [op.type, op.text])).toEqual([['del', 'small'], ['ins', 'big']]);
+  expect(
+    wordDiff('a small change', 'a big change')
+      .filter((op) => op.type !== 'eq')
+      .map((op) => [op.type, op.text]),
+  ).toEqual([
+    ['del', 'small'],
+    ['ins', 'big'],
+  ]);
   expect(tokenize('')).toEqual([]);
 });

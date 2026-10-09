@@ -94,11 +94,7 @@ export interface ReviewSource {
 export class ReaderError extends Error {
   readonly hint: string;
   readonly needsToken: boolean;
-  constructor(
-    message: string,
-    hint = '',
-    needsToken = false,
-  ) {
+  constructor(message: string, hint = '', needsToken = false) {
     super(message);
     this.hint = hint;
     this.needsToken = needsToken;

@@ -36,12 +36,17 @@ async function send(message: unknown, from: unknown = sender()): Promise<unknown
 const request = (url: string, method = 'GET', body?: string) => ({ type: 'galley:github', url, method, ...(body === undefined ? {} : { body }) });
 
 it('restores enabled sites when the extension is installed or updated, and when the browser starts', async () => {
-  const { runtime, permissions, scripting } = (globalThis as unknown as { chrome: {
-    runtime: Record<'onInstalled' | 'onStartup', { addListener: ReturnType<typeof vi.fn> }>;
-    permissions: { getAll: ReturnType<typeof vi.fn> };
-    scripting: { registerContentScripts: ReturnType<typeof vi.fn> };
-  } }).chrome;
-  const [[onInstalled]] = runtime.onInstalled.addListener.mock.calls, [[onStartup]] = runtime.onStartup.addListener.mock.calls;
+  const { runtime, permissions, scripting } = (
+    globalThis as unknown as {
+      chrome: {
+        runtime: Record<'onInstalled' | 'onStartup', { addListener: ReturnType<typeof vi.fn> }>;
+        permissions: { getAll: ReturnType<typeof vi.fn> };
+        scripting: { registerContentScripts: ReturnType<typeof vi.fn> };
+      };
+    }
+  ).chrome;
+  const [[onInstalled]] = runtime.onInstalled.addListener.mock.calls,
+    [[onStartup]] = runtime.onStartup.addListener.mock.calls;
   expect(onStartup).toBe(onInstalled);
   onInstalled();
   await vi.waitFor(() => expect(scripting.registerContentScripts).toHaveBeenCalledOnce());

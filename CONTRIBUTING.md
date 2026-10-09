@@ -7,7 +7,7 @@ Thanks for helping. Galley is small, so the process is too.
 ```bash
 git clone https://github.com/m9rc1n/galley.git
 cd galley
-npm install
+npm install        # also turns on the pre-push hook (.githooks/pre-push)
 npm run dev        # dev build in dist/dev with live reload; load it once via chrome://extensions → Load unpacked
 npm run demo       # or: try the reader on a sample merge request, no extension needed
 ```
@@ -17,10 +17,12 @@ Node 22.12 or newer is required (22.12+, 24 or 26+). See "Develop in your own Ch
 ## Before you open a pull request
 
 ```bash
-npm run check      # typecheck, lint and unit tests
+npm run check      # typecheck, lint, formatting, and unit tests with the coverage thresholds
 npm run build      # both browser builds
 npm run test:e2e   # browser checks; needed for anything that changes how the reader looks or behaves
 ```
+
+`git push` runs `npm run check` first, on each commit being pushed, in a temporary worktree, so uncommitted and untracked files don't count; a failure stops the push. `npm install` turns the hook on by setting `core.hooksPath` to `.githooks` (if you install with `--ignore-scripts`, run `npm run prepare` once). To skip it for one push, use `git push --no-verify`. `npm run format` fixes formatting.
 
 CI runs all of these, on Node 22 and 24, and fails if test coverage drops. `test:e2e` needs Chrome; set `CHROME_PATH` if it is installed somewhere unusual. If you change what the reader looks like, include a screenshot; `npm run store-assets` redraws the store graphics from the real reader.
 
@@ -70,7 +72,7 @@ npm run test:coverage             # coverage report in coverage/, and the thresh
 
 **Browser checks** (`e2e/reader.mjs`) drive the real reader in Chrome against the demo page: layout at several widths, selection, focus, the sticky bar, comments. `npm run test:e2e` builds the demo, serves it and runs them; screenshots land in `reports/e2e/`.
 
-**Lint** is [Biome](https://biomejs.dev) (`npm run lint`), configured in `biome.jsonc` with its recommended rules plus `noFloatingPromises`; formatting is deliberately not enforced. One rule is custom (`lint/no-unsanitized-html.grit`): writing a string as HTML (`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`) is an error, because this extension renders content from pull requests. Document text must go through the sanitiser in `src/ui/render.ts` or be built from DOM nodes. A static template is fine if you say why:
+**Lint and formatting** use [Biome](https://biomejs.dev), configured in `biome.jsonc`: the recommended lint rules plus `noFloatingPromises` (`npm run lint`), and the formatter with 160-character lines (`npm run format` rewrites files, `npm run format:check` only reports). CI and the pre-push hook fail on unformatted files; editors with the Biome extension can format on save. One rule is custom (`lint/no-unsanitized-html.grit`): writing a string as HTML (`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`) is an error, because this extension renders content from pull requests. Document text must go through the sanitiser in `src/ui/render.ts` or be built from DOM nodes. A static template is fine if you say why:
 
 ```ts
 // biome-ignore lint/plugin: a bundled icon constant.

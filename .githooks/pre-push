@@ -1,0 +1,42 @@
+#!/bin/sh
+# Before a push, runs `npm run check` (types, Biome lint and formatting, unit tests with the coverage
+# thresholds in vitest.config.ts) on each commit being pushed. The checks run in a temporary worktree
+# of that commit, so uncommitted or untracked files cannot make a failing commit pass.
+# `npm install` turns this hook on (scripts/install-hooks.mjs). Skip it once with `git push --no-verify`.
+set -eu
+
+root=$(git rev-parse --show-toplevel)
+if [ ! -d "$root/node_modules" ]; then
+  echo "pre-push: node_modules is missing. Run npm install, then push again." >&2
+  exit 1
+fi
+
+tree=''
+cleanup() {
+  if [ -n "$tree" ]; then
+    git -C "$root" worktree remove --force "$tree" >/dev/null 2>&1 || rm -rf "$tree"
+    tree=''
+  fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+checked=' '
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  # An all-zero id deletes the remote ref: there is nothing to check.
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac
+  commit=$(git rev-parse --verify --quiet "$local_sha^{commit}") || continue
+  case "$checked" in *" $commit "*) continue ;; esac
+  checked="$checked$commit "
+
+  echo "pre-push: checking $(git log -1 --format='%h %s' "$commit")"
+  tree=$(mktemp -d "${TMPDIR:-/tmp}/galley-pre-push.XXXXXX")
+  git -C "$root" worktree add --quiet --detach "$tree" "$commit" </dev/null
+  ln -s "$root/node_modules" "$tree/node_modules"
+  # stdin still holds the remaining refs for this loop; the checks must not read it.
+  if ! (cd "$tree" && unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE && npm run --silent check) </dev/null; then
+    echo "pre-push: checks failed for $(git log -1 --format=%h "$commit"). Fix them (npm run format fixes formatting), or push with --no-verify." >&2
+    exit 1
+  fi
+  cleanup
+done

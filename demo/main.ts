@@ -73,25 +73,58 @@ const source: ReviewSource = {
     const [rfc, readme] = docs;
     const threads: Thread[] = [
       {
-        doc: rfc, side: 'head', line: 13, url: '#thread-1',
+        doc: rfc,
+        side: 'head',
+        line: 13,
+        url: '#thread-1',
         comments: [
-          { author: 'Dana Whitfield', handle: 'dana', body: 'Love this framing. Could we link the **skim-reading** study here?', createdAt: ago(26), url: '#thread-1' },
-          { author: 'Lee Okafor', handle: 'lee', body: 'Good idea, I will add it as a footnote in the next revision.', createdAt: ago(3), url: '#thread-1-reply' },
+          {
+            author: 'Dana Whitfield',
+            handle: 'dana',
+            body: 'Love this framing. Could we link the **skim-reading** study here?',
+            createdAt: ago(26),
+            url: '#thread-1',
+          },
+          {
+            author: 'Lee Okafor',
+            handle: 'lee',
+            body: 'Good idea, I will add it as a footnote in the next revision.',
+            createdAt: ago(3),
+            url: '#thread-1-reply',
+          },
         ],
       },
       {
-        doc: rfc, side: 'head', line: 21, url: '#thread-2',
-        comments: [{ author: 'Samantha Konstantinopoulou-Reyes', handle: 'sam', body: 'Does “source of truth” also cover comments written in the reader?', createdAt: ago(5), url: '#thread-2' }],
+        doc: rfc,
+        side: 'head',
+        line: 21,
+        url: '#thread-2',
+        comments: [
+          {
+            author: 'Samantha Konstantinopoulou-Reyes',
+            handle: 'sam',
+            body: 'Does “source of truth” also cover comments written in the reader?',
+            createdAt: ago(5),
+            url: '#thread-2',
+          },
+        ],
       },
       {
-        doc: readme, side: 'head', line: null, url: '#thread-3',
+        doc: readme,
+        side: 'head',
+        line: null,
+        url: '#thread-3',
         comments: [{ author: 'Kim Park', handle: 'kim', body: 'The install section reads much better now.', createdAt: ago(50), url: '#thread-3' }],
       },
     ];
     const replies: Array<{ thread: string; body: string; createdAt: string }> = JSON.parse(sessionStorage.getItem('galley:demo-replies') ?? '[]');
     for (const thread of threads) {
       thread.reply = demoReply(thread.url);
-      thread.comments.push(...replies.filter((reply) => reply.thread === thread.url).map((reply) => ({ author: 'You', body: reply.body, createdAt: reply.createdAt, url: thread.url })));
+      thread.comments.push(
+        ...replies
+          .filter((reply) => reply.thread === thread.url)
+          .map((reply) => ({ author: 'You', body: reply.body, createdAt: reply.createdAt, url: thread.url })),
+      );
     }
     return threads;
   },

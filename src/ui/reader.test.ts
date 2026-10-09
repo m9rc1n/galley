@@ -17,7 +17,9 @@ it('source files retain native diff lines without the Markdown change gutter or 
 });
 
 it('opens a modal, replaces an existing reader, and restores the page focus and scrolling on close', async () => {
-  const page = document.createElement('button'); document.body.append(page); page.focus();
+  const page = document.createElement('button');
+  document.body.append(page);
+  page.focus();
   document.documentElement.style.overflow = 'clip';
   const closed = vi.fn();
   await ui.open(review(), { onClose: closed });
@@ -26,7 +28,8 @@ it('opens a modal, replaces an existing reader, and restores the page focus and 
   const second = openReader(review());
   expect(closed).toHaveBeenCalledOnce();
   expect(document.querySelectorAll('#galley-reader')).toHaveLength(1);
-  second.close(); second.close();
+  second.close();
+  second.close();
   expect(document.activeElement).toBe(page);
   expect(document.documentElement.style.overflow).toBe('clip');
   expect(ui.disconnect).toHaveBeenCalledTimes(2);
@@ -66,10 +69,14 @@ it('loads no more than three documents at a time and retains the requested start
     await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(4));
     pending[1].resolve(contents);
     await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(5));
-    pending.forEach((p) => { p.resolve(contents); });
+    pending.forEach((p) => {
+      p.resolve(contents);
+    });
     await vi.waitFor(() => expect(ui.q('.mr-skeleton')).toBeNull());
     expect(ui.q('.mr-file-name').textContent).toBe('4.md');
-  } finally { handle.close(); }
+  } finally {
+    handle.close();
+  }
 });
 
 it('keeps other documents readable after a load failure and retries only the failed document', async () => {
@@ -98,8 +105,10 @@ it('handles empty reviews and late source resolution after closing', async () =>
   await ui.open(review({ docs: [] }));
   expect(ui.q('.mr-message').textContent).toContain('No readable changes');
   const pending = deferred<ReturnType<typeof review>>();
-  const handle = openReader(pending.promise); handle.close();
-  const source = review(); pending.resolve(source);
+  const handle = openReader(pending.promise);
+  handle.close();
+  const source = review();
+  pending.resolve(source);
   await pending.promise;
   expect(source.load).not.toHaveBeenCalled();
   expect(document.querySelector('#galley-reader')).toBeNull();
@@ -107,7 +116,7 @@ it('handles empty reviews and late source resolution after closing', async () =>
 
 it('loads optional code files only when enabled, after documents, and excludes them from navigation when disabled', async () => {
   const code = { path: 'src/main.ts', oldPath: 'src/main.ts', status: 'modified' as const, kind: 'code' as const };
-  const load = vi.fn(async (doc) => doc.kind === 'code' ? { base: 'const count = 1;', head: 'const count = 2;' } : contents);
+  const load = vi.fn(async (doc) => (doc.kind === 'code' ? { base: 'const count = 1;', head: 'const count = 2;' } : contents));
   await ui.open(review({ codeDocs: [code], load }));
   expect(load).toHaveBeenCalledTimes(1);
   expect(ui.q('[data-document="1"]').hidden).toBe(true);
@@ -147,8 +156,10 @@ it('traps focus in settings, persists appearance, and uses Escape to close the d
   expect(ui.shadow().activeElement).toBe(ui.q('button[data-act="close-settings"]'));
   ui.click('[data-value="dark"]');
   const font = ui.q<HTMLSelectElement>('#mr-typeface');
-  font.value = 'sans'; font.dispatchEvent(new Event('change', { bubbles: true }));
-  ui.click('[data-settings-tab="review"]'); ui.click('[data-mode="clean"]');
+  font.value = 'sans';
+  font.dispatchEvent(new Event('change', { bubbles: true }));
+  ui.click('[data-settings-tab="review"]');
+  ui.click('[data-mode="clean"]');
   ui.click('[data-settings-tab="reading"]');
   for (let i = 0; i < 8; i++) ui.click('[data-act="larger"]');
   expect(ui.q('.mr-root').style.getPropertyValue('--body-size')).toBe('24px');
@@ -170,7 +181,8 @@ it('groups reading, layout and review settings into keyboard-accessible tabs wit
   expect(ui.q('#mr-layout-panel').hidden).toBe(true);
   expect(ui.q('#mr-review-panel').hidden).toBe(true);
   const reviewTab = ui.q('[data-settings-tab="review"]');
-  reviewTab.focus(); ui.key('ArrowLeft');
+  reviewTab.focus();
+  ui.key('ArrowLeft');
   expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="layout"]'));
   expect(ui.q('#mr-layout-panel').hidden).toBe(false);
   ui.key('ArrowLeft');
@@ -181,7 +193,8 @@ it('groups reading, layout and review settings into keyboard-accessible tabs wit
   expect(ui.q('#mr-keys-panel').hidden).toBe(false);
   ui.key('Home');
   expect(reviewTab.tabIndex).toBe(-1);
-  ui.key('End'); ui.key('ArrowLeft');
+  ui.key('End');
+  ui.key('ArrowLeft');
   expect(reviewTab.getAttribute('aria-selected')).toBe('true');
   expect(ui.q('#mr-reading-panel').hidden).toBe(true);
   expect(ui.q('#mr-review-panel').hidden).toBe(false);
@@ -189,7 +202,8 @@ it('groups reading, layout and review settings into keyboard-accessible tabs wit
   expect(ui.shadow().activeElement).toBe(ui.q('[data-mode="changes"]'));
   ui.click('[data-settings-tab="reading"]');
   const font = ui.q<HTMLSelectElement>('#mr-typeface');
-  font.value = 'georgia'; font.dispatchEvent(new Event('change', { bubbles: true }));
+  font.value = 'georgia';
+  font.dispatchEvent(new Event('change', { bubbles: true }));
   expect(ui.q('.mr-root').dataset.font).toBe('georgia');
   ui.click('[data-act="larger"]');
   expect(ui.q('.mr-text-size').textContent).toBe('22 px');
@@ -203,14 +217,21 @@ it('opens the review tab directly when a code-only review needs code files enabl
 });
 
 it('lets the reader choose a layout and density, remembers both, and keeps comments below their text in Focus', async () => {
-  const thread: Thread = { doc: guide, side: 'head', line: 5, url: '#thread', comments: [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }] };
+  const thread: Thread = {
+    doc: guide,
+    side: 'head',
+    line: 5,
+    url: '#thread',
+    comments: [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }],
+  };
   await ui.open(review({ loadThreads: async () => [thread] }));
   ui.flushFrame();
   const root = ui.q('.mr-root');
   expect([root.dataset.layout, root.dataset.density]).toEqual(['balanced', 'comfortable']);
   expect(root.classList).toContain('has-rail');
   expect(ui.q('.mr-threads .mr-thread')).not.toBeNull();
-  ui.click('[data-act="settings"]'); ui.click('[data-settings-tab="layout"]');
+  ui.click('[data-act="settings"]');
+  ui.click('[data-settings-tab="layout"]');
   ui.click('[data-setting="layout"] [data-value="focus"]');
   ui.click('[data-setting="density"] [data-value="compact"]');
   ui.flushFrame();
@@ -227,7 +248,13 @@ it('lets the reader choose a layout and density, remembers both, and keeps comme
 
 it('moves between conversations and changes the view from the keyboard, and lists every shortcut in its own tab', async () => {
   const at = new Date().toISOString();
-  const threads: Thread[] = [5, 3].map((line) => ({ doc: guide, side: 'head', line, url: `#t${line}`, comments: [{ author: 'Dana', body: `On line ${line}`, createdAt: at, url: `#t${line}` }] }));
+  const threads: Thread[] = [5, 3].map((line) => ({
+    doc: guide,
+    side: 'head',
+    line,
+    url: `#t${line}`,
+    comments: [{ author: 'Dana', body: `On line ${line}`, createdAt: at, url: `#t${line}` }],
+  }));
   await ui.open(review({ loadThreads: async () => threads }));
   ui.flushFrame();
   const root = ui.q('.mr-root');
@@ -244,7 +271,8 @@ it('moves between conversations and changes the view from the keyboard, and list
   expect(ui.q('.mr-toast').textContent).toContain('Layout: Review');
   ui.key('d');
   expect(root.dataset.density).toBe('compact');
-  ui.key('+'); ui.key('+');
+  ui.key('+');
+  ui.key('+');
   expect(ui.q('.mr-text-size').textContent).toBe('24 px');
   // Titles, bylines, contents and comments scale with the text, not the body alone.
   expect(root.style.getPropertyValue('--text-scale')).toBe('1.2');
@@ -268,10 +296,12 @@ it('grows the text with the window in Fit to screen, up to one and a half times'
   // 1280px is narrower than the 1440px the composition is drawn for, so nothing is scaled down.
   expect([root.style.getPropertyValue('--fit'), root.style.getPropertyValue('--body-size')]).toEqual(['1', '20px']);
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1800);
-  root.dispatchEvent(new Event('galley:context')); ui.flushFrame();
+  root.dispatchEvent(new Event('galley:context'));
+  ui.flushFrame();
   expect([root.style.getPropertyValue('--fit'), root.style.getPropertyValue('--body-size')]).toEqual(['1.25', '25px']);
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(3840);
-  root.dispatchEvent(new Event('galley:context')); ui.flushFrame();
+  root.dispatchEvent(new Event('galley:context'));
+  ui.flushFrame();
   expect([root.style.getPropertyValue('--fit'), root.style.getPropertyValue('--body-size')]).toEqual(['1.5', '30px']);
   // The chosen text size is still the one the settings show.
   ui.click('[data-act="settings"]');
@@ -280,11 +310,18 @@ it('grows the text with the window in Fit to screen, up to one and a half times'
 
 it('shows people by their name and mentions them by username, never by a name with spaces', async () => {
   const at = new Date().toISOString();
-  const thread: Thread = { doc: guide, side: 'head', line: 5, url: '#thread', reply: vi.fn(), comments: [
-    { author: 'Dana Whitfield', handle: 'dana', body: 'Question?', createdAt: at, url: '#thread' },
-    { author: 'Lee Okafor', handle: 'lee', body: 'Agreed.', createdAt: at, url: '#thread' },
-    { author: 'Sam Reyes', body: 'Name only.', createdAt: at, url: '#thread' },
-  ] };
+  const thread: Thread = {
+    doc: guide,
+    side: 'head',
+    line: 5,
+    url: '#thread',
+    reply: vi.fn(),
+    comments: [
+      { author: 'Dana Whitfield', handle: 'dana', body: 'Question?', createdAt: at, url: '#thread' },
+      { author: 'Lee Okafor', handle: 'lee', body: 'Agreed.', createdAt: at, url: '#thread' },
+      { author: 'Sam Reyes', body: 'Name only.', createdAt: at, url: '#thread' },
+    ],
+  };
   await ui.open(review({ loadThreads: async () => [thread] }));
   const names = [...ui.shadow().querySelectorAll<HTMLElement>('.mr-thread-author')];
   expect(names.map((name) => name.textContent)).toEqual(['Dana Whitfield', 'Lee Okafor', 'Sam Reyes']);
@@ -334,14 +371,21 @@ it('keeps change markers quiet until the text beside one is pointed at', async (
   expect(ui.shadow().querySelector('.mr-mark.is-hot')).toBeNull();
 });
 
-it('offers the request\'s own title and description as a first document, sanitised and foldable', async () => {
-  const overview = { kind: 'Merge request' as const, title: 'Docs: reading-first reviews', description: 'Adds **RFC 42**.<script>bad()</script>\n\n- Look at the goals', author: 'Dana Whitfield', url: `${location.origin}/mr/128` };
+it("offers the request's own title and description as a first document, sanitised and foldable", async () => {
+  const overview = {
+    kind: 'Merge request' as const,
+    title: 'Docs: reading-first reviews',
+    description: 'Adds **RFC 42**.<script>bad()</script>\n\n- Look at the goals',
+    author: 'Dana Whitfield',
+    url: `${location.origin}/mr/128`,
+  };
   await ui.open(review({ overview }));
   const section = ui.q('.mr-overview');
   // Off until the reader asks for it, and placed before the first document.
   expect(section.hidden).toBe(true);
   expect(section.nextElementSibling?.matches('.mr-document[data-document="0"]')).toBe(true);
-  ui.click('[data-act="settings"]'); ui.click('[data-settings-tab="review"]');
+  ui.click('[data-act="settings"]');
+  ui.click('[data-settings-tab="review"]');
   ui.click('[data-act="overview"]');
   expect(section.hidden).toBe(false);
   expect(ui.q('[data-act="overview"]').getAttribute('aria-checked')).toBe('true');
@@ -366,7 +410,8 @@ it('hides the description switch when the platform has no description to show', 
 it('lets the reader choose shaded or outlined comment cards, and remembers the choice', async () => {
   await ui.open(review());
   expect(ui.q('.mr-root').dataset.comments).toBe('shaded');
-  ui.click('[data-act="settings"]'); ui.click('[data-settings-tab="review"]');
+  ui.click('[data-act="settings"]');
+  ui.click('[data-settings-tab="review"]');
   ui.click('[data-setting="comments"] [data-value="outlined"]');
   expect(ui.q('.mr-root').dataset.comments).toBe('outlined');
   expect(ui.q('[data-setting="comments"] [data-value="outlined"]').getAttribute('aria-pressed')).toBe('true');
@@ -395,26 +440,41 @@ it('changes palettes without changing brightness and remembers both after reopen
 });
 
 it('shields page shortcuts while respecting text input and modifier keys', async () => {
-  const pageKey = vi.fn(); window.addEventListener('keydown', pageKey);
+  const pageKey = vi.fn();
+  window.addEventListener('keydown', pageKey);
   try {
     await ui.open(review());
-    ui.key('c', { ctrlKey: true }); expect(ui.q('.mr-root').classList).toContain('mode-changes');
-    ui.key('c'); expect(ui.q('.mr-root').classList).toContain('mode-clean');
-    ui.key('c'); expect(ui.q('.mr-root').classList).toContain('mode-changes');
-    ui.key('+'); expect(ui.q('.mr-root').style.getPropertyValue('--body-size')).toBe('22px');
-    ui.key('-'); expect(ui.q('.mr-root').style.getPropertyValue('--body-size')).toBe('20px');
+    ui.key('c', { ctrlKey: true });
+    expect(ui.q('.mr-root').classList).toContain('mode-changes');
+    ui.key('c');
+    expect(ui.q('.mr-root').classList).toContain('mode-clean');
+    ui.key('c');
+    expect(ui.q('.mr-root').classList).toContain('mode-changes');
+    ui.key('+');
+    expect(ui.q('.mr-root').style.getPropertyValue('--body-size')).toBe('22px');
+    ui.key('-');
+    expect(ui.q('.mr-root').style.getPropertyValue('--body-size')).toBe('20px');
     await ui.commentOn();
-    ui.key('c'); expect(ui.q('.mr-root').classList).toContain('mode-changes');
+    ui.key('c');
+    expect(ui.q('.mr-root').classList).toContain('mode-changes');
     expect(pageKey).not.toHaveBeenCalled();
     ui.close();
     document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true }));
     expect(pageKey).toHaveBeenCalledOnce();
-  } finally { window.removeEventListener('keydown', pageKey); }
+  } finally {
+    window.removeEventListener('keydown', pageKey);
+  }
 });
 
 it('holds external document and thread images until an explicit action, with consent remembered', async () => {
   const img = '![pixel](https://tracker.example/a.png)';
-  const thread: Thread = { doc: guide, side: 'head', line: null, url: '#thread', comments: [{ author: 'Reviewer', body: img, createdAt: new Date().toISOString(), url: '#thread' }] };
+  const thread: Thread = {
+    doc: guide,
+    side: 'head',
+    line: null,
+    url: '#thread',
+    comments: [{ author: 'Reviewer', body: img, createdAt: new Date().toISOString(), url: '#thread' }],
+  };
   await ui.open(review({ load: async () => ({ base: '', head: `# Guide\n\n${img}` }), loadThreads: async () => [thread] }));
   expect(ui.shadow().querySelectorAll('img[data-mr-src]')).toHaveLength(2);
   expect(ui.q('img').getAttribute('src')).toBeNull();
@@ -431,10 +491,15 @@ it('navigates change targets and headings without following the platform page li
   const head = '# Guide\n\n## First\n\nNew one.\n\n## Second\n\nNew two.\n\n## Third\n\nNew three.\n';
   await ui.open(review({ load: async () => ({ base: head.replaceAll('New', 'Old'), head }) }));
   const changes = [...ui.shadow().querySelectorAll<HTMLElement>('[data-mr-change]')];
-  changes.forEach((el, i) => { ui.bounds(el, 400 + i * 100); });
-  ui.key('j'); const first = ui.scroll.mock.calls.at(-1)?.[0].top;
-  ui.key('j'); expect(ui.scroll.mock.calls.at(-1)?.[0].top).toBeGreaterThan(first);
-  ui.key('k'); expect(ui.scroll.mock.calls.at(-1)?.[0].top).toBe(first);
+  changes.forEach((el, i) => {
+    ui.bounds(el, 400 + i * 100);
+  });
+  ui.key('j');
+  const first = ui.scroll.mock.calls.at(-1)?.[0].top;
+  ui.key('j');
+  expect(ui.scroll.mock.calls.at(-1)?.[0].top).toBeGreaterThan(first);
+  ui.key('k');
+  expect(ui.scroll.mock.calls.at(-1)?.[0].top).toBe(first);
   ui.click('[data-act="heading"]');
   expect(ui.scroll.mock.calls.at(-1)?.[0].top).toBeGreaterThan(0);
   ui.flushFrame();
@@ -446,7 +511,8 @@ it('navigates change targets and headings without following the platform page li
 it('does not treat a failed native viewed write as saved and lets the reader retry explicitly', async () => {
   const save = vi.fn().mockRejectedValueOnce(new Error('Permission denied')).mockResolvedValue(undefined);
   await ui.open(review({ viewed: { label: 'Saved on GitHub', load: async () => [], set: save } }));
-  await ui.readyViewed(); ui.click('[data-act="viewed"]');
+  await ui.readyViewed();
+  ui.click('[data-act="viewed"]');
   await vi.waitFor(() => expect(ui.q('.mr-viewed-feedback').textContent).toBe('Permission denied'));
   expect(ui.q('.mr-viewed').getAttribute('aria-pressed')).toBe('false');
   expect(save).toHaveBeenCalledOnce();
@@ -471,11 +537,13 @@ it('retries loading native progress without marking a file viewed prematurely', 
 });
 
 it('persists local viewed progress across reopening without storing document text', async () => {
-  await ui.open(review()); await ui.readyViewed();
+  await ui.open(review());
+  await ui.readyViewed();
   ui.click('[data-act="viewed"]');
   await vi.waitFor(() => expect(ui.q('.mr-viewed').getAttribute('aria-pressed')).toBe('true'));
   expect(Object.keys(localStorage).join()).not.toContain('guide.md');
-  await ui.open(review()); await ui.readyViewed();
+  await ui.open(review());
+  await ui.readyViewed();
   expect(ui.q('.mr-viewed').getAttribute('aria-pressed')).toBe('true');
   ui.click('[data-act="viewed"]');
   await vi.waitFor(() => expect(ui.q('.mr-viewed').getAttribute('aria-pressed')).toBe('false'));
@@ -495,16 +563,19 @@ it('opens the editor beside its paragraph, with no comment button in the top bar
   expect(composer.getAttribute('aria-label')).toBe('New comment on docs/guide.md, line 5');
   expect(composer.querySelector('.mr-comment-quote')).toBeNull();
   expect(ui.q('[data-mr-change="modified"]').classList).toContain('mr-targeted');
-  ui.input('   '); expect(composer.querySelector<HTMLButtonElement>('.mr-submit')!.disabled).toBe(true);
+  ui.input('   ');
+  expect(composer.querySelector<HTMLButtonElement>('.mr-submit')!.disabled).toBe(true);
   ui.input('Please explain the new limit.');
   composer.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   composer.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  composer.querySelector<HTMLButtonElement>('.mr-cancel')!.click(); ui.key('Escape');
+  composer.querySelector<HTMLButtonElement>('.mr-cancel')!.click();
+  ui.key('Escape');
   expect(composer.isConnected).toBe(true);
   expect(post).toHaveBeenCalledExactlyOnceWith('Please explain the new limit.');
   expect(composer.querySelector('textarea')!.readOnly).toBe(true);
   pending.resolve({ url: `${location.origin}/thread/7` });
-  await vi.waitFor(() => expect(ui.q('.mr-composer')).toBeNull()); ui.flushFrame();
+  await vi.waitFor(() => expect(ui.q('.mr-composer')).toBeNull());
+  ui.flushFrame();
   expect(ui.q('.mr-thread.is-own.is-new').textContent).toContain('Please explain the new limit.');
   expect(ui.q('.mr-toast a').getAttribute('href')).toBe(`${location.origin}/thread/7`);
   expect(ui.q('.mr-targeted')).toBeNull();
@@ -514,7 +585,9 @@ it('opens the editor beside its paragraph, with no comment button in the top bar
 it('keeps a draft on Escape, keeps the reader open while it is unsent, and never retries a failed post', async () => {
   const post = vi.fn().mockRejectedValueOnce(new ReaderError('Revision changed.', 'Reload the review.')).mockResolvedValue({ url: '#posted' });
   await ui.open(review({ prepareComment: async () => ({ kind: 'inline', label: 'Inline', post }) }));
-  const composer = await ui.commentOn(); ui.input('Keep this draft'); ui.key('Escape');
+  const composer = await ui.commentOn();
+  ui.input('Keep this draft');
+  ui.key('Escape');
   const status = composer.querySelector('.mr-comment-status')!;
   expect(status.textContent).toContain('Draft kept');
   expect(ui.shadow().activeElement).toBe(ui.q('.mr-root'));
@@ -542,11 +615,14 @@ it('ignores stale comment preparation after its editor is cancelled', async () =
   const prepare = vi.fn().mockReturnValueOnce(stale.promise).mockResolvedValue({ kind: 'inline', label: 'Current target', post });
   await ui.open(review({ prepareComment: prepare }));
   ui.q('[data-mr-change="modified"]').dispatchEvent(new Event('pointerover', { bubbles: true }));
-  ui.click('[data-act="comment-block"]'); ui.click('.mr-composer .mr-cancel');
+  ui.click('[data-act="comment-block"]');
+  ui.click('.mr-composer .mr-cancel');
   const composer = await ui.commentOn('.mr-content h1');
-  stale.resolve({ kind: 'file', label: 'Stale target', post: stalePost }); await stale.promise;
+  stale.resolve({ kind: 'file', label: 'Stale target', post: stalePost });
+  await stale.promise;
   expect(composer.querySelector('.mr-comment-status')!.textContent).toContain('Current target');
-  ui.input('Draft'); composer.querySelector<HTMLButtonElement>('.mr-submit')!.click();
+  ui.input('Draft');
+  composer.querySelector<HTMLButtonElement>('.mr-submit')!.click();
   await vi.waitFor(() => expect(ui.q('.mr-composer')).toBeNull());
   expect(post).toHaveBeenCalledExactlyOnceWith('Draft');
   expect(stalePost).not.toHaveBeenCalled();
@@ -554,20 +630,41 @@ it('ignores stale comment preparation after its editor is cancelled', async () =
 
 it('surfaces unavailable commenting and preparation failures without enabling submission', async () => {
   await ui.open(review());
-  let composer = await ui.commentOn(); ui.input('Draft');
+  let composer = await ui.commentOn();
+  ui.input('Draft');
   expect(composer.querySelector('.mr-comment-status')!.textContent).toContain('unavailable');
   expect(composer.querySelector<HTMLButtonElement>('.mr-submit')!.disabled).toBe(true);
-  await ui.open(review({ prepareComment: async () => { throw new Error('Write scope missing'); } }));
+  await ui.open(
+    review({
+      prepareComment: async () => {
+        throw new Error('Write scope missing');
+      },
+    }),
+  );
   composer = await ui.commentOn();
   expect(composer.querySelector('.mr-comment-status')!.textContent).toBe('Write scope missing');
   expect(composer.querySelector<HTMLButtonElement>('.mr-submit')!.disabled).toBe(true);
-  ui.key('Escape'); expect(ui.q('.mr-composer')).toBeNull();
+  ui.key('Escape');
+  expect(ui.q('.mr-composer')).toBeNull();
 });
 
 it('anchors and sanitises existing threads, preserving context and folding long conversations', async () => {
-  const comments = Array.from({ length: 5 }, (_, i) => ({ author: `Reviewer ${i}`, body: i === 0 ? '<script>bad()</script>\n\n![pixel](https://tracker.example/p.gif)' : `Reply ${i}`, createdAt: new Date(Date.now() - 86400_000 * i).toISOString(), url: '#thread' }));
+  const comments = Array.from({ length: 5 }, (_, i) => ({
+    author: `Reviewer ${i}`,
+    body: i === 0 ? '<script>bad()</script>\n\n![pixel](https://tracker.example/p.gif)' : `Reply ${i}`,
+    createdAt: new Date(Date.now() - 86400_000 * i).toISOString(),
+    url: '#thread',
+  }));
   const thread: Thread = { doc: guide, side: 'head', line: 3, resolved: true, outdated: true, url: 'javascript:alert(1)', comments };
-  await ui.open(review({ loadThreads: async () => [thread, { ...thread, line: null, url: `${location.origin}/thread` }, { ...thread, line: 2, url: 'https://elsewhere.example/thread' }] }));
+  await ui.open(
+    review({
+      loadThreads: async () => [
+        thread,
+        { ...thread, line: null, url: `${location.origin}/thread` },
+        { ...thread, line: 2, url: 'https://elsewhere.example/thread' },
+      ],
+    }),
+  );
   ui.flushFrame();
   expect(ui.q('.mr-content p').hidden).toBe(false);
   expect(ui.shadow().querySelectorAll('.mr-thread')).toHaveLength(3);
@@ -580,12 +677,20 @@ it('anchors and sanitises existing threads, preserving context and folding long 
   expect(ui.q('.mr-thread').classList).toContain('is-expanded');
   ui.click('[data-act="toggle-thread"]');
   expect(ui.q('[data-act="toggle-thread"]').textContent).toBe('3 more replies');
-  ui.bounds(ui.q('.mr-article'), 100, 100); ui.q('.mr-root').dispatchEvent(new Event('galley:context')); ui.flushFrame();
+  ui.bounds(ui.q('.mr-article'), 100, 100);
+  ui.q('.mr-root').dispatchEvent(new Event('galley:context'));
+  ui.flushFrame();
   expect(ui.q('.mr-content .mr-thread')).toBeTruthy();
 });
 
 it('continues reading when loading threads fails', async () => {
-  await ui.open(review({ loadThreads: async () => { throw new Error('Offline'); } }));
+  await ui.open(
+    review({
+      loadThreads: async () => {
+        throw new Error('Offline');
+      },
+    }),
+  );
   expect(ui.q('.mr-content')).toBeTruthy();
   expect(ui.q('.mr-message')).toBeNull();
 });
@@ -594,13 +699,15 @@ it('offers a selected quote without opening the composer until requested and can
   const prepare = vi.fn(async (_target: CommentTarget) => ({ kind: 'inline' as const, label: 'Inline', post: vi.fn() }));
   await ui.open(review({ prepareComment: prepare }));
   const selected = ui.q('.mr-content ins');
-  const range = document.createRange(); range.selectNodeContents(selected);
+  const range = document.createRange();
+  range.selectNodeContents(selected);
   const selection = { isCollapsed: false, rangeCount: 1, getRangeAt: () => range };
   Object.defineProperty(ui.shadow(), 'getSelection', { value: () => selection });
   selected.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
   expect(ui.q('.mr-select-chip').hidden).toBe(false);
   expect(ui.q('.mr-composer')).toBeNull();
-  ui.key('Escape'); expect(ui.q('.mr-select-chip').hidden).toBe(true);
+  ui.key('Escape');
+  expect(ui.q('.mr-select-chip').hidden).toBe(true);
   selected.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
   ui.click('[data-act="comment-selection"]');
   await vi.waitFor(() => expect(prepare).toHaveBeenCalledOnce());
@@ -612,24 +719,31 @@ it('offers a selected quote without opening the composer until requested and can
 it('prevents a selection spanning old and new text from being posted against one version', async () => {
   await ui.open(review());
   const paragraph = ui.q('[data-mr-change="modified"]');
-  const range = document.createRange(); range.selectNodeContents(paragraph);
+  const range = document.createRange();
+  range.selectNodeContents(paragraph);
   const selection = { isCollapsed: false, rangeCount: 1, getRangeAt: () => range };
   Object.defineProperty(ui.shadow(), 'getSelection', { value: () => selection });
   paragraph.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
   expect(ui.q<HTMLButtonElement>('.mr-select-chip').disabled).toBe(true);
   expect(ui.q('.mr-select-chip').title).toContain('one version');
-  selection.isCollapsed = true; document.dispatchEvent(new Event('selectionchange'));
-  ui.key('Escape'); expect(ui.q('.mr-select-chip').hidden).toBe(true);
+  selection.isCollapsed = true;
+  document.dispatchEvent(new Event('selectionchange'));
+  ui.key('Escape');
+  expect(ui.q('.mr-select-chip').hidden).toBe(true);
 });
 
 it('comments on the paragraph in focus with R and submits with Ctrl+Enter without page shortcuts', async () => {
   const post = vi.fn(async () => ({ url: '#posted' }));
   const prepare = vi.fn(async (_target: CommentTarget) => ({ kind: 'inline' as const, label: 'Inline', post }));
   await ui.open(review({ prepareComment: prepare }));
-  ui.bounds(ui.q('h1'), 80); ui.bounds(ui.q('[data-mr-change="modified"]'), 230);
-  ui.key('r'); await vi.waitFor(() => expect(ui.q('.mr-composer .mr-comment-status').textContent).toContain('Inline'));
+  ui.bounds(ui.q('h1'), 80);
+  ui.bounds(ui.q('[data-mr-change="modified"]'), 230);
+  ui.key('r');
+  await vi.waitFor(() => expect(ui.q('.mr-composer .mr-comment-status').textContent).toContain('Inline'));
   expect(prepare.mock.calls[0][0].startLine).toBe(5);
-  ui.flushFrame(); ui.input('Review via keyboard'); ui.key('Enter', { ctrlKey: true });
+  ui.flushFrame();
+  ui.input('Review via keyboard');
+  ui.key('Enter', { ctrlKey: true });
   await vi.waitFor(() => expect(ui.q('.mr-composer')).toBeNull());
   expect(post).toHaveBeenCalledExactlyOnceWith('Review via keyboard');
 });
@@ -659,11 +773,14 @@ it('reflects renamed and unchanged documents and warns about edits that Markdown
 
 it('restores automatic colour scheme behavior and responds to system theme changes', async () => {
   await ui.open(review());
-  ui.click('[data-value="sepia"]'); expect(ui.q('.mr-root').dataset.theme).toBe('sepia');
+  ui.click('[data-value="sepia"]');
+  expect(ui.q('.mr-root').dataset.theme).toBe('sepia');
   ui.click('[data-value="auto"]');
-  Object.defineProperty(ui.media, 'matches', { value: true }); ui.media.dispatchEvent(new Event('change'));
+  Object.defineProperty(ui.media, 'matches', { value: true });
+  ui.media.dispatchEvent(new Event('change'));
   expect(ui.q('.mr-root').classList).toContain('is-dark');
-  ui.click('[data-value="light"]'); ui.media.dispatchEvent(new Event('change'));
+  ui.click('[data-value="light"]');
+  ui.media.dispatchEvent(new Event('change'));
   expect(ui.q('.mr-root').dataset.theme).toBe('sepia');
   expect(ui.q('.mr-root').classList).not.toContain('is-dark');
 });
@@ -676,13 +793,16 @@ it('updates the current file and progress indicator on scrolling, and follows do
   ui.click('.mr-content a[href="#review-context"]');
   expect(ui.scroll).toHaveBeenCalledWith({ top: 204, behavior: 'smooth' });
   const root = ui.q('.mr-root');
-  Object.defineProperty(root, 'scrollHeight', { value: 1600 }); root.scrollTop = 400;
+  Object.defineProperty(root, 'scrollHeight', { value: 1600 });
+  root.scrollTop = 400;
   ui.bounds(ui.q('[data-document="1"]'), 100);
-  root.dispatchEvent(new Event('scroll')); ui.flushFrame();
+  root.dispatchEvent(new Event('scroll'));
+  ui.flushFrame();
   expect(ui.q('.mr-file-name').textContent).toBe('other.md');
   expect(ui.q('.mr-progress > div').style.transform).toBe('scaleX(0.5)');
   expect(ui.q('.mr-topbar').classList).toContain('is-scrolled');
-  ui.key('['); expect(ui.q('.mr-file-name').textContent).toBe('guide.md');
+  ui.key('[');
+  expect(ui.q('.mr-file-name').textContent).toBe('guide.md');
 });
 
 it('loads an individually held image only on its explicit button', async () => {
@@ -696,14 +816,17 @@ it('loads an individually held image only on its explicit button', async () => {
 it('keeps several drafts, returns to one when its text is chosen again, and removes editors left empty', async () => {
   const prepare = vi.fn(async (_target: CommentTarget) => ({ kind: 'inline' as const, label: 'Inline', post: vi.fn() }));
   await ui.open(review({ prepareComment: prepare }));
-  ui.bounds(ui.q('h1'), 80); ui.bounds(ui.q('[data-mr-change="modified"]'), 230);
-  const first = await ui.commentOn(); ui.input('First thought');
+  ui.bounds(ui.q('h1'), 80);
+  ui.bounds(ui.q('[data-mr-change="modified"]'), 230);
+  const first = await ui.commentOn();
+  ui.input('First thought');
   const second = await ui.commentOn('.mr-content h1');
   expect(ui.shadow().querySelectorAll('.mr-composer')).toHaveLength(2);
   expect(first.querySelector('textarea')!.value).toBe('First thought');
   expect([...ui.shadow().querySelectorAll('.mr-targeted')]).toEqual([ui.q('.mr-content h1'), ui.q('[data-mr-change="modified"]')]);
   // Clicking away from an editor that was never used removes it; one with a draft stays.
-  ui.q('.mr-root').focus(); await ui.tick();
+  ui.q('.mr-root').focus();
+  await ui.tick();
   expect(second.isConnected).toBe(false);
   expect(first.isConnected).toBe(true);
   expect(ui.q('.mr-content h1').classList).not.toContain('mr-targeted');
@@ -720,14 +843,22 @@ it('keeps several drafts, returns to one when its text is chosen again, and remo
 it('replies to a comment from its Reply action, prevents duplicate posts, and shows the sanitised reply', async () => {
   const pending = deferred<{ url: string }>();
   const reply = vi.fn(() => pending.promise);
-  const thread: Thread = { doc: guide, side: 'head', line: 5, url: '#thread', comments: [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }], reply };
+  const thread: Thread = {
+    doc: guide,
+    side: 'head',
+    line: 5,
+    url: '#thread',
+    comments: [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }],
+    reply,
+  };
   await ui.open(review({ loadThreads: async () => [thread] }));
   // Pointing at a thread marks the text it belongs to.
   ui.q('.mr-thread').dispatchEvent(new Event('pointerover', { bubbles: true }));
   expect(ui.q('[data-mr-change="modified"]').classList).toContain('mr-linked');
   expect(ui.q('.mr-reply')).toBeNull();
   ui.click('.mr-reply-to');
-  const box = ui.q<HTMLFormElement>('.mr-thread .mr-reply'), input = box.querySelector('textarea')!;
+  const box = ui.q<HTMLFormElement>('.mr-thread .mr-reply'),
+    input = box.querySelector('textarea')!;
   expect(box.previousElementSibling).toBe(ui.q('.mr-thread-comment'));
   expect(box.querySelector('.mr-reply-context')!.textContent).toBe('Replying to Dana');
   expect(input.getAttribute('aria-label')).toBe('Reply to Dana');
@@ -737,7 +868,8 @@ it('replies to a comment from its Reply action, prevents duplicate posts, and sh
   ui.input('  An answer <script>bad()</script>  ', '.mr-thread .mr-reply textarea');
   box.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   box.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  box.querySelector<HTMLButtonElement>('.mr-cancel')!.click(); ui.key('Escape');
+  box.querySelector<HTMLButtonElement>('.mr-cancel')!.click();
+  ui.key('Escape');
   expect(reply).toHaveBeenCalledExactlyOnceWith('An answer <script>bad()</script>');
   expect(input.readOnly).toBe(true);
   pending.resolve({ url: '#reply' });
@@ -748,20 +880,25 @@ it('replies to a comment from its Reply action, prevents duplicate posts, and sh
   expect(ui.q('.mr-thread script')).toBeNull();
   expect(thread.comments.at(-1)?.body).toBe('An answer <script>bad()</script>');
   expect(ui.q('.mr-thread .mr-reply')).toBeNull();
-  expect(input.value).toBe(''); expect(input.readOnly).toBe(false);
+  expect(input.value).toBe('');
+  expect(input.readOnly).toBe(false);
   // The conversation continues from the new reply.
   expect(ui.shadow().activeElement).toBe([...ui.shadow().querySelectorAll('.mr-reply-to')].at(-1));
 });
 
 it('names the person a reply answers, keeps each thread’s draft, and keeps a failed reply editable', async () => {
   const reply = vi.fn().mockRejectedValueOnce(new ReaderError('Permission denied.', 'Your draft is kept.')).mockResolvedValue({ url: '#reply' });
-  const comments = [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }, { author: 'Lee', body: 'Agreed.', createdAt: new Date().toISOString(), url: '#thread' }];
+  const comments = [
+    { author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' },
+    { author: 'Lee', body: 'Agreed.', createdAt: new Date().toISOString(), url: '#thread' },
+  ];
   const threads: Thread[] = [5, null].map((line) => ({ doc: guide, side: 'head', line, url: '#thread', comments: [...comments], reply }));
   await ui.open(review({ loadThreads: async () => threads }));
   const answer = () => ui.q('.mr-file-threads .mr-thread-comment.is-reply .mr-reply-to');
   // Answering a reply opens the box under it and names its author.
   answer().click();
-  const box = ui.q<HTMLFormElement>('.mr-file-threads .mr-reply'), file = box.querySelector('textarea')!;
+  const box = ui.q<HTMLFormElement>('.mr-file-threads .mr-reply'),
+    file = box.querySelector('textarea')!;
   expect(file.value).toBe('@Lee ');
   expect(box.previousElementSibling).toBe(ui.q('.mr-file-threads .mr-thread-comment.is-reply'));
   expect(box.querySelector('.mr-reply-context')!.textContent).toBe('Replying to Lee');
@@ -769,22 +906,26 @@ it('names the person a reply answers, keeps each thread’s draft, and keeps a f
   ui.key('Escape');
   expect(box.hidden).toBe(true);
   expect(ui.shadow().activeElement).toBe(answer());
-  answer().click(); ui.input('@Lee File reply', '.mr-file-threads .mr-reply textarea');
+  answer().click();
+  ui.input('@Lee File reply', '.mr-file-threads .mr-reply textarea');
   ui.key('Escape');
   expect(file.value).toBe('@Lee File reply');
   expect(box.querySelector('.mr-comment-status')!.textContent).toContain('Draft kept');
   expect(ui.shadow().activeElement).toBe(ui.q('.mr-root'));
-  file.focus(); ui.key('Enter', { ctrlKey: true });
+  file.focus();
+  ui.key('Enter', { ctrlKey: true });
   await vi.waitFor(() => expect(box.querySelector('.mr-comment-status')!.textContent).toBe('Permission denied. Your draft is kept.'));
   expect(reply).toHaveBeenCalledOnce();
-  expect(file.readOnly).toBe(false); expect(file.value).toBe('@Lee File reply');
+  expect(file.readOnly).toBe(false);
+  expect(file.value).toBe('@Lee File reply');
   // Another thread has its own box and draft.
   ui.click('.mr-threads .mr-reply-to');
   const other = ui.q<HTMLTextAreaElement>('.mr-threads .mr-reply textarea');
   expect(other.value).toBe('');
   ui.input('Another thought', '.mr-threads .mr-reply textarea');
   ui.click('.mr-threads .mr-reply .mr-cancel');
-  expect(ui.q('.mr-threads .mr-reply').hidden).toBe(true); expect(other.value).toBe('');
+  expect(ui.q('.mr-threads .mr-reply').hidden).toBe(true);
+  expect(other.value).toBe('');
   expect(file.value).toBe('@Lee File reply');
   ui.click('.mr-file-threads .mr-reply .mr-submit');
   await vi.waitFor(() => expect(file.value).toBe(''));
@@ -795,18 +936,29 @@ it('names the person a reply answers, keeps each thread’s draft, and keeps a f
 it('keeps a new comment and a reply as separate drafts, and supports replies to a comment just posted', async () => {
   const reply = vi.fn(async () => ({ url: '#reply' }));
   const post = vi.fn(async () => ({ url: '#new', reply }));
-  const thread: Thread = { doc: guide, side: 'head', line: 5, url: '#thread', comments: [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }], reply };
+  const thread: Thread = {
+    doc: guide,
+    side: 'head',
+    line: 5,
+    url: '#thread',
+    comments: [{ author: 'Dana', body: 'Question?', createdAt: new Date().toISOString(), url: '#thread' }],
+    reply,
+  };
   await ui.open(review({ prepareComment: async () => ({ kind: 'inline', label: 'Inline', post }), loadThreads: async () => [thread] }));
-  const composer = await ui.commentOn(); ui.input('A new topic');
-  ui.click('.mr-thread .mr-reply-to'); ui.input('Reply draft', '.mr-thread .mr-reply textarea');
+  const composer = await ui.commentOn();
+  ui.input('A new topic');
+  ui.click('.mr-thread .mr-reply-to');
+  ui.input('Reply draft', '.mr-thread .mr-reply textarea');
   await ui.tick();
   expect(composer.isConnected).toBe(true);
   expect(composer.querySelector('textarea')!.value).toBe('A new topic');
   composer.querySelector<HTMLButtonElement>('.mr-submit')!.click();
   expect(post).toHaveBeenCalledExactlyOnceWith('A new topic');
-  await vi.waitFor(() => expect(ui.q('.mr-composer')).toBeNull()); ui.flushFrame();
+  await vi.waitFor(() => expect(ui.q('.mr-composer')).toBeNull());
+  ui.flushFrame();
   expect(ui.q<HTMLTextAreaElement>('.mr-thread:not(.is-own) .mr-reply textarea').value).toBe('Reply draft');
-  ui.click('.mr-thread.is-own .mr-reply-to'); ui.input('Follow-up', '.mr-thread.is-own .mr-reply textarea');
+  ui.click('.mr-thread.is-own .mr-reply-to');
+  ui.input('Follow-up', '.mr-thread.is-own .mr-reply textarea');
   ui.key('Enter', { ctrlKey: true });
   await vi.waitFor(() => expect(reply).toHaveBeenCalledExactlyOnceWith('Follow-up'));
   expect(ui.q<HTMLTextAreaElement>('.mr-thread:not(.is-own) .mr-reply textarea').value).toBe('Reply draft');
@@ -815,7 +967,8 @@ it('keeps a new comment and a reply as separate drafts, and supports replies to 
 it('comments on the selected words with R, and not on a selection that spans both versions', async () => {
   const prepare = vi.fn(async (_target: CommentTarget) => ({ kind: 'inline' as const, label: 'Inline', post: vi.fn() }));
   await ui.open(review({ prepareComment: prepare }));
-  const range = document.createRange(); range.selectNodeContents(ui.q('.mr-content ins'));
+  const range = document.createRange();
+  range.selectNodeContents(ui.q('.mr-content ins'));
   const selection = { isCollapsed: false, rangeCount: 1, getRangeAt: () => range };
   Object.defineProperty(ui.shadow(), 'getSelection', { value: () => selection });
   ui.key('r');
@@ -832,7 +985,8 @@ it('comments on the selected words with R, and not on a selection that spans bot
 
 it('keeps the comment control while the pointer crosses the margin to it, and drops it elsewhere', async () => {
   await ui.open(review({ prepareComment: async () => ({ kind: 'inline', label: 'Inline', post: vi.fn() }) }));
-  const paragraph = ui.q('[data-mr-change="modified"]'), button = ui.q('.mr-comment-btn');
+  const paragraph = ui.q('[data-mr-change="modified"]'),
+    button = ui.q('.mr-comment-btn');
   const move = (target: Element, clientX: number, clientY: number, pointerType = 'mouse') => {
     const event = new MouseEvent('pointermove', { bubbles: true, composed: true, clientX, clientY });
     Object.defineProperty(event, 'pointerType', { value: pointerType });
@@ -862,8 +1016,22 @@ it('keeps the comment control while the pointer crosses the margin to it, and dr
 it('comments on source files as on documents: beside the code when there is room, between the lines otherwise', async () => {
   localStorage.setItem('galley:settings', JSON.stringify({ codeFiles: true }));
   const code = { path: 'src/main.ts', oldPath: 'src/main.ts', kind: 'code' as const, status: 'modified' as const };
-  const thread: Thread = { doc: code, side: 'head', line: 1, url: '#t', comments: [{ author: 'Dana', body: 'Why 2?', createdAt: new Date().toISOString(), url: '#t' }] };
-  await ui.open(review({ docs: [], codeDocs: [code], load: async () => ({ base: 'const value = 1;\n', head: 'const value = 2;\n' }), loadThreads: async () => [thread], prepareComment: async () => ({ kind: 'inline', label: 'Inline', post: vi.fn() }) }));
+  const thread: Thread = {
+    doc: code,
+    side: 'head',
+    line: 1,
+    url: '#t',
+    comments: [{ author: 'Dana', body: 'Why 2?', createdAt: new Date().toISOString(), url: '#t' }],
+  };
+  await ui.open(
+    review({
+      docs: [],
+      codeDocs: [code],
+      load: async () => ({ base: 'const value = 1;\n', head: 'const value = 2;\n' }),
+      loadThreads: async () => [thread],
+      prepareComment: async () => ({ kind: 'inline', label: 'Inline', post: vi.fn() }),
+    }),
+  );
   ui.flushFrame();
   expect(ui.q('.mr-root').classList).toContain('has-rail');
   expect(ui.q('.mr-threads .mr-thread').classList).toContain('is-code-card');
@@ -874,7 +1042,8 @@ it('comments on source files as on documents: beside the code when there is room
   expect(composer.parentElement).toBe(ui.q('.mr-threads'));
   expect(composer.classList).toContain('is-code-card');
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1100);
-  ui.q('.mr-root').dispatchEvent(new Event('galley:context')); ui.flushFrame();
+  ui.q('.mr-root').dispatchEvent(new Event('galley:context'));
+  ui.flushFrame();
   expect(ui.q('.mr-root').classList).not.toContain('has-rail');
   expect(line.nextElementSibling).toBe(ui.q('.mr-code-lines .mr-thread'));
   expect(line.nextElementSibling?.nextElementSibling).toBe(composer);
@@ -883,17 +1052,27 @@ it('comments on source files as on documents: beside the code when there is room
 
 it('enlarges a diagram in a dialog, pauses reading shortcuts, and returns focus when it closes', async () => {
   await ui.open(review());
-  const zoom = document.createElement('button'); zoom.className = 'mr-diagram-zoom'; zoom.dataset.act = 'zoom-diagram';
-  const image = document.createElement('img'); image.src = 'data:image/svg+xml,%3Csvg%2F%3E'; image.alt = 'New version of Mermaid diagram.'; image.width = 900; image.height = 300;
-  zoom.append(image); ui.q('.mr-content').append(zoom);
-  zoom.focus(); zoom.click();
-  const box = ui.q('.mr-lightbox'), enlarged = box.querySelector('img')!;
+  const zoom = document.createElement('button');
+  zoom.className = 'mr-diagram-zoom';
+  zoom.dataset.act = 'zoom-diagram';
+  const image = document.createElement('img');
+  image.src = 'data:image/svg+xml,%3Csvg%2F%3E';
+  image.alt = 'New version of Mermaid diagram.';
+  image.width = 900;
+  image.height = 300;
+  zoom.append(image);
+  ui.q('.mr-content').append(zoom);
+  zoom.focus();
+  zoom.click();
+  const box = ui.q('.mr-lightbox'),
+    enlarged = box.querySelector('img')!;
   expect(box.hidden).toBe(false);
   expect(enlarged.getAttribute('src')).toBe(image.getAttribute('src'));
   expect(enlarged.alt).toBe(image.alt);
   expect(enlarged.style.width).toBe('1120px');
   expect(ui.shadow().activeElement).toBe(ui.q('.mr-lightbox-close'));
-  ui.scroll.mockClear(); ui.key('j');
+  ui.scroll.mockClear();
+  ui.key('j');
   expect(ui.scroll).not.toHaveBeenCalled();
   ui.key('Tab');
   expect(ui.shadow().activeElement).toBe(ui.q('.mr-lightbox-close'));
@@ -902,6 +1081,7 @@ it('enlarges a diagram in a dialog, pauses reading shortcuts, and returns focus 
   expect(enlarged.getAttribute('src')).toBeNull();
   expect(ui.shadow().activeElement).toBe(zoom);
   expect(document.querySelector('#galley-reader')).toBeTruthy();
-  zoom.click(); enlarged.click();
+  zoom.click();
+  enlarged.click();
   expect(box.hidden).toBe(true);
 });

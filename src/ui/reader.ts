@@ -1,4 +1,14 @@
-import { ReaderError, type DocContents, type DocRef, type DocStatus, type ReviewOverview, type ReviewSource, type CommentTarget, type CommentPlan, type Thread } from '../platforms/types.ts';
+import {
+  ReaderError,
+  type DocContents,
+  type DocRef,
+  type DocStatus,
+  type ReviewOverview,
+  type ReviewSource,
+  type CommentTarget,
+  type CommentPlan,
+  type Thread,
+} from '../platforms/types.ts';
 import { highlightCode, languageName, languageOf } from './code.ts';
 import { renderCodeFile } from './code-files.ts';
 import { isPalette, PALETTE_KEYS, type DiagramPalette } from './diagram-palette.ts';
@@ -38,10 +48,17 @@ const paletteButton = ([value, name, caption]: [Theme, string, string]) => `
     <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
     <span class="mr-theme-caption">${caption}</span>
   </button>`;
-const PALETTE_PAGES = Array.from({ length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) }, (_, page) =>
-  `<div class="mr-palette-page">${PALETTES.slice(page * PALETTES_PER_PAGE, (page + 1) * PALETTES_PER_PAGE).map(paletteButton).join('')}</div>`).join('');
-const PALETTE_DOTS = Array.from({ length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) }, (_, page) =>
-  `<button class="mr-carousel-dot" data-act="palette-page" data-page="${page}" aria-label="Palettes, page ${page + 1}"></button>`).join('');
+const PALETTE_PAGES = Array.from(
+  { length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) },
+  (_, page) =>
+    `<div class="mr-palette-page">${PALETTES.slice(page * PALETTES_PER_PAGE, (page + 1) * PALETTES_PER_PAGE)
+      .map(paletteButton)
+      .join('')}</div>`,
+).join('');
+const PALETTE_DOTS = Array.from(
+  { length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) },
+  (_, page) => `<button class="mr-carousel-dot" data-act="palette-page" data-page="${page}" aria-label="Palettes, page ${page + 1}"></button>`,
+).join('');
 
 /**
  * Each layout is drawn as a page: a contents column (c), the text (t, with lines) and the comments
@@ -55,48 +72,64 @@ const LAYOUT_CHOICES: Array<[Layout, string, string]> = [
   ['fit', 'Fit to screen', 'Everything grows with the window'],
 ];
 const LAYOUT_NAMES = Object.fromEntries(LAYOUT_CHOICES.map(([value, name]) => [value, name])) as Record<Layout, string>;
-const LAYOUT_OPTIONS = LAYOUT_CHOICES.map(([value, name, caption]) => `
+const LAYOUT_OPTIONS = LAYOUT_CHOICES.map(
+  ([value, name, caption]) => `
   <button data-value="${value}" aria-label="${name}: ${caption}">
     <span class="mr-layout-preview" aria-hidden="true"><i class="c"></i><i class="t"><b></b><b></b><b></b><b></b></i><i class="m"><b></b><b></b></i></span>
     <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
     <span class="mr-theme-caption">${caption}</span>
-  </button>`).join('');
+  </button>`,
+).join('');
 
 /** Settings tabs, in order: arrow keys move through them. */
 const SETTINGS_TABS = ['reading', 'layout', 'review', 'keys'] as const;
-type SettingsTab = typeof SETTINGS_TABS[number];
+type SettingsTab = (typeof SETTINGS_TABS)[number];
 /** Every shortcut, grouped the way a review goes; the Keys tab lists them and onKey handles them. */
 const SHORTCUTS: Array<[string, Array<[string[], string]>]> = [
-  ['Move through the review', [
-    [['J', 'K'], 'Next / previous change'],
-    [['N', 'P'], 'Next / previous conversation'],
-    [[']', '['], 'Next / previous file'],
-    [['F'], 'Go to a file'],
-  ]],
-  ['Comment', [
-    [['R'], 'Comment on the selection or the paragraph in focus'],
-    [['⌘/Ctrl', 'Enter'], 'Post the comment or reply'],
-    [['Esc'], 'Leave the editor; your draft is kept'],
-    [['V'], 'Mark the file viewed'],
-  ]],
-  ['Change the view', [
-    [['C'], 'Change marks on / off'],
-    [['A'], 'Changed parts / whole files'],
-    [['L'], 'Next layout'],
-    [['D'], 'Comfortable / compact'],
-    [['+', '−'], 'Larger / smaller text'],
-    [['0'], 'Default text size'],
-  ]],
-  ['Settings', [
-    [[','], 'Open settings'],
-    [['?'], 'Show these shortcuts'],
-    [['Esc'], 'Close settings, then the reader'],
-  ]],
+  [
+    'Move through the review',
+    [
+      [['J', 'K'], 'Next / previous change'],
+      [['N', 'P'], 'Next / previous conversation'],
+      [[']', '['], 'Next / previous file'],
+      [['F'], 'Go to a file'],
+    ],
+  ],
+  [
+    'Comment',
+    [
+      [['R'], 'Comment on the selection or the paragraph in focus'],
+      [['⌘/Ctrl', 'Enter'], 'Post the comment or reply'],
+      [['Esc'], 'Leave the editor; your draft is kept'],
+      [['V'], 'Mark the file viewed'],
+    ],
+  ],
+  [
+    'Change the view',
+    [
+      [['C'], 'Change marks on / off'],
+      [['A'], 'Changed parts / whole files'],
+      [['L'], 'Next layout'],
+      [['D'], 'Comfortable / compact'],
+      [['+', '−'], 'Larger / smaller text'],
+      [['0'], 'Default text size'],
+    ],
+  ],
+  [
+    'Settings',
+    [
+      [[','], 'Open settings'],
+      [['?'], 'Show these shortcuts'],
+      [['Esc'], 'Close settings, then the reader'],
+    ],
+  ],
 ];
-const KEY_GROUPS = SHORTCUTS.map(([title, keys]) => `
-  <section class="mr-settings-section mr-keys-group" aria-label="${title}"><h3 class="mr-keys-title">${title}</h3><dl class="mr-keys">${
-    keys.map(([combo, description]) => `<dt>${combo.map((key) => `<kbd>${key}</kbd>`).join(' ')}</dt><dd>${description}</dd>`).join('')
-  }</dl></section>`).join('');
+const KEY_GROUPS = SHORTCUTS.map(
+  ([title, keys]) => `
+  <section class="mr-settings-section mr-keys-group" aria-label="${title}"><h3 class="mr-keys-title">${title}</h3><dl class="mr-keys">${keys
+    .map(([combo, description]) => `<dt>${combo.map((key) => `<kbd>${key}</kbd>`).join(' ')}</dt><dd>${description}</dd>`)
+    .join('')}</dl></section>`,
+).join('');
 
 /** Settings chosen from a group of buttons in the settings sheet (data-setting / data-value). */
 type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'comments' | 'layout' | 'density';
@@ -235,7 +268,8 @@ function textWithoutDeletions(el: HTMLElement): string {
   return clone.textContent?.trim() ?? '';
 }
 
-const relative = typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' }) : null;
+const relative =
+  typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' }) : null;
 
 function relativeTime(iso: string): string {
   const minutes = Math.round((Date.parse(iso) - Date.now()) / 60_000);
@@ -249,7 +283,7 @@ function relativeTime(iso: string): string {
 
 /** Tight list items are inline spans; their visual block is the list item. */
 function surfaceOf(el: HTMLElement): HTMLElement {
-  return el.matches('.mr-tight') ? el.closest('li') ?? el : el;
+  return el.matches('.mr-tight') ? (el.closest('li') ?? el) : el;
 }
 
 /** What a failed write says to the reviewer, with the platform's advice when it has some. */
@@ -291,10 +325,7 @@ export interface ReaderHandle {
 }
 
 /** Open the reader over the current page. Accepts a promise so it can show loading and errors itself. */
-export function openReader(
-  source: ReviewSource | Promise<ReviewSource>,
-  options: { start?: number; onClose?: () => void } = {},
-): ReaderHandle {
+export function openReader(source: ReviewSource | Promise<ReviewSource>, options: { start?: number; onClose?: () => void } = {}): ReaderHandle {
   active?.close();
   const reader = new Reader(options.onClose);
   active = reader;
@@ -364,7 +395,26 @@ class Reader {
   private readonly shadow = this.host.attachShadow({ mode: 'open' });
   private readonly root: HTMLElement;
   private readonly el: Record<
-    'progress' | 'topbar' | 'fileBtn' | 'fileName' | 'fileStatus' | 'viewed' | 'viewedFeedback' | 'fileCount' | 'files' | 'settings' | 'toc' | 'article' | 'gutter' | 'doc' | 'pill' | 'pillLabel' | 'chip' | 'toast' | 'empty' | 'lightbox',
+    | 'progress'
+    | 'topbar'
+    | 'fileBtn'
+    | 'fileName'
+    | 'fileStatus'
+    | 'viewed'
+    | 'viewedFeedback'
+    | 'fileCount'
+    | 'files'
+    | 'settings'
+    | 'toc'
+    | 'article'
+    | 'gutter'
+    | 'doc'
+    | 'pill'
+    | 'pillLabel'
+    | 'chip'
+    | 'toast'
+    | 'empty'
+    | 'lightbox',
     HTMLElement
   >;
   private settings: Settings = { ...DEFAULT_SETTINGS };
@@ -479,10 +529,14 @@ class Reader {
       if (this.rendered) this.buildToc(this.rendered);
       this.schedule(true);
     });
-    this.root.addEventListener('scroll', () => {
-      if (!this.el.chip.hidden && !this.chipTarget?.range) this.hideChip();
-      this.schedule(false);
-    }, { passive: true });
+    this.root.addEventListener(
+      'scroll',
+      () => {
+        if (!this.el.chip.hidden && !this.chipTarget?.range) this.hideChip();
+        this.schedule(false);
+      },
+      { passive: true },
+    );
     for (const type of ['keydown', 'keyup', 'keypress']) window.addEventListener(type, this.shield, true);
     this.dark.addEventListener('change', this.onSchemeChange);
     this.resize.observe(this.root);
@@ -506,7 +560,10 @@ class Reader {
     }
     this.index = Math.min(Math.max(start, 0), all.length - 1);
     this.views = all.map((doc, i) => {
-      const section = h('section', `mr-document${doc.status === 'removed' || doc.status === 'added' ? ` doc-${doc.status}` : ''}${doc.kind === 'code' ? ' is-code' : ''}`);
+      const section = h(
+        'section',
+        `mr-document${doc.status === 'removed' || doc.status === 'added' ? ` doc-${doc.status}` : ''}${doc.kind === 'code' ? ' is-code' : ''}`,
+      );
       section.setAttribute('aria-label', doc.path);
       section.dataset.document = String(i);
       section.hidden = doc.kind === 'code' && !this.settings.codeFiles;
@@ -542,9 +599,7 @@ class Reader {
   showError(err: unknown): void {
     if (this.closed) return;
     const e =
-      err instanceof ReaderError
-        ? err
-        : new ReaderError('Something went wrong while loading this document.', err instanceof Error ? err.message : String(err));
+      err instanceof ReaderError ? err : new ReaderError('Something went wrong while loading this document.', err instanceof Error ? err.message : String(err));
     const extra: Node[] = [];
     if (e.needsToken) {
       const p = h('p');
@@ -590,7 +645,17 @@ class Reader {
     try {
       const contents = await this.load(view.doc);
       if (this.closed) return;
-      const r = view.doc.kind === 'code' ? renderCodeFile(document, view.doc, contents) : renderDocument(document, { path: view.doc.status === 'removed' ? view.doc.oldPath : view.doc.path, status: view.doc.status, ...contents, links: this.source!.links(view.doc), origin: location.origin, images: this.settings.images });
+      const r =
+        view.doc.kind === 'code'
+          ? renderCodeFile(document, view.doc, contents)
+          : renderDocument(document, {
+              path: view.doc.status === 'removed' ? view.doc.oldPath : view.doc.path,
+              status: view.doc.status,
+              ...contents,
+              links: this.source!.links(view.doc),
+              origin: location.origin,
+              images: this.settings.images,
+            });
       view.rendered = r;
       view.section.replaceChildren(this.buildArticle(view.doc, r));
       for (const block of r.blocks) this.blockOf.set(block.el, { view, block });
@@ -599,7 +664,10 @@ class Reader {
       filterDocument(r, this.settings.scope === 'changed');
       renderDiagrams(r.diagrams, this.root.classList.contains('is-dark'), () => this.schedule(true), this.palette());
       void highlightCode(r.content).then(() => this.schedule(true));
-      if (index === this.index) { this.rendered = r; this.buildToc(r); }
+      if (index === this.index) {
+        this.rendered = r;
+        this.buildToc(r);
+      }
       this.schedule(true);
       if (!this.source!.viewed) await this.initLocalViewed(view.doc, contents);
       else this.updateViewed();
@@ -608,14 +676,18 @@ class Reader {
       const box = h('div', 'mr-message');
       box.append(h('h2', '', view.doc.path), h('p', '', err instanceof Error ? err.message : String(err)));
       const platform = h('a', 'mr-outline', 'Open platform diff');
-      platform.href = this.source!.diffUrl; platform.target = '_blank'; platform.rel = 'noopener noreferrer';
+      platform.href = this.source!.diffUrl;
+      platform.target = '_blank';
+      platform.rel = 'noopener noreferrer';
       box.append(platform);
       const retry = actionButton('Try again', 'retry-doc', 'mr-outline');
       retry.dataset.doc = String(index);
       box.append(retry);
       view.section.replaceChildren(box);
       this.schedule(true);
-    } finally { this.loading.delete(view.doc); }
+    } finally {
+      this.loading.delete(view.doc);
+    }
   }
 
   private show(index: number): void {
@@ -658,7 +730,13 @@ class Reader {
 
   private byline(doc: DocRef, r: RenderedDoc): HTMLElement {
     const line = h('div', 'mr-byline');
-    line.append(h('span', '', doc.kind === 'code' ? languageName(languageOf(doc.path)) ?? 'Source file' : `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE))} min read`));
+    line.append(
+      h(
+        'span',
+        '',
+        doc.kind === 'code' ? (languageName(languageOf(doc.path)) ?? 'Source file') : `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE))} min read`,
+      ),
+    );
     // A whole new or deleted file is said once, here, beside what kind of file it is.
     const noun = doc.kind === 'code' ? 'file' : 'document';
     if (doc.status === 'added') line.append(chip('added', `New ${noun}`));
@@ -681,7 +759,8 @@ class Reader {
     }
     if (r.heldImages) {
       const load = actionButton(`Load ${r.heldImages} external image${r.heldImages === 1 ? '' : 's'}`, 'load-images', 'mr-chip is-images');
-      load.title = 'Images hosted outside this site were not loaded, so their hosts cannot see that you are reading. Choose Always in reading settings to skip this.';
+      load.title =
+        'Images hosted outside this site were not loaded, so their hosts cannot see that you are reading. Choose Always in reading settings to skip this.';
       line.append(load);
     }
     return line;
@@ -849,14 +928,19 @@ class Reader {
   // Viewed status is optional; failures never remove the document or imply a successful save.
   private async initLocalViewed(doc: DocRef, contents: DocContents): Promise<void> {
     const state = this.viewed.get(doc)!;
-    state.busy = true; state.error = undefined;
+    state.busy = true;
+    state.error = undefined;
     this.updateViewed();
     try {
       state.key = await viewedKey(this.source!.diffUrl, doc, contents);
       state.value = await loadViewed(state.key);
       state.ready = true;
-    } catch (err) { state.error = err instanceof Error ? err.message : String(err); }
-    finally { state.busy = false; if (!this.closed) this.updateViewed(); }
+    } catch (err) {
+      state.error = err instanceof Error ? err.message : String(err);
+    } finally {
+      state.busy = false;
+      if (!this.closed) this.updateViewed();
+    }
   }
 
   private initNativeViewed(): Promise<void> {
@@ -866,7 +950,11 @@ class Reader {
       this.updateViewed();
       try {
         const paths = await this.source!.viewed!.load();
-        for (const [doc, state] of this.viewed) { state.value = paths.includes(doc.path); state.ready = true; state.error = undefined; }
+        for (const [doc, state] of this.viewed) {
+          state.value = paths.includes(doc.path);
+          state.ready = true;
+          state.error = undefined;
+        }
       } catch (err) {
         for (const state of this.viewed.values()) state.error = err instanceof Error ? err.message : String(err);
       } finally {
@@ -891,7 +979,15 @@ class Reader {
     button.disabled = !view.rendered || state.busy || (!state.ready && !state.error);
     button.setAttribute('aria-pressed', String(state.value));
     button.setAttribute('aria-label', `${state.value ? 'Unmark' : 'Mark'} ${view.doc.path} as viewed`);
-    const label = state.busy ? state.ready ? 'Saving…' : 'Loading…' : !state.ready && state.error ? 'Retry loading viewed state' : state.value ? 'Viewed (V to unmark)' : 'Mark as viewed (V)';
+    const label = state.busy
+      ? state.ready
+        ? 'Saving…'
+        : 'Loading…'
+      : !state.ready && state.error
+        ? 'Retry loading viewed state'
+        : state.value
+          ? 'Viewed (V to unmark)'
+          : 'Mark as viewed (V)';
     button.title = `${label}\n${state.error ?? this.source!.viewed?.label ?? 'Saved in this browser; resets when this file changes'}`;
     button.classList.toggle('is-busy', state.busy);
     button.classList.toggle('is-error', Boolean(state.error));
@@ -910,14 +1006,19 @@ class Reader {
       return;
     }
     const value = !state.value;
-    state.busy = true; state.error = undefined;
+    state.busy = true;
+    state.error = undefined;
     this.updateViewed();
     try {
       if (this.source!.viewed) await this.source!.viewed.set(view.doc, value);
       else await saveViewed(state.key!, value);
       state.value = value;
-    } catch (err) { state.error = err instanceof Error ? err.message : String(err); }
-    finally { state.busy = false; if (!this.closed) this.updateViewed(); }
+    } catch (err) {
+      state.error = err instanceof Error ? err.message : String(err);
+    } finally {
+      state.busy = false;
+      if (!this.closed) this.updateViewed();
+    }
   }
 
   private update(patch: Partial<Settings>): void {
@@ -952,11 +1053,16 @@ class Reader {
     codeToggle.setAttribute('aria-checked', String(s.codeFiles));
     codeToggle.title = `${this.source?.codeDocs?.length ?? 0} supported code files`;
     let loadCode = false;
-    for (const view of this.views) if (view.doc.kind === 'code') {
-      view.section.hidden = !s.codeFiles;
-      loadCode ||= s.codeFiles && !view.rendered;
+    for (const view of this.views)
+      if (view.doc.kind === 'code') {
+        view.section.hidden = !s.codeFiles;
+        loadCode ||= s.codeFiles && !view.rendered;
+      }
+    if (this.source) {
+      this.updateFileButton();
+      if (this.rendered) this.buildToc(this.rendered);
+      else this.el.toc.replaceChildren();
     }
-    if (this.source) { this.updateFileButton(); if (this.rendered) this.buildToc(this.rendered); else this.el.toc.replaceChildren(); }
     if (loadCode) void this.loadAll(0);
     for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-scope]')) b.setAttribute('aria-pressed', String(b.dataset.scope === s.scope));
     r.classList.toggle('mode-changes', s.mode === 'changes');
@@ -978,7 +1084,8 @@ class Reader {
       for (const b of group.querySelectorAll<HTMLElement>('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === value));
     }
     const palette = this.palette();
-    for (const view of this.views) if (view.rendered) renderDiagrams(view.rendered.diagrams, r.classList.contains('is-dark'), () => this.schedule(true), palette);
+    for (const view of this.views)
+      if (view.rendered) renderDiagrams(view.rendered.diagrams, r.classList.contains('is-dark'), () => this.schedule(true), palette);
     this.schedule(true);
   }
 
@@ -1012,7 +1119,8 @@ class Reader {
     const image = this.el.lightbox.querySelector('img')!;
     image.src = source.src;
     image.alt = source.alt;
-    const width = source.width || source.naturalWidth || 600, height = source.height || source.naturalHeight || 400;
+    const width = source.width || source.naturalWidth || 600,
+      height = source.height || source.naturalHeight || 400;
     const room = Math.min((this.root.clientWidth - 160) / width, (this.root.clientHeight - 200) / height);
     image.style.width = `${Math.round(width * Math.min(1.6, Math.max(1, room)))}px`;
     this.el.lightbox.hidden = false;
@@ -1064,12 +1172,18 @@ class Reader {
   /** N and P: bring the next or previous conversation level with the focus line, and point it out. */
   private stepThread(direction: 1 | -1): void {
     const threads = this.visibleThreads();
-    if (!threads.length) { this.toast('No conversations in this review yet'); return; }
+    if (!threads.length) {
+      this.toast('No conversations in this review yet');
+      return;
+    }
     // Several conversations can share one paragraph, so the list holds cards, positioned by their text.
     const cards = threads.map((thread) => thread.card);
     const tops = new Map(threads.map((thread) => [thread.card, thread.anchor.getBoundingClientRect().top]));
     const card = this.nextOf(cards, direction, (el) => tops.get(el) ?? 0);
-    if (!card) { this.toast(direction === 1 ? 'No more conversations below' : 'No more conversations above'); return; }
+    if (!card) {
+      this.toast(direction === 1 ? 'No more conversations below' : 'No more conversations above');
+      return;
+    }
     this.scrollToEl(threads.find((thread) => thread.card === card)!.anchor, FOCUS_LINE, false);
     card.classList.remove('mr-flash');
     void card.offsetWidth;
@@ -1112,7 +1226,9 @@ class Reader {
     const href = platformLink(overview.url, location.origin);
     if (href) {
       const link = h('a', 'mr-overview-link', `Open on ${new URL(href, location.href).host}`);
-      link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       byline.append(link);
     }
     const body = h('details', 'mr-overview-body');
@@ -1157,7 +1273,7 @@ class Reader {
   }
 
   private stepDoc(direction: 1 | -1): void {
-    const indices = this.views.flatMap((view, i) => view.section.hidden ? [] : [i]);
+    const indices = this.views.flatMap((view, i) => (view.section.hidden ? [] : [i]));
     const next = indices[indices.indexOf(this.index) + direction];
     if (next !== undefined) this.show(next);
   }
@@ -1210,7 +1326,11 @@ class Reader {
     }
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       const editor = this.editorAt(e.composedPath()[0]);
-      if (editor) { e.preventDefault(); editor.send(); return; }
+      if (editor) {
+        e.preventDefault();
+        editor.send();
+        return;
+      }
     }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const target = e.composedPath()[0];
@@ -1224,8 +1344,9 @@ class Reader {
     }
     if (e.key === 'Tab') {
       const focusRoot = !this.el.lightbox.hidden ? this.el.lightbox : this.el.settings.hidden ? this.root : this.el.settings;
-      const controls = [...focusRoot.querySelectorAll<HTMLElement>('button, a[href], input, textarea, select, summary, [tabindex="0"]')]
-        .filter((el) => el.getClientRects().length && !el.matches(':disabled, [tabindex="-1"]'));
+      const controls = [...focusRoot.querySelectorAll<HTMLElement>('button, a[href], input, textarea, select, summary, [tabindex="0"]')].filter(
+        (el) => el.getClientRects().length && !el.matches(':disabled, [tabindex="-1"]'),
+      );
       const index = controls.indexOf(this.shadow.activeElement as HTMLElement);
       const next = e.shiftKey ? (index <= 0 ? controls.length - 1 : index - 1) : (index + 1) % controls.length;
       controls[next]?.focus();
@@ -1426,7 +1547,7 @@ class Reader {
       case 'toggle-thread': {
         const card = action.closest('.mr-thread');
         card?.classList.toggle('is-expanded');
-        action.textContent = card?.classList.contains('is-expanded') ? 'Show fewer replies' : action.dataset.label ?? '';
+        action.textContent = card?.classList.contains('is-expanded') ? 'Show fewer replies' : (action.dataset.label ?? '');
         this.schedule(true);
         return;
       }
@@ -1485,7 +1606,8 @@ class Reader {
     const origin = this.el.article.getBoundingClientRect().top;
     const box = block ? surfaceOf(block).getBoundingClientRect() : null;
     for (const mark of this.el.gutter.children as HTMLCollectionOf<HTMLElement>) {
-      const top = parseFloat(mark.style.top), bottom = top + parseFloat(mark.style.height);
+      const top = parseFloat(mark.style.top),
+        bottom = top + parseFloat(mark.style.height);
       mark.classList.toggle('is-hot', Boolean(box && box.top - origin < bottom && box.bottom - origin > top));
     }
   }
@@ -1537,7 +1659,8 @@ class Reader {
     const hover = this.hover;
     const el = hover?.el;
     // A block that is already being commented on has its editor beside it.
-    button.hidden = !el?.isConnected || Boolean(el.closest('[hidden]')) || !el.getClientRects().length || this.drafts.some((draft) => !draft.range && draft.anchor === el);
+    button.hidden =
+      !el?.isConnected || Boolean(el.closest('[hidden]')) || !el.getClientRects().length || this.drafts.some((draft) => !draft.range && draft.anchor === el);
     if (button.hidden || !hover || !el) return;
     const article = this.el.article.getBoundingClientRect();
     const first = el.getClientRects()[0];
@@ -1567,7 +1690,7 @@ class Reader {
     // In the comments column: level with the block, or just below the conversation already beside it.
     const height = button.offsetHeight || 40;
     let top = middle - height / 2;
-    const cards = [...this.rail.children as HTMLCollectionOf<HTMLElement>].filter((card) => !card.hidden).sort((a, b) => a.offsetTop - b.offsetTop);
+    const cards = [...(this.rail.children as HTMLCollectionOf<HTMLElement>)].filter((card) => !card.hidden).sort((a, b) => a.offsetTop - b.offsetTop);
     for (const card of cards) {
       if (top < card.offsetTop + card.offsetHeight + 8 && top + height > card.offsetTop - 8) top = card.offsetTop + card.offsetHeight + 8;
     }
@@ -1623,7 +1746,9 @@ class Reader {
     if (!selection || selection.isCollapsed || !selection.rangeCount) return;
     const range = selection.getRangeAt(0);
     const view = this.views.find((v) => v.section.contains(range.startContainer) && v.section.contains(range.endContainer));
-    const inCard = [range.startContainer, range.endContainer].some((node) => (node instanceof Element ? node : node.parentElement)?.closest('.mr-composer, .mr-thread'));
+    const inCard = [range.startContainer, range.endContainer].some((node) =>
+      (node instanceof Element ? node : node.parentElement)?.closest('.mr-composer, .mr-thread'),
+    );
     if (!view?.rendered || inCard) {
       this.hideChip();
       return;
@@ -1695,10 +1820,13 @@ class Reader {
     draft.form.prepend(h('p', 'mr-comment-target', `Comment on ${place}`));
     if (range) draft.form.insertBefore(h('blockquote', `mr-comment-quote${target.doc.kind === 'code' ? ' is-code' : ''}`, target.quote), draft.textarea);
     draft.cancel.addEventListener('click', () => this.closeDraft(draft));
-    draft.form.addEventListener('focusout', () => setTimeout(() => {
-      // Clicking away from an empty editor removes it, as long as the reader still has focus.
-      if (this.drafts.includes(draft) && !draft.busy && !hasDraft(draft) && !draft.form.contains(this.shadow.activeElement) && document.hasFocus()) this.closeDraft(draft);
-    }, 0));
+    draft.form.addEventListener('focusout', () =>
+      setTimeout(() => {
+        // Clicking away from an empty editor removes it, as long as the reader still has focus.
+        if (this.drafts.includes(draft) && !draft.busy && !hasDraft(draft) && !draft.form.contains(this.shadow.activeElement) && document.hasFocus())
+          this.closeDraft(draft);
+      }, 0),
+    );
     this.drafts.push(draft);
     this.active = draft.form;
     this.refreshMarks();
@@ -1714,15 +1842,18 @@ class Reader {
       return;
     }
     draft.status.textContent = 'Preparing…';
-    void prepare(draft.target).then((plan) => {
-      if (this.closed || !this.drafts.includes(draft)) return;
-      draft.plan = plan;
-      draft.ready = true;
-      draft.status.textContent = `${plan.label} · ${SUBMIT_KEY}`;
-      this.updateEditor(draft);
-    }, (err) => {
-      if (!this.closed && this.drafts.includes(draft)) draft.status.textContent = problem(err);
-    });
+    void prepare(draft.target).then(
+      (plan) => {
+        if (this.closed || !this.drafts.includes(draft)) return;
+        draft.plan = plan;
+        draft.ready = true;
+        draft.status.textContent = `${plan.label} · ${SUBMIT_KEY}`;
+        this.updateEditor(draft);
+      },
+      (err) => {
+        if (!this.closed && this.drafts.includes(draft)) draft.status.textContent = problem(err);
+      },
+    );
   }
 
   private async postDraft(draft: Draft): Promise<void> {
@@ -1811,9 +1942,14 @@ class Reader {
     actions.append(status, cancel, submit);
     form.append(textarea, actions);
     const editor: Editor = { form, textarea, status, cancel, submit, ready: false, busy: false, prefill: '', send: () => {} };
-    form.addEventListener('submit', (e) => { e.preventDefault(); editor.send(); });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      editor.send();
+    });
     // The card is the field: a click on its padding puts the cursor in the text.
-    form.addEventListener('click', (e) => { if (e.target === form) textarea.focus(); });
+    form.addEventListener('click', (e) => {
+      if (e.target === form) textarea.focus();
+    });
     textarea.addEventListener('input', () => this.fitEditor(editor));
     this.editorOf.set(form, editor);
     this.resize.observe(form);
@@ -1871,7 +2007,9 @@ class Reader {
     }
     toast.hidden = false;
     clearTimeout(this.toastTimer);
-    this.toastTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
+    this.toastTimer = window.setTimeout(() => {
+      toast.hidden = true;
+    }, 6000);
   }
 
   // ---------------------------------------------------------------- threads
@@ -1963,8 +2101,10 @@ class Reader {
 
   /** A thread's card: anchored ones are kept for layout, file comments are already on the page. */
   private cardOf(thread: Thread): HTMLElement | undefined {
-    return this.threadEls.find((entry) => this.threadByCard.get(entry.card) === thread)?.card
-      ?? [...this.root.querySelectorAll<HTMLElement>('.mr-thread')].find((card) => this.threadByCard.get(card) === thread);
+    return (
+      this.threadEls.find((entry) => this.threadByCard.get(entry.card) === thread)?.card ??
+      [...this.root.querySelectorAll<HTMLElement>('.mr-thread')].find((card) => this.threadByCard.get(card) === thread)
+    );
   }
 
   /** Redraw a thread in place, keeping its position and the cursor in its reply box. */
@@ -2012,10 +2152,13 @@ class Reader {
       if (thread.doc !== view.doc) continue;
       const card = this.threadCard(thread);
       const line = thread.line;
-      const block = line === null ? undefined : r.blocks.find((b) => {
-        const unit = thread.side === 'base' ? b.base : b.head;
-        return unit && line - 1 >= unit.lines[0] && line - 1 < Math.max(unit.lines[1], unit.lines[0] + 1);
-      });
+      const block =
+        line === null
+          ? undefined
+          : r.blocks.find((b) => {
+              const unit = thread.side === 'base' ? b.base : b.head;
+              return unit && line - 1 >= unit.lines[0] && line - 1 < Math.max(unit.lines[1], unit.lines[0] + 1);
+            });
       if (!block) {
         fileLevel.push(card);
         continue;
@@ -2038,7 +2181,10 @@ class Reader {
     const card = h('aside', `mr-thread${own ? ' is-own' : ''}${thread.resolved ? ' is-resolved' : ''}`);
     this.threadByCard.set(card, thread);
     const first = thread.comments[0];
-    card.setAttribute('aria-label', `Comment by ${first?.author ?? 'unknown'}${thread.line ? ` on ${thread.side === 'base' ? 'old' : 'new'} line ${thread.line}` : ''}`);
+    card.setAttribute(
+      'aria-label',
+      `Comment by ${first?.author ?? 'unknown'}${thread.line ? ` on ${thread.side === 'base' ? 'old' : 'new'} line ${thread.line}` : ''}`,
+    );
     const fold = thread.comments.length > 3;
     const editor = this.replyEditors.get(thread);
     thread.comments.forEach((comment, i) => {
@@ -2118,7 +2264,12 @@ class Reader {
     if (!wide) return;
     const placed = entries
       .filter((entry) => !entry.card.hidden)
-      .map((entry, order) => ({ card: entry.card, top: surfaceOf(entry.anchor).getBoundingClientRect().top - article.top, height: entry.card.offsetHeight, order }))
+      .map((entry, order) => ({
+        card: entry.card,
+        top: surfaceOf(entry.anchor).getBoundingClientRect().top - article.top,
+        height: entry.card.offsetHeight,
+        order,
+      }))
       .sort((a, b) => a.top - b.top || a.order - b.order);
     // Cards never overlap. The one in use stays level with its text; the others make room around it.
     const tops = placed.map((item) => item.top);
@@ -2128,7 +2279,9 @@ class Reader {
     if (tops[0] < 0) {
       for (let i = 0; i < placed.length; i++) tops[i] = Math.max(placed[i].top, i ? tops[i - 1] + placed[i - 1].height + CARD_GAP : 0);
     }
-    placed.forEach((item, i) => { item.card.style.top = `${tops[i]}px`; });
+    placed.forEach((item, i) => {
+      item.card.style.top = `${tops[i]}px`;
+    });
   }
 
   // ---------------------------------------------------------------- frame updates
@@ -2161,19 +2314,24 @@ class Reader {
     if (contents) {
       const box = contents.getBoundingClientRect();
       const beneath = (rect: DOMRect) => rect.top < box.bottom + 32 && rect.bottom > box.top - 32;
-      this.el.toc.classList.toggle('is-covered', this.views.some((view) => {
-        if (view.section.hidden) return false;
-        if (view.doc.kind === 'code') return beneath(view.section.getBoundingClientRect());
-        // So do code blocks that run wider than the text, into the contents column.
-        return [...view.section.querySelectorAll<HTMLElement>('.mr-content > pre')].some((pre) => {
-          const rect = pre.getBoundingClientRect();
-          return rect.left < box.right + 16 && beneath(rect);
-        });
-      }));
+      this.el.toc.classList.toggle(
+        'is-covered',
+        this.views.some((view) => {
+          if (view.section.hidden) return false;
+          if (view.doc.kind === 'code') return beneath(view.section.getBoundingClientRect());
+          // So do code blocks that run wider than the text, into the contents column.
+          return [...view.section.querySelectorAll<HTMLElement>('.mr-content > pre')].some((pre) => {
+            const rect = pre.getBoundingClientRect();
+            return rect.left < box.right + 16 && beneath(rect);
+          });
+        }),
+      );
     }
     this.el.topbar.classList.toggle('is-scrolled', top > 2);
     let currentDoc = this.index;
-    this.views.forEach((view, i) => { if (!view.section.hidden && view.section.getBoundingClientRect().top <= 150) currentDoc = i; });
+    this.views.forEach((view, i) => {
+      if (!view.section.hidden && view.section.getBoundingClientRect().top <= 150) currentDoc = i;
+    });
     if (currentDoc !== this.index) {
       this.index = currentDoc;
       this.rendered = this.views[currentDoc].rendered;
@@ -2200,8 +2358,7 @@ class Reader {
     list.forEach((el, i) => {
       if (el.getBoundingClientRect().top <= line) current = i;
     });
-    this.el.pillLabel.textContent =
-      current === -1 ? `${list.length} change${list.length === 1 ? '' : 's'}` : `Change ${current + 1} of ${list.length}`;
+    this.el.pillLabel.textContent = current === -1 ? `${list.length} change${list.length === 1 ? '' : 's'}` : `Change ${current + 1} of ${list.length}`;
   }
 
   /** Draw the change bars in the left margin, merging adjacent blocks of the same kind. */
@@ -2241,7 +2398,7 @@ class Reader {
       mark.dataset.label = label[s.kind] ?? '';
       mark.dataset.act = 'mark';
       mark.dataset.i = String(i);
-      this.markTargets.push(s.point ? (nextVisible(s.target, s.target.closest('.mr-content')!) as HTMLElement) ?? s.target : s.target);
+      this.markTargets.push(s.point ? ((nextVisible(s.target, s.target.closest('.mr-content')!) as HTMLElement) ?? s.target) : s.target);
       gutter.append(mark);
     });
   }

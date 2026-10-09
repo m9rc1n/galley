@@ -36,16 +36,20 @@ function openFrame(host: ParentNode, page: string): Frame {
   el.style.cssText = 'position:fixed;left:-100000px;top:0;width:1200px;height:800px;border:0;visibility:hidden;pointer-events:none';
   const replies = new Map<number, (reply: Record<string, unknown>) => void>();
   const port = new Promise<MessagePort>((resolve) => {
-    el.addEventListener('load', () => {
-      const channel = new MessageChannel();
-      channel.port1.onmessage = ({ data }: MessageEvent<unknown>) => {
-        const id = (data as { id?: unknown } | null)?.id;
-        if (typeof id === 'number') replies.get(id)?.(data as Record<string, unknown>);
-      };
-      // An opaque origin cannot be named as a target; the port, not the origin, carries the replies.
-      el.contentWindow?.postMessage('galley-sandbox', '*', [channel.port2]);
-      resolve(channel.port1);
-    }, { once: true });
+    el.addEventListener(
+      'load',
+      () => {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = ({ data }: MessageEvent<unknown>) => {
+          const id = (data as { id?: unknown } | null)?.id;
+          if (typeof id === 'number') replies.get(id)?.(data as Record<string, unknown>);
+        };
+        // An opaque origin cannot be named as a target; the port, not the origin, carries the replies.
+        el.contentWindow?.postMessage('galley-sandbox', '*', [channel.port2]);
+        resolve(channel.port1);
+      },
+      { once: true },
+    );
   });
   el.src = pageUrl(page);
   host.append(el);
@@ -67,12 +71,18 @@ export function sandbox(page: string, timeoutMs: number): Sandbox {
     const id = ++requests;
     return new Promise<Record<string, unknown>>((resolve, reject) => {
       const deadline = Date.now() + timeoutMs;
-      const done = () => { clearInterval(watchdog); current.replies.delete(id); };
+      const done = () => {
+        clearInterval(watchdog);
+        current.replies.delete(id);
+      };
       // A frame stuck on hostile input, or closed with the reader, is discarded; the next request gets a fresh one.
       const watchdog = setInterval(() => {
         if (current.el.isConnected && Date.now() < deadline) return;
         done();
-        if (frame === current) { current.el.remove(); frame = null; }
+        if (frame === current) {
+          current.el.remove();
+          frame = null;
+        }
         reject(new Error('The renderer stopped.'));
       }, 250);
       current.replies.set(id, (reply) => {

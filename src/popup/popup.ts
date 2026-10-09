@@ -52,9 +52,7 @@ async function renderSite(origin: string | null, tabId: number | undefined): Pro
     // Must be the first call in the click handler: the browser requires a user gesture.
     const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
     if (!granted) return;
-    await chrome.scripting
-      .registerContentScripts([siteScript(origin)])
-      .catch(() => {});
+    await chrome.scripting.registerContentScripts([siteScript(origin)]).catch(() => {});
     if (tabId !== undefined) await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }).catch(() => {});
     await renderSite(origin, tabId);
   });

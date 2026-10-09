@@ -28,4 +28,6 @@ console.log(`| Folder | ${metrics.join(' | ')} |`);
 console.log(`| --- | ${metrics.map(() => '---:').join(' | ')} |`);
 console.log(rows.join('\n'));
 console.log(`| **All of src** | ${metrics.map((m) => `**${total[m].pct}%**`).join(' | ')} |`);
-console.log('\nReader workflows and extension entry points are included. Browser checks (`npm run test:e2e`) separately verify real layout and selection behavior.');
+console.log(
+  '\nReader workflows and extension entry points are included. Browser checks (`npm run test:e2e`) separately verify real layout and selection behavior.',
+);

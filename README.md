@@ -174,7 +174,7 @@ We are building toward a complete, considerate review flow:
 
 [PUBLISHING.md](PUBLISHING.md) walks through the Chrome Web Store submission. What is already prepared:
 
-- `npm run release` runs the tests and the type check, then builds `dist/galley-chrome-<version>.zip`. The zip includes `THIRD_PARTY_NOTICES.txt` with the licences of the bundled libraries.
+- `npm run release` runs `npm run check` (types, lint, formatting, tests with coverage), then builds `dist/galley-chrome-<version>.zip`. The zip includes `THIRD_PARTY_NOTICES.txt` with the licences of the bundled libraries.
 - [`store/ARTWORK.md`](store/ARTWORK.md) explains the mission artwork and its reproducible templates.
 - [`store/LISTING.md`](store/LISTING.md) has the listing copy, the privacy-practices answers (single purpose, permission justifications, data disclosures) and the reviewer test instructions.
 - `npm run store-assets` renders the five 1280×800 screenshots, both promo tiles, the README hero and the store icon into `store/assets/`. Screenshots come from the real reader; the mission artwork is a typeset illustration.
@@ -209,8 +209,9 @@ npm run test:watch # unit tests, re-running as you edit
 npm run test:coverage # unit tests with coverage and the per-folder thresholds
 npm run test:e2e   # builds the demo and runs the browser checks (Chrome; CHROME_PATH supported)
 npm run lint       # Biome; npm run lint:fix applies the safe fixes
+npm run format     # Biome formatter; npm run format:check only reports
 npm run typecheck  # TypeScript, no emit
-npm run check      # typecheck, lint and unit tests: what a pull request needs to pass
+npm run check      # typecheck, lint, formatting, tests with coverage: what a pull request needs to pass, and what git push runs first
 npm run icons      # redraw the toolbar icons
 npm run release    # tests, type check, store-ready zips, privacy page
 npm run store-assets  # real screenshots, mission artwork and README hero (needs Chrome)

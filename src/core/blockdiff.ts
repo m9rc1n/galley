@@ -58,7 +58,10 @@ function pairRun(removed: Unit[], added: Unit[], out: BlockChange[]): void {
  * run of deletions/insertions is paired up by similarity so small edits show up as edits.
  */
 export function diffUnits(base: Unit[], head: Unit[]): BlockChange[] {
-  const parts = boundedDiff(base.map((u) => u.key), head.map((u) => u.key));
+  const parts = boundedDiff(
+    base.map((u) => u.key),
+    head.map((u) => u.key),
+  );
   const out: BlockChange[] = [];
   let bi = 0;
   let hi = 0;

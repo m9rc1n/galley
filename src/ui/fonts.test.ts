@@ -11,10 +11,15 @@ it('loads locally bundled normal and italic faces once when the reader reopens',
   Object.defineProperty(doc, 'fonts', { value: fonts });
   const load = vi.fn().mockResolvedValue(undefined);
   const construct = vi.fn();
-  vi.stubGlobal('FontFace', class {
-    load = load;
-    constructor(...args: unknown[]) { construct(...args); }
-  });
+  vi.stubGlobal(
+    'FontFace',
+    class {
+      load = load;
+      constructor(...args: unknown[]) {
+        construct(...args);
+      }
+    },
+  );
   loadReaderFonts(doc);
   loadReaderFonts(doc);
   await Promise.resolve();
@@ -31,9 +36,12 @@ it('keeps system fallbacks available when decoding fonts fails or the font API i
   Object.defineProperty(doc, 'fonts', { value: fonts });
   vi.stubGlobal('FontFace', undefined);
   expect(() => loadReaderFonts(doc)).not.toThrow();
-  vi.stubGlobal('FontFace', class {
-    load = () => Promise.reject(new Error('Font unavailable'));
-  });
+  vi.stubGlobal(
+    'FontFace',
+    class {
+      load = () => Promise.reject(new Error('Font unavailable'));
+    },
+  );
   loadReaderFonts(document.implementation.createHTMLDocument());
   loadReaderFonts(doc);
   await Promise.resolve();

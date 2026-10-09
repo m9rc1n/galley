@@ -31,12 +31,20 @@ function start(): void {
       },
       () => {
         if (current?.key !== ctx.key) return;
-        launcher.show(ctx.key, 0, () => {
-          // Retry on click: a token may have been added, or a rate limit may have reset.
-          const retry = sourceFor(ctx, true);
-          openReader(retry);
-          retry.then(() => present(ctx), () => {});
-        }, true);
+        launcher.show(
+          ctx.key,
+          0,
+          () => {
+            // Retry on click: a token may have been added, or a rate limit may have reset.
+            const retry = sourceFor(ctx, true);
+            openReader(retry);
+            retry.then(
+              () => present(ctx),
+              () => {},
+            );
+          },
+          true,
+        );
       },
     );
   };

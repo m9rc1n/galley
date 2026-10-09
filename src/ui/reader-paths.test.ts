@@ -6,7 +6,14 @@ import { contents, guide, readerHarness, review } from '../testing/reader.ts';
 
 const ui = readerHarness();
 const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
-const thread = (line: number, extra: Partial<Thread> = {}): Thread => ({ doc: guide, side: 'head', line, url: `#t${line}`, comments: [{ author: 'Dana', body: `On line ${line}`, createdAt: at(5), url: `#t${line}` }], ...extra });
+const thread = (line: number, extra: Partial<Thread> = {}): Thread => ({
+  doc: guide,
+  side: 'head',
+  line,
+  url: `#t${line}`,
+  comments: [{ author: 'Dana', body: `On line ${line}`, createdAt: at(5), url: `#t${line}` }],
+  ...extra,
+});
 
 it('walks back through conversations and changes, and says when there is nothing more in that direction', async () => {
   await ui.open(review({ loadThreads: async () => [thread(5)] }));
@@ -37,7 +44,10 @@ it('opens the file list from the keyboard and turns view settings back again', a
   expect(ui.q('.mr-files').hidden).toBe(false);
   ui.key('Escape');
   expect(ui.q('.mr-files').hidden).toBe(true);
-  for (const [key, toasts] of [['a', ['Whole files', 'Changed parts']], ['d', ['Compact', 'Comfortable']]] as const) {
+  for (const [key, toasts] of [
+    ['a', ['Whole files', 'Changed parts']],
+    ['d', ['Compact', 'Comfortable']],
+  ] as const) {
     ui.key(key);
     expect(ui.q('.mr-toast').textContent).toBe(toasts[0]);
     ui.key(key);
@@ -63,7 +73,12 @@ it('keeps viewed progress on this device when the platform has none, and says wh
 });
 
 it('dates comments the way people say them: hours, days, then the date', async () => {
-  const comments = [at(3 * 60), at(3 * 24 * 60), at(90 * 24 * 60), 'not a date'].map((createdAt, i) => ({ author: `Person ${i}`, body: 'Hi', createdAt, url: '#t' }));
+  const comments = [at(3 * 60), at(3 * 24 * 60), at(90 * 24 * 60), 'not a date'].map((createdAt, i) => ({
+    author: `Person ${i}`,
+    body: 'Hi',
+    createdAt,
+    url: '#t',
+  }));
   await ui.open(review({ loadThreads: async () => [thread(5, { comments })] }));
   const times = [...ui.shadow().querySelectorAll('.mr-thread-time')].map((time) => time.textContent);
   expect(times[0]).toMatch(/hr|hour/);
@@ -83,7 +98,8 @@ it('shows a file that failed to load with its reason and a way to try again', as
 
 it('offers to try a review again when it could not be opened, and asks for a token when that is the problem', async () => {
   let attempt = 0;
-  const source = () => (attempt++ === 0 ? Promise.reject(new ReaderError('This pull request is in a private repository.', 'Add a token.', true)) : Promise.resolve(review()));
+  const source = () =>
+    attempt++ === 0 ? Promise.reject(new ReaderError('This pull request is in a private repository.', 'Add a token.', true)) : Promise.resolve(review());
   ui.close();
   const { openReader } = await import('./reader.ts');
   openReader(source());
@@ -102,7 +118,9 @@ it('marks a removed block in Clean mode with a point where it used to be', async
 
 it('shows a request description without an author, and without a link that leaves the platform', async () => {
   await ui.open(review({ overview: { kind: 'Pull request', title: 'Docs', description: 'Text', author: '', url: 'https://evil.example/pr/1' } }));
-  ui.click('[data-act="settings"]'); ui.click('[data-settings-tab="review"]'); ui.click('[data-act="overview"]');
+  ui.click('[data-act="settings"]');
+  ui.click('[data-settings-tab="review"]');
+  ui.click('[data-act="overview"]');
   const section = ui.q('.mr-overview');
   expect(section.querySelector('.mr-overview-author')).toBeNull();
   expect(section.querySelector('.mr-overview-link')).toBeNull();

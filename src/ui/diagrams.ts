@@ -35,17 +35,23 @@ export function prepareDiagram(doc: Document, block: RenderedBlock): Diagram | n
     version.className = 'mr-diagram-version';
     version.dataset.mrSide = side;
     const caption = doc.createElement('p');
-    caption.className = 'mr-diagram-caption'; caption.textContent = label;
+    caption.className = 'mr-diagram-caption';
+    caption.textContent = label;
     version.append(caption);
     const view = doc.createElement('div');
-    view.className = 'mr-diagram-view'; view.setAttribute('aria-label', `${label} Mermaid diagram`);
+    view.className = 'mr-diagram-view';
+    view.setAttribute('aria-label', `${label} Mermaid diagram`);
     view.textContent = 'Rendering diagram…';
     const sourceDetails = doc.createElement('details');
-    const summary = doc.createElement('summary'); summary.textContent = 'View source';
-    sourceDetails.className = 'mr-diagram-source'; sourceDetails.append(summary);
-    const pre = doc.createElement('pre'), code = doc.createElement('code');
+    const summary = doc.createElement('summary');
+    summary.textContent = 'View source';
+    sourceDetails.className = 'mr-diagram-source';
+    sourceDetails.append(summary);
+    const pre = doc.createElement('pre'),
+      code = doc.createElement('code');
     code.textContent = source ?? unit.source;
-    pre.append(code); sourceDetails.append(pre);
+    pre.append(code);
+    sourceDetails.append(pre);
     if (source !== null) {
       version.append(view, sourceDetails);
       versions.push({ side, source, view, sourceDetails });
@@ -55,7 +61,8 @@ export function prepareDiagram(doc: Document, block: RenderedBlock): Diagram | n
     el.append(version);
   };
   if (block.kind === 'modified' && block.base && block.head) {
-    add(block.base, 'base', 'Before'); add(block.head, 'head', 'After');
+    add(block.base, 'base', 'Before');
+    add(block.head, 'head', 'After');
   } else if (block.head) add(block.head, 'head', block.kind === 'added' ? 'New diagram' : 'Diagram');
   else if (block.base) add(block.base, 'base', 'Removed diagram');
   block.el.replaceWith(el);
@@ -66,15 +73,14 @@ export function prepareDiagram(doc: Document, block: RenderedBlock): Diagram | n
 /** Lock configuration to the reader and prevent diagrams from loading external assets. */
 export function diagramCode(source: string): string {
   if (source.length > 20_000) throw new Error('This diagram is too large to render.');
-  const code = source
-    .replace(/^\s*---[^\S\n]*\n[\s\S]*?\n---[^\S\n]*(?:\n|$)/, '')
-    .replace(/%%\{[\s\S]*?\}%%/g, '');
+  const code = source.replace(/^\s*---[^\S\n]*\n[\s\S]*?\n---[^\S\n]*(?:\n|$)/, '').replace(/%%\{[\s\S]*?\}%%/g, '');
   for (const metadata of code.matchAll(/@\s*\{[^}]*\}/g)) {
     if (/\b(?:img|icon)\b|\\/i.test(metadata[0])) throw new Error('External images and icon packs are not supported.');
   }
   // Permit ordinary colours and line styles, but not CSS that can request resources.
   for (const command of code.split(/[\n;]/)) {
-    if (/^\s*(?:classDef|style|linkStyle)\s/i.test(command) && /[\\{}@]|url\s*\(|(?:https?:)?\/\//i.test(command)) throw new Error('External diagram styles are not supported.');
+    if (/^\s*(?:classDef|style|linkStyle)\s/i.test(command) && /[\\{}@]|url\s*\(|(?:https?:)?\/\//i.test(command))
+      throw new Error('External diagram styles are not supported.');
   }
   return code;
 }
@@ -87,14 +93,15 @@ export function diagramImage(doc: Document, svg: string): string {
   });
   const clean = purifier.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true }, FORBID_TAGS: ['image', 'foreignObject', 'a'], ALLOW_DATA_ATTR: false });
   // Styles are confined to the image. Only fragment references can survive in CSS.
-  const local = clean.replace(/url\(\s*(['"]?)([^)]*?)\1\s*\)/gi, (_match, _quote, url: string) => /^#[\w-]+$/.test(url) ? `url(${url})` : 'none');
+  const local = clean.replace(/url\(\s*(['"]?)([^)]*?)\1\s*\)/gi, (_match, _quote, url: string) => (/^#[\w-]+$/.test(url) ? `url(${url})` : 'none'));
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(local)}`;
 }
 
 /** The size the drawing was laid out at, from its viewBox, so its text is shown at its own size. */
 export function diagramSize(svg: string): { width: number; height: number } | null {
   const box = /^\s*<svg\b[^>]*?\sviewBox="\s*-?[\d.]+[\s,]+-?[\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"/.exec(svg);
-  const width = Math.ceil(Number(box?.[1])), height = Math.ceil(Number(box?.[2]));
+  const width = Math.ceil(Number(box?.[1])),
+    height = Math.ceil(Number(box?.[2]));
   return width > 0 && height > 0 && width <= 20_000 && height <= 20_000 ? { width, height } : null;
 }
 
@@ -123,38 +130,44 @@ export function renderDiagrams(diagrams: Diagram[], dark: boolean, changed: () =
     const state = { theme, token: (previous?.token ?? 0) + 1 };
     rendered.set(diagram, state);
     for (const version of diagram.versions) {
-      queue = queue.then(async () => {
-        if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
-        const doc = diagram.el.ownerDocument;
-        try {
-          const svg = await requestSvg(diagram.el, diagramCode(version.source), dark, palette);
+      queue = queue
+        .then(async () => {
           if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
-          const image = doc.createElement('img');
-          image.alt = `${version.side === 'base' ? 'Old' : 'New'} version of Mermaid diagram. View source below.`;
-          image.src = diagramImage(doc, svg);
-          const size = diagramSize(svg);
-          if (size) {
-            image.width = size.width;
-            image.height = size.height;
+          const doc = diagram.el.ownerDocument;
+          try {
+            const svg = await requestSvg(diagram.el, diagramCode(version.source), dark, palette);
+            if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
+            const image = doc.createElement('img');
+            image.alt = `${version.side === 'base' ? 'Old' : 'New'} version of Mermaid diagram. View source below.`;
+            image.src = diagramImage(doc, svg);
+            const size = diagramSize(svg);
+            if (size) {
+              image.width = size.width;
+              image.height = size.height;
+            }
+            // A diagram fits the column; choosing it shows it at full size.
+            const zoom = doc.createElement('button');
+            zoom.type = 'button';
+            zoom.className = 'mr-diagram-zoom';
+            zoom.dataset.act = 'zoom-diagram';
+            zoom.title = 'Enlarge diagram';
+            zoom.setAttribute('aria-label', `Enlarge the ${version.side === 'base' ? 'old' : 'new'} version of the diagram`);
+            zoom.append(image);
+            version.view.replaceChildren(zoom);
+            version.view.dataset.state = 'ready';
+            image.addEventListener('load', changed, { once: true });
+          } catch (err) {
+            if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
+            version.view.dataset.state = 'error';
+            version.view.textContent = `${err instanceof Error && /not supported|too large/.test(err.message) ? err.message : 'Could not render this Mermaid diagram.'} The source is available below.`;
+            version.sourceDetails.open = true;
+          } finally {
+            changed();
           }
-          // A diagram fits the column; choosing it shows it at full size.
-          const zoom = doc.createElement('button');
-          zoom.type = 'button';
-          zoom.className = 'mr-diagram-zoom';
-          zoom.dataset.act = 'zoom-diagram';
-          zoom.title = 'Enlarge diagram';
-          zoom.setAttribute('aria-label', `Enlarge the ${version.side === 'base' ? 'old' : 'new'} version of the diagram`);
-          zoom.append(image);
-          version.view.replaceChildren(zoom);
-          version.view.dataset.state = 'ready';
-          image.addEventListener('load', changed, { once: true });
-        } catch (err) {
-          if (rendered.get(diagram) !== state || !diagram.el.isConnected) return;
-          version.view.dataset.state = 'error';
-          version.view.textContent = `${err instanceof Error && /not supported|too large/.test(err.message) ? err.message : 'Could not render this Mermaid diagram.'} The source is available below.`;
-          version.sourceDetails.open = true;
-        } finally { changed(); }
-      }).catch(() => { /* Keep later diagrams usable if a document is closed during rendering. */ });
+        })
+        .catch(() => {
+          /* Keep later diagrams usable if a document is closed during rendering. */
+        });
     }
   }
 }

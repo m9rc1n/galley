@@ -97,7 +97,10 @@ await save(entry, 'screenshot-2-entry.jpg');
 await save(await readerShot({ settings: light, heading: 'A small browser extension' }), 'screenshot-3-tables.jpg');
 await save(await readerShot({ settings: { ...light, appearance: 'dark', mode: 'clean' }, heading: 'Goals' }), 'screenshot-4-clean-dark.jpg');
 
-await save(await readerShot({ settings: { ...light, theme: 'sepia' }, heading: 'A small browser extension', menu: 'settings' }), 'screenshot-5-sepia-settings.jpg');
+await save(
+  await readerShot({ settings: { ...light, theme: 'sepia' }, heading: 'A small browser extension', menu: 'settings' }),
+  'screenshot-5-sepia-settings.jpg',
+);
 
 // The mission illustration is separate from real product screenshots, shared with the README.
 for (const artwork of ARTWORK) {

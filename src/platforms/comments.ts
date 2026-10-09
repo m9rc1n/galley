@@ -1,14 +1,27 @@
 import { ReaderError, type CommentTarget, type DocRef, type Thread } from './types.ts';
 
-export interface DiffLine { oldLine?: number; newLine?: number; oldPos: number; newPos: number; hunk: number }
+export interface DiffLine {
+  oldLine?: number;
+  newLine?: number;
+  oldPos: number;
+  newPos: number;
+  hunk: number;
+}
 
 /** Only lines actually present in a platform patch may receive an inline comment. */
 export function diffLines(patch = ''): DiffLine[] {
   const result: DiffLine[] = [];
-  let oldLine = 0, newLine = 0, hunk = -1;
+  let oldLine = 0,
+    newLine = 0,
+    hunk = -1;
   for (const line of patch.split('\n')) {
     const match = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
-    if (match) { oldLine = Number(match[1]); newLine = Number(match[2]); hunk++; continue; }
+    if (match) {
+      oldLine = Number(match[1]);
+      newLine = Number(match[2]);
+      hunk++;
+      continue;
+    }
     if (hunk < 0) continue;
     const positions = { oldPos: oldLine, newPos: newLine };
     if (line.startsWith('+')) result.push({ newLine: newLine++, ...positions, hunk });
@@ -26,7 +39,14 @@ export function diffRange(patch: string | undefined, target: CommentTarget): Dif
 }
 
 export function validateTarget(docs: DocRef[], target: CommentTarget): void {
-  if (!docs.includes(target.doc) || !Number.isInteger(target.startLine) || !Number.isInteger(target.endLine) || target.startLine < 1 || target.endLine < target.startLine || (target.side !== 'base' && target.side !== 'head')) {
+  if (
+    !docs.includes(target.doc) ||
+    !Number.isInteger(target.startLine) ||
+    !Number.isInteger(target.endLine) ||
+    target.startLine < 1 ||
+    target.endLine < target.startLine ||
+    (target.side !== 'base' && target.side !== 'head')
+  ) {
     throw new ReaderError('Select a paragraph in this review before commenting.');
   }
 }
@@ -76,7 +96,13 @@ export function githubThreads(docs: DocRef[], comments: GitHubReviewComment[], r
   const byId = new Map<number, Thread>();
   const threads: Thread[] = [];
   for (const c of [...comments].sort((a, b) => a.id - b.id)) {
-    const entry = { author: c.user?.login ?? 'ghost', ...(c.user?.login ? { handle: c.user.login } : {}), body: c.body ?? '', createdAt: c.created_at, url: c.html_url };
+    const entry = {
+      author: c.user?.login ?? 'ghost',
+      ...(c.user?.login ? { handle: c.user.login } : {}),
+      body: c.body ?? '',
+      createdAt: c.created_at,
+      url: c.html_url,
+    };
     const root = c.in_reply_to_id === undefined ? undefined : byId.get(c.in_reply_to_id);
     if (root) {
       root.comments.push(entry);
@@ -116,7 +142,12 @@ export interface GitLabDiscussion {
 }
 
 /** Diff discussions become threads; general merge request discussions have no place in a document. */
-export function gitlabThreads(docs: DocRef[], discussions: GitLabDiscussion[], noteUrl: (id: number) => string, replyFor?: (id: string | undefined) => Thread['reply']): Thread[] {
+export function gitlabThreads(
+  docs: DocRef[],
+  discussions: GitLabDiscussion[],
+  noteUrl: (id: number) => string,
+  replyFor?: (id: string | undefined) => Thread['reply'],
+): Thread[] {
   const threads: Thread[] = [];
   for (const discussion of discussions) {
     const notes = discussion.notes.filter((note) => !note.system);
@@ -136,7 +167,9 @@ export function gitlabThreads(docs: DocRef[], discussions: GitLabDiscussion[], n
       comments: notes.map((note) => ({
         author: note.author?.name?.trim() || note.author?.username || 'unknown',
         ...(note.author?.username ? { handle: note.author.username } : {}),
-        body: note.body, createdAt: note.created_at, url: noteUrl(note.id),
+        body: note.body,
+        createdAt: note.created_at,
+        url: noteUrl(note.id),
       })),
       ...(replyFor ? { reply: replyFor(discussion.id) } : {}),
     });

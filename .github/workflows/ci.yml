@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   static:
-    name: Lint and types
+    name: Lint, formatting and types
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -34,8 +34,9 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Types
         run: npm run typecheck
-      - name: Lint
-        run: npx biome lint . --reporter=github
+      # `biome ci` lints and fails on any file `npm run format` would change.
+      - name: Lint and formatting
+        run: npx biome ci . --reporter=github
 
   test:
     name: Tests (Node ${{ matrix.node }})
