@@ -268,10 +268,25 @@ export async function checkCodeComments(browser, demoUrl, screenshots) {
   assert.equal(invitation.gap, false, 'Code keeps the full Add a comment box beside an existing discussion');
   assert.ok(invitation.highlighted, 'The relevant code-comment paragraph highlights as soon as it is hovered');
   assert.equal(invitation.label, 'Comment on lines 4–5');
-  await page.mouse.move((note.right + invitation.left) / 2, invitation.y);
-  await page.mouse.move(invitation.x, invitation.y);
-  assert.equal(await page.evaluate(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-comment-btn').hidden), false);
+  // Straight to the control, as a hand would move, crossing the lines between: none of them takes it.
+  await page.mouse.move(invitation.x, invitation.y, { steps: 16 });
+  const reached = await page.evaluate(() => {
+    const button = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-comment-btn');
+    return { hidden: button.hidden, label: button.getAttribute('aria-label') };
+  });
+  assert.deepEqual(reached, { hidden: false, label: 'Comment on lines 4–5' });
   await page.screenshot({ path: join(screenshots, 'galley-code-comment-hover.png') });
+  // The comments column is a lane: level with a line of code, it offers to comment on that line.
+  const lane = await page.evaluate(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    const row = s.querySelector('.mr-code-text[data-line="h:15"]').getBoundingClientRect();
+    return { x: s.querySelector('.mr-article').getBoundingClientRect().right + 80, y: row.top + row.height / 2 };
+  });
+  await page.mouse.move(lane.x, lane.y, { steps: 4 });
+  await page.waitForFunction(
+    () => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-comment-btn').getAttribute('aria-label') === 'Comment on line 16',
+  );
+  assert.equal(await page.evaluate(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-comment-btn').hidden), false);
   await page.mouse.move(12, 80);
   await page.evaluate(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-setting="codeComments"] [data-value="source"]').click());
   const written = await read();

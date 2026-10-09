@@ -51,6 +51,8 @@ export function readerHarness() {
       return (this.closest('[hidden]') ? [] : [this.getBoundingClientRect()]) as unknown as DOMRectList;
     });
     Object.defineProperty(Range.prototype, 'getBoundingClientRect', { configurable: true, value: () => new DOMRect(400, 300, 100, 20) });
+    // Nothing is under a point unless a test says so (the comments column asks what text is level with it).
+    Object.defineProperty(ShadowRoot.prototype, 'elementFromPoint', { configurable: true, value: () => null });
     Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, value: () => [new DOMRect(400, 300, 100, 20)] });
     scroll.mockClear();
     disconnect.mockClear();

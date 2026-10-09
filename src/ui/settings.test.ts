@@ -57,6 +57,14 @@ it('remembers how comment cards look, and shades them unless outlines were chose
   expect((await loadSettings()).comments).toBe('shaded');
 });
 
+it('shows + and − beside changed code lines unless they were turned off', async () => {
+  expect(DEFAULT_SETTINGS.signs).toBe(true);
+  await saveSettings({ ...DEFAULT_SETTINGS, signs: false });
+  expect((await loadSettings()).signs).toBe(false);
+  localStorage.setItem('galley:settings', JSON.stringify({ signs: 'no' }));
+  expect((await loadSettings()).signs).toBe(true);
+});
+
 it('remembers how test files and code comments read, and starts with the plan and formatted notes', async () => {
   expect(DEFAULT_SETTINGS).toMatchObject({ tests: 'plan', codeComments: 'formatted' });
   await saveSettings({ ...DEFAULT_SETTINGS, tests: 'source', codeComments: 'source' });

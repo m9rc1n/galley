@@ -2044,13 +2044,23 @@
   --tail-bg: var(--code-del);
   --tail-bar: inset 3px 0 0 var(--gutter-removed);
 }
-/* The gutter keeps old number, new number and sign close together, set apart from the code by space and a hairline. */
+/* The gutter keeps old number, new number and sign close together, set apart from the code by space. */
 .mr-code-lines {
   --gutter: calc((var(--digits, 3) * 2 + 3.4) * 0.6 * var(--code-size) + 27px);
 }
+/* + and − beside changed lines are optional (Reading settings → Review); without them the column narrows to a gap. */
+.mr-root {
+  --sign-width: 2.2ch;
+}
+.mr-root.no-signs {
+  --sign-width: 0.6ch;
+}
+.no-signs .mr-code-sign {
+  visibility: hidden;
+}
 .mr-code-line {
   display: grid;
-  grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) 2.2ch minmax(0, 1fr);
+  grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) var(--sign-width) minmax(0, 1fr);
   width: 100%;
   box-sizing: border-box;
   min-height: 24px;
@@ -2061,8 +2071,7 @@
 }
 .mr-code-text {
   --hang: calc(var(--indent, 0ch) + 2ch);
-  padding-left: calc(var(--hang) + 14px);
-  border-left: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  padding-left: calc(var(--hang) + 15px);
   text-indent: calc(-1 * var(--hang));
   overflow-wrap: anywhere;
 }
@@ -2117,7 +2126,7 @@
 }
 .mr-move-note {
   display: grid;
-  grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) 2.2ch minmax(0, 1fr);
+  grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) var(--sign-width) minmax(0, 1fr);
   padding: 6px 16px 2px 12px;
   background: var(--code-moved);
   box-shadow: inset 3px 0 0 var(--gutter-moved);
@@ -4274,7 +4283,7 @@
    separates them from code; the words inside show what changed. */
 .mr-source-comment {
   position: relative;
-  margin: 10px 16px 10px calc(12px + 2 * (var(--digits, 3) * 1ch + 0.6ch) + 2.2ch);
+  margin: 10px 16px 10px calc(12px + 2 * (var(--digits, 3) * 1ch + 0.6ch) + var(--sign-width));
   padding: 12px 18px 15px;
   border-radius: 10px;
   background: var(--card);

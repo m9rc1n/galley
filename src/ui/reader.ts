@@ -210,6 +210,7 @@ const TEMPLATE = `
         <div class="mr-set-row"><span>Context<small>Show changed sections or read the full files</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
         <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Show the request’s title and description before the files</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
         <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
+        <div class="mr-set-row"><span id="mr-signs-label">+ and − signs<small>Mark added and removed lines of code with + and −</small></span><button class="mr-switch" data-act="signs" role="switch" aria-checked="true" aria-labelledby="mr-signs-label"></button></div>
         <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
         <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
         <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
@@ -421,6 +422,8 @@ interface Draft extends Editor {
 const RAIL_SPACE = 296;
 /** Vertical space between cards in the comments column. */
 const CARD_GAP = 12;
+/** On the way to the comment control, passing over other text keeps it; stopping on a block this long moves it. */
+const AIM_DELAY = 280;
 
 class Reader {
   private readonly host = document.createElement('div');
@@ -471,6 +474,9 @@ class Reader {
   private dragged = false;
   private readonly blockOf = new WeakMap<Element, { view: View; block: RenderedBlock }>();
   private hover: Hit | null = null;
+  /** Where the pointer last was on the hovered block: the corner of the path to its comment control. */
+  private aim: { x: number; y: number } | null = null;
+  private aimTimer = 0;
   /** Text marked because the pointer is on its card or on the comment control. */
   private linked: HTMLElement | null = null;
   private readonly commentBtn = h('button', 'mr-comment-btn');
@@ -535,7 +541,7 @@ class Reader {
     this.el.article.prepend(this.rail, this.commentBtn);
     q('.mr-tb-right').prepend(this.el.pill);
     this.root.addEventListener('mouseup', (e) => this.captureSelection(e));
-    this.el.doc.addEventListener('pointerover', (e) => this.onHover(e.target as Element));
+    this.el.doc.addEventListener('pointerover', (e) => this.onHover(e.target as Element, e));
     this.el.doc.addEventListener('focusin', (e) => this.onHover(e.target as Element));
     this.root.addEventListener('pointermove', (e) => this.trackPointer(e), { passive: true });
     this.root.addEventListener('pointerleave', () => this.clearHover());
@@ -1193,6 +1199,8 @@ class Reader {
     overviewToggle.setAttribute('aria-checked', String(s.overview));
     overviewToggle.closest<HTMLElement>('.mr-set-row')!.hidden = Boolean(this.source) && !this.source?.overview;
     if (this.overview) this.overview.hidden = !s.overview;
+    this.shadow.querySelector('[data-act="signs"]')!.setAttribute('aria-checked', String(s.signs));
+    r.classList.toggle('no-signs', !s.signs);
     const codeToggle = this.shadow.querySelector<HTMLElement>('[data-act="code-files"]')!;
     codeToggle.setAttribute('aria-checked', String(s.codeFiles));
     codeToggle.title = `${this.source?.codeDocs?.length ?? 0} supported code files`;
@@ -1773,6 +1781,9 @@ class Reader {
         if (!this.settings.codeFiles && !this.source?.codeDocs?.length) return;
         this.update({ codeFiles: !this.settings.codeFiles });
         return;
+      case 'signs':
+        this.update({ signs: !this.settings.signs });
+        return;
       case 'zoom-diagram':
         this.openLightbox(action);
         return;
@@ -1874,14 +1885,38 @@ class Reader {
     return null;
   }
 
-  private onHover(node: Element): void {
+  private onHover(node: Element, e?: Event): void {
     const hit = this.blockAt(node);
     if (!hit || (hit.el === this.hover?.el && hit.side === this.hover.side)) return;
+    // On the way to the comment control, trackPointer decides whether this block takes it.
+    if (e instanceof MouseEvent && this.aiming(e.clientX, e.clientY)) return;
+    this.hoverBlock(hit, e);
+  }
+
+  private hoverBlock(hit: Hit, e?: Event): void {
+    clearTimeout(this.aimTimer);
     if (this.hover) surfaceOf(this.hover.el).classList.remove('mr-hovered');
     this.hover = hit;
+    this.aim = e instanceof MouseEvent ? { x: e.clientX, y: e.clientY } : null;
     surfaceOf(hit.el).classList.toggle('mr-hovered', hit.view.doc.kind === 'code');
     this.placeCommentButton();
     this.heatMark(hit.el);
+  }
+
+  /**
+   * Heading for the comment control: inside the triangle from the last point on the hovered block to the
+   * control's near edge, or level with the control past that edge. Menus use the same rule for submenus.
+   */
+  private aiming(x: number, y: number): boolean {
+    if (!this.aim || this.commentBtn.hidden) return false;
+    const box = this.commentBtn.getBoundingClientRect();
+    const edge = box.left >= this.aim.x ? box.left : box.right;
+    const progress = (x - this.aim.x) / (edge - this.aim.x);
+    if (!(progress > 0)) return false;
+    if (progress >= 1) return y >= box.top - 8 && y <= box.bottom + 8;
+    const top = this.aim.y + (box.top - 8 - this.aim.y) * progress;
+    const bottom = this.aim.y + (box.bottom + 8 - this.aim.y) * progress;
+    return y >= Math.min(top, bottom) && y <= Math.max(top, bottom);
   }
 
   /** The change marker beside the text being pointed at comes to full strength. */
@@ -1898,11 +1933,39 @@ class Reader {
   /** The control stays while the pointer crosses the margin towards it, and goes anywhere else. */
   private trackPointer(e: PointerEvent): void {
     const node = e.composedPath()[0];
-    if (!this.hover || e.pointerType === 'touch' || !(node instanceof Element)) return;
-    if (node.closest('.mr-comment-btn') || this.blockAt(node)?.el === this.hover.el) return;
+    if (e.pointerType === 'touch' || !(node instanceof Element)) return;
+    if (node.closest('.mr-comment-btn')) {
+      clearTimeout(this.aimTimer);
+      return;
+    }
+    const over = this.blockAt(node);
+    if (this.hover && over?.el === this.hover.el) {
+      clearTimeout(this.aimTimer);
+      this.aim = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    if (this.aiming(e.clientX, e.clientY)) {
+      clearTimeout(this.aimTimer);
+      if (over) this.aimTimer = window.setTimeout(() => this.hoverBlock(over), AIM_DELAY);
+      return;
+    }
+    // On wide screens the comments column is a lane: pointing into it, level with any text, offers to
+    // comment on that text. Level with the space between two blocks, the control stays where it is.
+    const article = this.el.article.getBoundingClientRect();
+    if (
+      this.root.classList.contains('has-rail') &&
+      e.clientX >= article.right &&
+      !node.closest('.mr-thread, .mr-composer, .mr-topbar, .mr-settings, .mr-menu')
+    ) {
+      const probe = this.shadow.elementFromPoint((article.left + article.right) / 2, e.clientY);
+      const hit = probe && this.blockAt(probe);
+      if (hit && hit.el !== this.hover?.el) this.hoverBlock(hit, e);
+      return;
+    }
+    if (!this.hover) return;
     const block = surfaceOf(this.hover.el).getBoundingClientRect();
     const control = this.commentBtn.hidden ? block : this.commentBtn.getBoundingClientRect();
-    const reach = this.commentBtn.hidden ? this.el.article.getBoundingClientRect().right : control.right;
+    const reach = this.commentBtn.hidden ? article.right : control.right;
     // A one-line target can be shorter than its comment control. Include both in the bridge so the
     // control and the target highlight survive a diagonal move into the input invitation.
     const across =
@@ -1914,6 +1977,7 @@ class Reader {
   }
 
   private clearHover(): void {
+    clearTimeout(this.aimTimer);
     if (!this.hover) return;
     surfaceOf(this.hover.el).classList.remove('mr-hovered');
     this.hover = null;

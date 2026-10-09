@@ -1012,13 +1012,87 @@ it('keeps the comment control while the pointer crosses the margin to it, and dr
   // Pointing at the control marks the paragraph it would comment on.
   button.dispatchEvent(new Event('pointerover', { bubbles: true }));
   expect(paragraph.classList).toContain('mr-linked');
-  move(ui.q('.mr-main'), 965, 700);
+  // Left of the text, away from the paragraph, it goes.
+  move(ui.q('.mr-main'), 100, 700);
   expect(button.hidden).toBe(true);
   ui.q('.mr-main').dispatchEvent(new Event('pointerover', { bubbles: true }));
   expect(paragraph.classList).not.toContain('mr-linked');
   paragraph.dispatchEvent(new Event('pointerover', { bubbles: true }));
   ui.q('.mr-root').dispatchEvent(new Event('pointerleave'));
   expect(button.hidden).toBe(true);
+});
+
+it('turns the + and − beside changed code lines off and on from Review settings, and remembers it', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ codeFiles: true }));
+  const code = { path: 'src/main.ts', oldPath: 'src/main.ts', kind: 'code' as const, status: 'modified' as const };
+  await ui.open(review({ docs: [], codeDocs: [code], load: async () => ({ base: 'const value = 1;\n', head: 'const value = 2;\n' }) }));
+  const toggle = ui.q('[data-act="signs"]');
+  expect(toggle.getAttribute('aria-checked')).toBe('true');
+  expect(ui.q('.mr-root').classList.contains('no-signs')).toBe(false);
+  ui.click('[data-act="signs"]');
+  expect(toggle.getAttribute('aria-checked')).toBe('false');
+  expect(ui.q('.mr-root').classList.contains('no-signs')).toBe(true);
+  // The signs stay in the rows, so line numbers and comment targets are untouched.
+  expect([...ui.shadow().querySelectorAll('.mr-code-sign')].map((sign) => sign.textContent)).toEqual(['−', '+']);
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!).signs).toBe(false));
+  ui.click('[data-act="signs"]');
+  expect(ui.q('.mr-root').classList.contains('no-signs')).toBe(false);
+});
+
+it('offers a comment from the comments column level with any text, and keeps it on the way to the control', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ scope: 'all' }));
+  await ui.open(
+    review({
+      load: async () => ({ base: 'First line.\n\nSecond line.\n\nThird line.\n', head: 'First line!\n\nSecond line.\n\nThird line!\n' }),
+      prepareComment: async () => ({ kind: 'inline', label: 'Inline', post: vi.fn() }),
+    }),
+  );
+  const [first, second, third] = [...ui.shadow().querySelectorAll<HTMLElement>('.mr-content p')];
+  const button = ui.q('.mr-comment-btn');
+  const main = ui.q('.mr-main');
+  const pointer = (type: string, target: Element, clientX: number, clientY: number) => {
+    const event = new MouseEvent(type, { bubbles: true, composed: true, clientX, clientY });
+    Object.defineProperty(event, 'pointerType', { value: 'mouse' });
+    target.dispatchEvent(event);
+  };
+  // The comments column starts where the text ends (960px); what is level with a point is the text there.
+  Object.defineProperty(ShadowRoot.prototype, 'elementFromPoint', {
+    configurable: true,
+    value: (_x: number, y: number) => (y >= 500 ? third : y >= 400 ? main : first),
+  });
+  pointer('pointermove', main, 1100, 520);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 5');
+  expect(button.hidden).toBe(false);
+  // Level with the space between blocks, it stays put; back over the text, away from the line, it goes.
+  pointer('pointermove', main, 1100, 450);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 5');
+  expect(button.hidden).toBe(false);
+  pointer('pointermove', main, 900, 520);
+  expect(button.hidden).toBe(true);
+
+  // From the first line towards its control below, passing over the second line keeps it.
+  ui.bounds(button, 600, 1000);
+  pointer('pointerover', first, 400, 310);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  pointer('pointerover', second, 700, 460);
+  pointer('pointermove', second, 700, 460);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  pointer('pointermove', main, 1010, 620);
+  pointer('pointerover', button, 1100, 620);
+  pointer('pointermove', button, 1100, 620);
+  vi.advanceTimersByTime(400);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  // Stopping on the second line on the way gives it the control.
+  pointer('pointermove', first, 400, 310);
+  pointer('pointermove', second, 700, 460);
+  vi.advanceTimersByTime(400);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 3');
+  // Moving away from the control is not heading for it.
+  pointer('pointerover', first, 400, 310);
+  pointer('pointerover', second, 300, 460);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 3');
+  vi.useRealTimers();
 });
 
 it('comments on source files as on documents: beside the code when there is room, between the lines otherwise', async () => {
