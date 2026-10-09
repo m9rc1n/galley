@@ -136,7 +136,10 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
     (mergeBase ??= (async () => {
       const { data: cmp } = await api<{ merge_base_commit: { sha: string } }>(`/compare/${pr.base.sha}...${pr.head.sha}`);
       return cmp.merge_base_commit.sha;
-    })().catch((err) => { mergeBase = null; throw err; }));
+    })().catch((err) => {
+      mergeBase = null;
+      throw err;
+    }));
 
   const all: GitHubDoc[] = files
     .filter(
