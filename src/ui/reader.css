@@ -56,8 +56,10 @@
   --size-scale: 1;
   --measure: 680px;
   /* Layouts (Settings, Layout) set these; see the end of this file. */
-  --frame-max: 1480px;
   --measure-max: 680px;
+  --rail-min: 360px;
+  --rail-max: 440px;
+  --shift: 0px;
   --fit: 1;
   --text-scale: 1;
   /* Titles, standfirsts, bylines, contents and comments follow the text size (reader.ts sets the parts). */
@@ -3646,18 +3648,30 @@
   }
 }
 
-/* Contents, document, conversation, laid out from the left so no side of the window sits empty: the
-   contents column at the edge, the document beside it and the comments column after it, as wide as
-   the window allows. Only very wide windows centre the whole composition. Source files have no
-   contents, so they take that column too and run to 120 characters where the window allows; their
-   comments column starts where the code ends, so commenting works the same everywhere. */
+/* Contents, document, conversation, set the way a reading site sets an article: the text is centred in
+   the window, the contents hang in the margin to its left and the comments column fills the margin to
+   its right, up to a comfortable card width (--rail-max). Even margins read as a frame around the text;
+   one empty column the size of the text reads as a hole. The text only moves left of centre when the
+   comments column would otherwise be narrower than --rail-min, and on very wide windows the margins
+   simply grow, evenly. */
 @media (min-width: 1280px) {
   .mr-root {
-    --frame: min(100vw, var(--frame-max));
-    --left: calc((100vw - var(--frame)) / 2);
-    --measure: min(var(--measure-max), calc(var(--frame) - 2 * var(--edge) - var(--toc-width) - var(--toc-gap) - var(--rail-gap) - 320px));
-    --rail-width: calc(var(--frame) - 2 * var(--edge) - var(--toc-width) - var(--toc-gap) - var(--measure) - var(--rail-gap));
-    --code-span: min(var(--code-width), calc(var(--frame) - 2 * var(--edge) - var(--rail-gap) - 300px));
+    --measure: min(var(--measure-max), calc(100vw - 2 * var(--edge) - var(--toc-width) - var(--toc-gap) - var(--rail-gap) - 320px));
+    /* Where the text starts: centred (less the layout's --shift), but never so far right that the
+       comments column drops below --rail-min, nor so far left that the contents leave the window. */
+    --text-left: max(
+      calc(var(--edge) + var(--toc-width) + var(--toc-gap)),
+      min(calc((100vw - var(--measure)) / 2 - var(--shift)), calc(100vw - var(--edge) - var(--rail-min) - var(--rail-gap) - var(--measure)))
+    );
+    --left: calc(var(--text-left) - var(--edge) - var(--toc-width) - var(--toc-gap));
+    --rail-width: min(var(--rail-max), calc(100vw - var(--edge) - var(--text-left) - var(--measure) - var(--rail-gap)));
+    --rail-end: calc(var(--text-left) + var(--measure) + var(--rail-gap) + var(--rail-width));
+    /* Source files have no contents, so they start in that column (further left only where their
+       comments would otherwise get less than 300px) and run to 120 characters where the window allows;
+       their comments start where the code ends and stop where every other comment does, so commenting
+       works the same everywhere. */
+    --code-span: min(var(--code-width), calc(var(--rail-end) - var(--edge) - var(--rail-gap) - 300px));
+    --code-left: max(var(--edge), min(calc(var(--left) + var(--edge)), calc(var(--rail-end) - var(--rail-gap) - 300px - var(--code-span))));
   }
   .mr-main {
     padding-right: 0;
@@ -3665,11 +3679,11 @@
   }
   .mr-article {
     margin-right: 0;
-    margin-left: calc(var(--left) + var(--edge) + var(--toc-width) + var(--toc-gap));
+    margin-left: var(--text-left);
   }
   /* The current document's name starts where the document does: its dot lines up with the text. */
   .mr-topbar {
-    grid-template-columns: minmax(0, calc(var(--left) + var(--edge) + var(--toc-width) + var(--toc-gap) - 24px)) minmax(0, var(--measure)) minmax(0, 1fr);
+    grid-template-columns: minmax(0, calc(var(--text-left) - 24px)) minmax(0, var(--measure)) minmax(0, 1fr);
   }
   .mr-tb-center {
     justify-content: flex-start;
@@ -3679,54 +3693,51 @@
   }
   .mr-document.is-code {
     width: var(--code-span);
-    margin-left: calc(-1 * (var(--toc-width) + var(--toc-gap)));
+    margin-left: calc(var(--code-left) - var(--text-left));
   }
   .mr-document.is-code::before {
     width: var(--measure);
-    margin-left: calc(var(--toc-width) + var(--toc-gap));
+    margin-left: calc(var(--text-left) - var(--code-left));
   }
   .mr-threads > .is-code-card {
     right: auto;
-    left: calc(var(--code-span) - var(--toc-width) - var(--toc-gap) - var(--measure));
-    width: calc(var(--frame) - 2 * var(--edge) - var(--code-span) - var(--rail-gap));
+    left: calc(var(--code-left) + var(--code-span) - var(--text-left) - var(--measure));
+    width: calc(var(--rail-end) - var(--code-left) - var(--code-span) - var(--rail-gap));
   }
   .mr-comment-btn.is-lane.is-beside-code {
-    left: calc(var(--code-span) - var(--toc-width) - var(--toc-gap) + var(--rail-gap));
-    width: calc(var(--frame) - 2 * var(--edge) - var(--code-span) - var(--rail-gap));
+    left: calc(var(--code-left) + var(--code-span) - var(--text-left) + var(--rail-gap));
+    width: calc(var(--rail-end) - var(--code-left) - var(--code-span) - var(--rail-gap));
   }
   .mr-comment-btn.is-lane.is-beside-code.is-gap {
-    left: calc(var(--code-span) - var(--toc-width) - var(--toc-gap) + (var(--rail-gap) - 34px) / 2);
+    left: calc(var(--code-left) + var(--code-span) - var(--text-left) + (var(--rail-gap) - 34px) / 2);
     width: 34px;
   }
 }
 
 /* ---------------------------------------------------------------- layouts and density (Settings, Layout)
-   A layout sets how far the wide-screen composition may grow (--frame-max), how long the lines of text
-   run (--measure-max), the contents column and how comments are set. The wide-screen rules above share
-   the window out from those: contents, text, then a comments column with what is left. Below 1280px
-   every layout reads in one column. */
+   A layout sets how long the lines of text run (--measure-max), the contents column, how wide the
+   comments column may be (--rail-min, --rail-max), how comments are set, and where the composition is
+   centred (--shift). The wide-screen rules above share the window out from those. Below 1280px every
+   layout reads in one column. */
 
-/* Balanced: contents, text and comments, free to grow so a large screen gives the comments more room. */
-.mr-root[data-layout="balanced"] {
-  --frame-max: 1680px;
-}
+/* Balanced (the defaults at the top): the text centred, contents and comments in its margins. */
 
-/* Review: the conversation first. A slimmer contents column and text, a wide comments column with
-   larger comment text; cards stop at a comfortable line length. */
+/* Review: the conversation first. A slimmer contents column and text and a comments column as wide as
+   the text, with larger comment text. The whole composition is centred rather than the text, so the
+   comments get their room before the margins do. */
 .mr-root[data-layout="review"] {
-  --frame-max: 1640px;
   --measure-max: 640px;
   --toc-width: 150px;
   --toc-gap: 64px;
+  --rail-min: 680px;
+  --rail-max: 680px;
+  --shift: calc((var(--rail-gap) + var(--rail-max) - var(--toc-width) - var(--toc-gap)) / 2);
   --comment-size: calc(15px * var(--type));
-  --card-max: 680px;
 }
 
 /* Wide text: longer lines for documents full of tables, code and diagrams. */
 .mr-root[data-layout="wide"] {
-  --frame-max: 1760px;
   --measure-max: 920px;
-  --card-max: 520px;
 }
 
 /* Code blocks in a document are as wide as their longest line (--chars, set by render.ts), up to
@@ -3745,11 +3756,12 @@
 
 /* Fit to screen: the balanced composition for a 1440px window, scaled by --fit (set by reader.ts). */
 .mr-root[data-layout="fit"] {
-  --frame-max: calc(1440px * var(--fit));
   --measure-max: calc(680px * var(--fit));
   --toc-width: calc(176px * var(--fit));
   --toc-gap: calc(80px * var(--fit));
   --rail-gap: calc(56px * var(--fit));
+  --rail-min: calc(360px * var(--fit));
+  --rail-max: calc(440px * var(--fit));
 }
 
 @media (min-width: 1280px) {
@@ -3758,7 +3770,7 @@
     --toc-width: 0px;
     --toc-gap: 0px;
     --measure: min(720px, calc(100vw - 2 * var(--edge)));
-    --frame: calc(var(--measure) + 2 * var(--edge));
+    --text-left: calc((100vw - var(--measure)) / 2);
   }
   .mr-root[data-layout="focus"] .mr-toc {
     display: none;
@@ -3766,13 +3778,8 @@
   /* Source files and code blocks still run to 120 characters, centred on the text. */
   .mr-root[data-layout="focus"] {
     --code-span: min(var(--code-width), calc(100vw - 2 * var(--edge)));
+    --code-left: calc((100vw - var(--code-span)) / 2);
     --code-md-span: min(var(--code-md-width), calc(100vw - 2 * var(--edge)));
-  }
-  .mr-root[data-layout="focus"] .mr-document.is-code {
-    margin-left: calc((var(--measure) - var(--code-span)) / 2);
-  }
-  .mr-root[data-layout="focus"] .mr-document.is-code::before {
-    margin-left: calc((var(--code-span) - var(--measure)) / 2);
   }
   .mr-root[data-layout="focus"] .mr-content > pre {
     margin-left: calc((100% - clamp(100%, calc(var(--chars, 0) * 1ch + 2ch + 52px), var(--code-md-span))) / 2);
@@ -3844,14 +3851,16 @@
   gap: 3px;
   border-radius: 3px;
 }
+/* Balanced: the text centred, contents and comments in its margins. */
 .mr-layout-preview .c {
   flex: 0 0 14%;
+  margin-left: 12%;
   background:
     linear-gradient(var(--rule) 0 0) 2px 3px / 60% 2px no-repeat,
     linear-gradient(var(--rule) 0 0) 2px 8px / 50% 2px no-repeat;
 }
 .mr-layout-preview .t {
-  flex: 0 0 44%;
+  flex: 0 0 42%;
   padding: 3px 4px;
   box-sizing: border-box;
   background: var(--bg);
@@ -3878,6 +3887,7 @@
 }
 [data-value="review"] .mr-layout-preview .c {
   flex-basis: 10%;
+  margin-left: 0;
 }
 [data-value="review"] .mr-layout-preview .t {
   flex-basis: 38%;
@@ -3885,8 +3895,12 @@
 [data-value="review"] .mr-layout-preview .m b {
   height: 13px;
 }
+[data-value="wide"] .mr-layout-preview .c {
+  flex-basis: 12%;
+  margin-left: 4%;
+}
 [data-value="wide"] .mr-layout-preview .t {
-  flex-basis: 58%;
+  flex-basis: 56%;
 }
 [data-value="focus"] .mr-layout-preview {
   justify-content: center;

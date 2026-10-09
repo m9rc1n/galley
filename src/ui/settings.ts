@@ -5,8 +5,8 @@ export const FONTS = ['galley', 'serif', 'sans', 'georgia', 'system', 'mono'] as
 export const APPEARANCES = ['auto', 'light', 'dark'] as const;
 /**
  * How the window is shared on wide screens (1280px and up). Narrower windows always read in one column.
- * - balanced: contents, text and a comments column, with the text kept to a comfortable measure.
- * - review: the conversation gets the room: a wide comments column with larger comment text.
+ * - balanced: the text centred at a comfortable measure, contents and comments in its margins.
+ * - review: the conversation gets the room: a comments column as wide as the text, with larger comment text.
  * - wide: a wider text column, for documents full of tables, code and diagrams.
  * - focus: the text alone, centred; comments sit below the paragraphs they discuss.
  * - fit: the balanced composition scaled to the window, so large screens get larger text.
