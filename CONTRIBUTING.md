@@ -43,10 +43,11 @@ npm run test:watch    # unit tests, re-running as you edit
 npm run test:coverage # unit tests with coverage, which must be 100% in every file
 npm run test:e2e      # builds the demo and runs the reader's browser checks (Chrome; CHROME_PATH supported)
 npm run test:site     # browser checks for the built website
+npm run test:pages    # preview lifecycle, file isolation and publisher checks
 npm run lint          # Biome; npm run lint:fix applies the safe fixes
 npm run format        # Biome formatter; npm run format:check only reports
 npm run typecheck     # TypeScript, no emit
-npm run check         # typecheck, lint, formatting, tests with coverage: what git push runs first
+npm run check         # typecheck, lint, formatting, tests with coverage and Pages preview checks
 npm run icons         # redraw the toolbar icons
 npm run store-assets  # real reader captures, store screenshots and artwork (needs Chrome)
 npm run artwork       # preview the artwork and the README on http://localhost:4180
