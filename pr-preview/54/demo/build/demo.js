@@ -637,10 +637,10 @@
     if (Math.max(contents2.base.length, contents2.head.length) > 5e5)
       throw new ReaderError("This source file is too large for the reader. Open it in the platform diff.");
     let lines = (text4) => {
-      let rows = text4.replace(/\r\n/g, `
+      let rows2 = text4.replace(/\r\n/g, `
 `).split(`
 `);
-      return rows.at(-1) === "" && rows.pop(), rows;
+      return rows2.at(-1) === "" && rows2.pop(), rows2;
     }, root = doc.createElement("div");
     root.className = "mr-content mr-code-file";
     let code2 = doc.createElement("div");
@@ -710,10 +710,10 @@
     let kind = kindOf(doc, contents2);
     if (!kind) return null;
     let lines = (text4) => {
-      let rows = text4.replace(/\r\n/g, `
+      let rows2 = text4.replace(/\r\n/g, `
 `).split(`
 `);
-      return rows.at(-1) === "" && rows.pop(), rows;
+      return rows2.at(-1) === "" && rows2.pop(), rows2;
     }, added = 0, removed = 0;
     for (let part2 of boundedDiff(lines(contents2.base), lines(contents2.head)))
       part2.added && (added += part2.value.length), part2.removed && (removed += part2.value.length);
@@ -8599,9 +8599,9 @@ ${t.content}\`\`\``);
   }
   var md = createMarkdown();
   function renderFrontMatter(fm, unitId) {
-    let rows = fm.fields.map(([k, v]) => `<div><dt>${escapeHtml2(k)}</dt> <dd>${escapeHtml2(v)}</dd></div>
-`).join(""), body = rows ? `<dl>
-${rows}</dl>` : `<pre><code>${escapeHtml2(fm.raw)}</code></pre>`;
+    let rows2 = fm.fields.map(([k, v]) => `<div><dt>${escapeHtml2(k)}</dt> <dd>${escapeHtml2(v)}</dd></div>
+`).join(""), body = rows2 ? `<dl>
+${rows2}</dl>` : `<pre><code>${escapeHtml2(fm.raw)}</code></pre>`;
     return `<details class="mr-meta"${unitId === null ? "" : ` data-mr-u="${unitId}"`}><summary>Front matter</summary>
 ${body}</details>
 `;
@@ -8912,10 +8912,10 @@ ${body}</details>
 `), head.split(`
 `));
     if (!parts.some((p) => p.added || p.removed)) return !1;
-    let frag = doc.createDocumentFragment(), b = 0, h3 = 0;
+    let frag = doc.createDocumentFragment(), b = 0, h2 = 0;
     for (let part2 of parts)
       for (let line of part2.value)
-        part2.removed ? frag.append(lineEl(doc, "del", "mr-del mr-line", line, `b:${b++}`)) : part2.added ? frag.append(lineEl(doc, "ins", "mr-ins mr-line", line, `h:${h3++}`)) : (frag.append(lineEl(doc, "span", "mr-cl", line, `h:${h3++}`)), b++);
+        part2.removed ? frag.append(lineEl(doc, "del", "mr-del mr-line", line, `b:${b++}`)) : part2.added ? frag.append(lineEl(doc, "ins", "mr-ins mr-line", line, `h:${h2++}`)) : (frag.append(lineEl(doc, "span", "mr-cl", line, `h:${h2++}`)), b++);
     return code2.replaceChildren(frag), registerCode(pre, { language: languageOf(pre.dataset.lang ?? ""), base, head }), !0;
   }
   function cells(row) {
@@ -9575,16 +9575,16 @@ ${body}</details>
     return el.className = className, text4 !== void 0 && (el.textContent = text4), el;
   }
   function groups(r, base, head) {
-    let unused = new Set(base), context = (definition, all2) => all2.filter((parent) => parent.kind === "suite" && parent.depth < definition.depth && parent.start <= definition.start && parent.end >= definition.end).map((parent) => parent.title), rows = (definition, side) => r.blocks.filter((block2) => {
+    let unused = new Set(base), context = (definition, all2) => all2.filter((parent) => parent.kind === "suite" && parent.depth < definition.depth && parent.start <= definition.start && parent.end >= definition.end).map((parent) => parent.title), rows2 = (definition, side) => r.blocks.filter((block2) => {
       let line = block2[side]?.lines[0];
       return line !== void 0 && line >= definition.start && line <= definition.end;
     }), result = [];
     for (let definition of head) {
-      let current = rows(definition, "head"), parents = context(definition, head), candidates = [...unused].filter((old2) => old2.kind === definition.kind && old2.depth === definition.depth), old = candidates.find((old2) => old2.title === definition.title && JSON.stringify(context(old2, base)) === JSON.stringify(parents)) ?? candidates.find(
+      let current = rows2(definition, "head"), parents = context(definition, head), candidates = [...unused].filter((old2) => old2.kind === definition.kind && old2.depth === definition.depth), old = candidates.find((old2) => old2.title === definition.title && JSON.stringify(context(old2, base)) === JSON.stringify(parents)) ?? candidates.find(
         (old2) => current.some((block2) => block2.kind === "same" && block2.base.lines[0] >= old2.start && block2.base.lines[0] <= old2.end && /[\w]/.test(block2.base.text))
       );
       old && unused.delete(old);
-      let selected = /* @__PURE__ */ new Set([...current, ...old ? rows(old, "base") : []]), all2 = r.blocks.filter((block2) => selected.has(block2));
+      let selected = /* @__PURE__ */ new Set([...current, ...old ? rows2(old, "base") : []]), all2 = r.blocks.filter((block2) => selected.has(block2));
       result.push({
         definition,
         old,
@@ -9596,7 +9596,7 @@ ${body}</details>
       });
     }
     for (let definition of unused) {
-      let oldRows = rows(definition, "base").filter((block2) => block2.kind === "removed");
+      let oldRows = rows2(definition, "base").filter((block2) => block2.kind === "removed");
       result.push({ definition, rows: oldRows, start: r.blocks.indexOf(oldRows[0]), status: "Removed", side: "base", context: context(definition, base) });
     }
     return result.filter((entry) => entry.start >= 0).sort((a, b) => a.start - b.start || a.definition.depth - b.definition.depth);
@@ -9710,8 +9710,8 @@ ${body}</details>
       return !(block2.head ?? block2.base).text.trim();
     };
     for (let lines of stream.querySelectorAll(".mr-code-lines")) {
-      let rows = [...lines.children].filter((row) => blockOf.has(row));
-      for (let edge of [rows, [...rows].reverse()])
+      let rows2 = [...lines.children].filter((row) => blockOf.has(row));
+      for (let edge of [rows2, [...rows2].reverse()])
         for (let row of edge) {
           if (!blank(row)) break;
           row.dataset.mrSpecBoilerplate = "";
@@ -9767,20 +9767,20 @@ ${body}</details>
     return line !== void 0 && line >= symbol.start && line <= symbol.end;
   }, statusOf = (changed, otherwise) => changed.every((block2) => "mrMoved" in block2.el.dataset) ? "Moved" : otherwise;
   function entries2(r, base, head) {
-    let rows = r.blocks.filter(isRow), unused = new Set(base), list2 = [], same = (a, b) => a.kind === b.kind && a.parent === b.parent;
+    let rows2 = r.blocks.filter(isRow), unused = new Set(base), list2 = [], same = (a, b) => a.kind === b.kind && a.parent === b.parent;
     for (let symbol of head) {
       let candidates = [...unused].filter((old2) => same(old2, symbol)), old = candidates.find((old2) => old2.name === symbol.name) ?? candidates.find(
-        (old2) => rows.some((block2) => block2.kind === "same" && within(block2, "head", symbol) && within(block2, "base", old2) && /\w{3}/.test(block2.head.text))
+        (old2) => rows2.some((block2) => block2.kind === "same" && within(block2, "head", symbol) && within(block2, "base", old2) && /\w{3}/.test(block2.head.text))
       );
       old && unused.delete(old);
-      let changed = rows.filter((block2) => block2.kind !== "same" && (within(block2, "head", symbol) || old !== void 0 && within(block2, "base", old)));
+      let changed = rows2.filter((block2) => block2.kind !== "same" && (within(block2, "head", symbol) || old !== void 0 && within(block2, "base", old)));
       changed.length && list2.push({ symbol, old, changed, status: statusOf(changed, old ? "Edited" : "Added") });
     }
     for (let symbol of unused) {
-      let changed = rows.filter((block2) => block2.kind === "removed" && within(block2, "base", symbol));
+      let changed = rows2.filter((block2) => block2.kind === "removed" && within(block2, "base", symbol));
       changed.length && list2.push({ symbol, changed, status: statusOf(changed, "Removed") });
     }
-    let other = rows.filter(
+    let other = rows2.filter(
       (block2) => block2.kind !== "same" && !head.some((symbol) => within(block2, "head", symbol)) && !base.some((symbol) => within(block2, "base", symbol))
     ), order = new Map(r.blocks.map((block2, index) => [block2, index]));
     return list2.sort((a, b) => order.get(a.changed[0]) - order.get(b.changed[0])), { list: list2, other };
@@ -9789,10 +9789,10 @@ ${body}</details>
     let name = element2(doc, "span", "mr-symbol-name"), prefix = entry.symbol.parent ? `${entry.symbol.parent}.` : "";
     return !entry.old || entry.old.name === entry.symbol.name ? name.textContent = `${prefix}${entry.symbol.name}` : name.append(prefix, element2(doc, "del", "mr-del", entry.old.name), element2(doc, "ins", "mr-ins", entry.symbol.name)), name;
   }
-  function link2(doc, rows, status, label2) {
+  function link2(doc, rows2, status, label2) {
     let button3 = element2(doc, "button", "mr-symbol-link");
     return button3.type = "button", button3.dataset.status = status.toLowerCase(), button3.setAttribute("aria-label", `${label2}, ${status.toLowerCase()}: go to its first changed line`), status === "Removed" && button3.classList.add("is-removed"), button3.addEventListener("click", () => {
-      let target = rows[0].el.closest(".mr-source-comment") ?? rows[0].el;
+      let target = rows2[0].el.closest(".mr-source-comment") ?? rows2[0].el;
       target.scrollIntoView({ block: "center", behavior: "instant" }), target.classList.remove("is-flash"), target.offsetWidth, target.classList.add("is-flash");
     }), button3;
   }
@@ -9914,15 +9914,15 @@ ${body}</details>
     let prose = first.el.closest(".mr-source-comment-body");
     if (doc.kind === "code" && covered.some((block2) => !!block2.el.closest(".mr-source-comment-body") != !!prose)) return null;
     if (doc.kind === "code" && !prose) {
-      let rows = covered.flatMap((block2) => {
+      let rows2 = covered.flatMap((block2) => {
         let text4 = block2.el.querySelector(".mr-code-text");
         if (!text4.textContent) return [{ block: block2, text: "" }];
         let selected = block2.el.ownerDocument.createRange();
         return selected.selectNodeContents(text4), range.compareBoundaryPoints(0, selected) > 0 && selected.setStart(range.startContainer, range.startOffset), range.compareBoundaryPoints(2, selected) < 0 && selected.setEnd(range.endContainer, range.endOffset), selected.collapsed ? [] : [{ block: block2, text: selected.toString().replace(/\u200b/g, "") }];
       });
-      if (!rows.length) return null;
-      let start3 = paragraphTarget(doc, rows[0].block, side), end2 = paragraphTarget(doc, rows[rows.length - 1].block, side);
-      return { ...start3, endLine: end2.endLine, quote: rows.map((row) => row.text).join(`
+      if (!rows2.length) return null;
+      let start3 = paragraphTarget(doc, rows2[0].block, side), end2 = paragraphTarget(doc, rows2[rows2.length - 1].block, side);
+      return { ...start3, endLine: end2.endLine, quote: rows2.map((row) => row.text).join(`
 `) };
     }
     let fragment = range.cloneContents();
@@ -9933,8 +9933,8 @@ ${body}</details>
   }
 
   // src/ui/source-comments.ts
-  function commentText(rows, side) {
-    let units = rows.flatMap((row) => row[side] ? [row[side]] : []), block2 = !1;
+  function commentText(rows2, side) {
+    let units = rows2.flatMap((row) => row[side] ? [row[side]] : []), block2 = !1;
     return { text: units.map(({ source: source2 }) => {
       let text4 = source2.trim();
       return !block2 && text4.startsWith("/*") ? (block2 = !0, text4 = text4.replace(/^\/\*+ ?/, "")) : block2 ? text4 = text4.replace(/^\*(?!\/) ?/, "") : text4 = text4.replace(/^(?:\/\/\/?|#|--|;|<!--) ?/, ""), block2 && text4.endsWith("*/") && (text4 = text4.slice(0, -2).trimEnd(), block2 = !1), text4.replace(/ ?-->$/, "");
@@ -9965,21 +9965,21 @@ ${body}</details>
     }
     if (runs.length > 500) return !1;
     let doc = r.content.ownerDocument, count = 0;
-    for (let rows of runs) {
-      let base = commentText(rows, "base"), head = commentText(rows, "head"), note = renderDocument(doc, { ...input, base: base.text, head: head.text });
+    for (let rows2 of runs) {
+      let base = commentText(rows2, "base"), head = commentText(rows2, "head"), note = renderDocument(doc, { ...input, base: base.text, head: head.text });
       if (!note.content.textContent.trim() || !note.blocks.length) continue;
       let card = doc.createElement("section");
       card.className = "mr-source-comment";
       let header = doc.createElement("header");
       header.className = "mr-source-comment-meta";
-      let current = rows.flatMap((row) => row.head ? [row.head] : []), version = current.length ? current : rows.map((row) => row.base), [first, last] = [version[0].lines[0] + 1, version.at(-1).lines[1]], kind = /^\s*\/\*\*/.test(version[0].source) ? "Doc comment" : "Comment";
+      let current = rows2.flatMap((row) => row.head ? [row.head] : []), version = current.length ? current : rows2.map((row) => row.base), [first, last] = [version[0].lines[0] + 1, version.at(-1).lines[1]], kind = /^\s*\/\*\*/.test(version[0].source) ? "Doc comment" : "Comment";
       header.textContent = `${kind} · ${current.length ? "" : "old "}${first === last ? `line ${first}` : `lines ${first}–${last}`}`;
       let source2 = doc.createElement("div");
-      source2.className = "mr-source-comment-source", source2.dataset.mrCommentView = "source", source2.hidden = !0, note.content.classList.add("mr-source-comment-body"), note.content.dataset.mrCommentView = "reading", card.append(header, note.content, source2), rows[0].el.before(card);
-      for (let row of rows) source2.append(row.el);
+      source2.className = "mr-source-comment-source", source2.dataset.mrCommentView = "source", source2.hidden = !0, note.content.classList.add("mr-source-comment-body"), note.content.dataset.mrCommentView = "reading", card.append(header, note.content, source2), rows2[0].el.before(card);
+      for (let row of rows2) source2.append(row.el);
       for (let block2 of note.blocks) {
         let offset = (unit, start2) => ({ ...unit, lines: [unit.lines[0] + start2, unit.lines[1] + start2] });
-        block2.base && (block2.base = offset(block2.base, base.start)), block2.head && (block2.head = offset(block2.head, head.start)), rows.some((row) => row.kind !== "same" || "mrSpecContext" in row.el.dataset) && (block2.el.dataset.mrSpecContext = "");
+        block2.base && (block2.base = offset(block2.base, base.start)), block2.head && (block2.head = offset(block2.head, head.start)), rows2.some((row) => row.kind !== "same" || "mrSpecContext" in row.el.dataset) && (block2.el.dataset.mrSpecContext = "");
       }
       if (note.hiddenLines) {
         let hint = doc.createElement("p");
@@ -10001,6 +10001,37 @@ ${body}</details>
     return entries3.length === PALETTE_KEYS.length && entries3.every(
       ([key, colour]) => PALETTE_KEYS.includes(key) && typeof colour == "string" && /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(colour)
     );
+  }
+
+  // src/ui/dom.ts
+  function h(tag, className = "", text4) {
+    let el = document.createElement(tag);
+    return className && (el.className = className), text4 !== void 0 && (el.textContent = text4), el;
+  }
+  function chip(kind, text4) {
+    let el = h("span", kind ? `mr-chip is-${kind}` : "mr-chip");
+    return el.append(h("span", "mr-dot"), text4), el;
+  }
+  var rows = 0;
+  function setRow(label2, control, explain = "") {
+    let row = h("div", "mr-set-row"), id = `mr-row-${++rows}`, name = h("span", "", label2);
+    return name.id = id, explain && name.append(h("small", "", explain)), (control.matches('select, input, button, [role="group"]') ? control : control.querySelector("select, input"))?.setAttribute("aria-labelledby", id), row.append(name, control), row;
+  }
+  function switchButton(act, checked) {
+    let b = h("button", "mr-switch");
+    return b.type = "button", b.dataset.act = act, b.setAttribute("role", "switch"), b.setAttribute("aria-checked", String(checked)), b;
+  }
+  function selectField(select2) {
+    let box = h("div", "mr-font-select");
+    return box.insertAdjacentHTML("beforeend", icons.chevronDown), box.prepend(select2), box;
+  }
+  function option(value, label2, selected = !1) {
+    let el = h("option", "", label2);
+    return el.value = value, el.defaultSelected = selected, el;
+  }
+  function textField(name, value = "", most = 200) {
+    let input = h("input", "mr-field");
+    return input.name = name, input.defaultValue = value, input.maxLength = most, input;
   }
 
   // src/core/docindex.ts
@@ -10148,7 +10179,7 @@ ${body}</details>
         let doc = this.docs.get(path);
         if (has(`${path} ${doc?.title ?? ""}`)) named.push({ path });
         else {
-          let heading2 = doc?.headings.find((h3) => has(h3.text));
+          let heading2 = doc?.headings.find((h2) => has(h2.text));
           heading2 && within2.push({ path, heading: heading2 });
         }
       }
@@ -10394,9 +10425,9 @@ ${body}</details>
   }
   function sectionText(src, heading2) {
     if (heading2 === null) return src;
-    let { headings } = outlineDocument(src), at = headings.findIndex((h3) => h3.id === heading2);
+    let { headings } = outlineDocument(src), at = headings.findIndex((h2) => h2.id === heading2);
     if (at === -1) return null;
-    let next = headings.slice(at + 1).find((h3) => h3.level <= headings[at].level);
+    let next = headings.slice(at + 1).find((h2) => h2.level <= headings[at].level);
     return src.split(`
 `).slice(headings[at].line - 1, next ? next.line - 1 : void 0).join(`
 `);
@@ -11438,6 +11469,17 @@ ${body}</details>
 
 .mr-chip.is-removed .mr-dot {
   color: var(--del);
+}
+
+/* Not changes: the reader's own carries a hint of the accent, as their threads do; a guess Galley has
+   not checked has a hollow dot. */
+.mr-chip.is-own .mr-dot {
+  color: var(--accent);
+}
+
+.mr-chip.is-unverified .mr-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
 }
 
 .mr-byline-note {
@@ -14996,6 +15038,23 @@ ${body}</details>
   pointer-events: none;
   color: var(--muted);
 }
+/* A one-line text field, the same size and edge as the select beside it. */
+.mr-field {
+  box-sizing: border-box;
+  flex: 0 1 210px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--control-rule);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px / 1.4 var(--sans);
+}
+.mr-field::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
 .mr-size-control {
   display: flex;
   align-items: center;
@@ -16292,10 +16351,6 @@ ${body}</details>
   }
 
   // src/ui/repo-views.ts
-  function h(tag, className = "", text4) {
-    let el = document.createElement(tag);
-    return className && (el.className = className), text4 !== void 0 && (el.textContent = text4), el;
-  }
   function button2(label2, act, className = "mr-btn mr-outline") {
     let b = h("button", className, label2);
     return b.type = "button", b.dataset.act = act, b;
@@ -16304,12 +16359,27 @@ ${body}</details>
     let a = h("a", className, label2);
     return a.href = href, a.target = "_blank", a.rel = "noopener noreferrer", a;
   }
-  function option(value, label2, selected = !1) {
-    let el = h("option", "", label2);
-    return el.value = value, el.defaultSelected = selected, el;
+  var ORIGIN_CHIPS = { documented: null, declared: null, reader: "own", suggested: "unverified" };
+  function originChip(origin) {
+    return chip(ORIGIN_CHIPS[origin], ORIGIN_NAMES[origin]);
   }
-  function originBadge(origin) {
-    return h("span", `mr-origin is-${origin}`, ORIGIN_NAMES[origin]);
+  function facts(...chips) {
+    let row = h("span", "mr-file-meta mr-repo-facts");
+    return row.append(...chips), row;
+  }
+  function composeActions(status, ...buttons) {
+    let actions = h("div", "mr-compose-actions");
+    return status && actions.append(h("p", "mr-comment-status", status)), actions.append(...buttons), actions;
+  }
+  function submit(label2) {
+    let b = h("button", "mr-btn mr-primary mr-submit", label2);
+    return b.type = "submit", b;
+  }
+  function select(name, values, chosen) {
+    let el = h("select");
+    el.name = name;
+    for (let [value, label2] of values) el.append(option(value, label2, value === chosen));
+    return el;
   }
   function evidenceList(evidence, links) {
     let list2 = h("ul", "mr-repo-evidence");
@@ -16340,74 +16410,103 @@ ${body}</details>
     decisions: "Decision records and what they state: their status, which supersede which, and the documents they link to or name."
   };
   function configStatus(config2) {
-    let box = h("div", "mr-lens-configs");
-    if (box.setAttribute("role", "status"), !config2.files)
-      return box.append(
-        h(
-          "p",
-          "",
-          "No configuration files were found: Compose files, GitHub Actions workflows, .gitlab-ci.yml, Kubernetes manifests in k8s/ or deploy/, and Terraform."
-        )
-      ), box;
-    config2.state === "idle" ? box.append(
+    let box = h("div", "mr-map-status mr-lens-configs");
+    box.setAttribute("role", "status");
+    let files = `${config2.files} configuration file${config2.files === 1 ? "" : "s"}`;
+    config2.files ? config2.state === "idle" ? box.append(
+      h("p", "", `Galley found ${files}. It reads them only when you ask, and never runs anything in them.`),
+      button2("Read configuration", "read-configs")
+    ) : config2.state === "reading" ? box.append(h("p", "", `Reading configuration… ${config2.read} of ${config2.files}`)) : box.append(h("p", "", `Read ${config2.read} of ${files} at ${config2.commit.slice(0, 7)}.`)) : box.append(
       h(
         "p",
         "",
-        `Galley found ${config2.files} configuration file${config2.files === 1 ? "" : "s"}. It reads them only when you ask, and never runs anything in them.`
-      ),
-      button2("Read configuration", "read-configs", "mr-btn mr-primary")
-    ) : config2.state === "reading" ? box.append(h("p", "", `Reading configuration… ${config2.read} of ${config2.files}`)) : box.append(h("p", "", `Read ${config2.read} of ${config2.files} configuration file${config2.files === 1 ? "" : "s"} at ${config2.commit.slice(0, 7)}.`));
+        "No configuration files were found: Compose files, GitHub Actions workflows, .gitlab-ci.yml, Kubernetes manifests in k8s/ or deploy/, and Terraform."
+      )
+    );
     for (let note of config2.notes) box.append(h("p", "mr-repo-limit", note));
     return box;
   }
-  function entityButton(entity2) {
-    let b = button2("", "entity", "mr-lens-entity");
-    return b.dataset.id = entity2.id, b.append(h("span", "mr-lens-name", entity2.name), originBadge(entity2.origin)), b;
+  function entityItem(entity2) {
+    let b = button2("", "entity", "mr-menu-item mr-lens-entity");
+    b.dataset.id = entity2.id;
+    let name = h("span", "mr-menu-name");
+    return name.append(h("span", "mr-path-name", entity2.name)), b.append(name, originChip(entity2.origin)), b;
   }
   function relationItem(relation, outgoing, other, links) {
-    let li = h("li", "mr-lens-relation"), line = h("p");
-    if (line.append(h("span", "mr-lens-label", outgoing ? relation.label : `${relation.label} (from)`), " ", entityButton(other), " ", originBadge(relation.origin)), relation.origin === "reader" && !relation.to.startsWith("doc:")) {
-      let remove = button2("Remove", "remove-relation", "mr-btn mr-lens-remove");
-      remove.dataset.from = relation.from, remove.dataset.to = relation.to, remove.dataset.label = relation.label, line.append(" ", remove);
+    let li = h("li", "mr-repo-edge mr-lens-relation"), to = button2(other.name, "entity", "mr-repo-edge-doc");
+    if (to.dataset.id = other.id, li.append(
+      h("span", "mr-lens-label", outgoing ? relation.label : `${relation.label} (from)`),
+      to,
+      facts(originChip(other.origin), originChip(relation.origin))
+    ), relation.origin === "reader" && !relation.to.startsWith("doc:")) {
+      let remove = button2("Remove", "remove-relation", "mr-reply-to");
+      remove.dataset.from = relation.from, remove.dataset.to = relation.to, remove.dataset.label = relation.label, li.append(remove);
     }
-    return li.append(line), relation.evidence.length && li.append(evidenceList(relation.evidence, links)), li;
+    return relation.evidence.length && li.append(evidenceList(relation.evidence, links)), li;
   }
   function focusCard(entity2, options) {
     let card = h("div", "mr-map-center mr-lens-focus"), title = h("h2", "mr-map-title", entity2.name);
     title.tabIndex = -1, card.append(title);
-    let facts = h("p", "mr-map-facts");
-    facts.append(h("span", "mr-repo-kind", entity2.kind), originBadge(entity2.origin)), card.append(facts), entity2.correctedFrom && card.append(h("p", "mr-repo-limit", `The source says ${entity2.correctedFrom}; you set ${entity2.kind}.`)), entity2.detail && card.append(h("p", "mr-lens-detail", entity2.detail));
+    let kind = h("p", "mr-map-facts");
+    kind.append(chip(null, entity2.kind), originChip(entity2.origin)), card.append(kind), entity2.correctedFrom && card.append(h("p", "mr-repo-limit", `The source says ${entity2.correctedFrom}; you set ${entity2.kind}.`)), entity2.detail && card.append(h("p", "mr-lens-detail", entity2.detail));
     for (let note of entity2.notes) card.append(h("p", "mr-repo-limit", note));
     if (entity2.evidence.length && card.append(h("h3", "", "Where it is said"), evidenceList(entity2.evidence, options.links)), entity2.doc) {
       let read = button2("Read", "open", "mr-btn mr-primary");
       read.dataset.path = entity2.doc;
-      let map2 = button2("On the document map", "doc-map", "mr-btn mr-outline");
+      let map2 = button2("On the document map", "doc-map");
       map2.dataset.path = entity2.doc;
       let actions = h("div", "mr-actions");
       return actions.append(read, map2), card.append(actions), card;
     }
-    let kind = h("label", "mr-lens-kind", "Type "), select = h("select");
-    select.dataset.act = "entity-kind", select.dataset.id = entity2.id;
-    let original = entity2.correctedFrom ?? entity2.kind;
-    select.dataset.original = original;
-    for (let value of [.../* @__PURE__ */ new Set([original, ...PROPOSED_KINDS])]) select.append(option(value, value, value === entity2.kind));
-    if (kind.append(select), card.append(kind), entity2.origin === "reader") {
-      let remove = button2("Remove this proposal", "remove-entity", "mr-btn mr-outline");
+    let original = entity2.correctedFrom ?? entity2.kind, type = select(
+      "kind",
+      [.../* @__PURE__ */ new Set([original, ...PROPOSED_KINDS])].map((value) => [value, value]),
+      entity2.kind
+    );
+    if (type.dataset.act = "entity-kind", type.dataset.id = entity2.id, type.dataset.original = original, card.append(setRow("Type", selectField(type), entity2.origin === "reader" ? "Your proposal" : `The source says ${original}`)), entity2.origin === "reader") {
+      let remove = button2("Remove this proposal", "remove-entity");
       remove.dataset.id = entity2.id, card.append(remove);
     }
     let others = options.model.entities.filter((other) => other.id !== entity2.id && !other.doc);
     if (others.length) {
       let form = h("form", "mr-lens-connect");
-      form.dataset.act = "propose-relation", form.dataset.from = entity2.id;
-      let to = h("select");
-      to.name = "to", to.setAttribute("aria-label", "Connect to");
-      for (let other of others) to.append(option(other.id, `${other.name} (${other.kind})`));
-      let label2 = h("input");
-      label2.name = "label", label2.defaultValue = "uses", label2.maxLength = 40, label2.required = !0, label2.setAttribute("aria-label", "Connection");
-      let submit = h("button", "mr-btn mr-outline", "Connect");
-      submit.type = "submit", form.append(h("span", "", "Connect to "), to, h("span", "", " as "), label2, submit), card.append(form);
+      form.dataset.act = "propose-relation", form.dataset.from = entity2.id, form.setAttribute("aria-label", "Connect to another item");
+      let label2 = textField("label", "uses", 40);
+      label2.required = !0, form.append(
+        setRow(
+          "Connect to",
+          selectField(
+            select(
+              "to",
+              others.map((other) => [other.id, `${other.name} (${other.kind})`]),
+              ""
+            )
+          )
+        ),
+        setRow("As", label2, "What it does to the other: uses, reads, deploys to"),
+        composeActions("", submit("Connect"))
+      ), card.append(form);
     }
     return card;
+  }
+  function proposeForm(lens, reading) {
+    let form = h("form", "mr-composer mr-lens-propose");
+    form.dataset.act = "propose-entity", form.dataset.lens = lens, form.setAttribute("aria-label", "Propose something the files do not show");
+    let name = textField("name", "", 80);
+    return name.required = !0, name.placeholder = lens === "architecture" ? "A component, such as Renderer" : "An environment or deployment unit", form.append(
+      h("p", "mr-comment-target", "Propose something the files do not show"),
+      setRow("Name", name),
+      setRow(
+        "Type",
+        selectField(
+          select(
+            "kind",
+            PROPOSED_KINDS.map((value) => [value, value]),
+            lens === "architecture" ? "Component" : "Environment"
+          )
+        )
+      )
+    ), reading && form.append(setRow(`About ${reading.title}`, switchButton("propose-about", !0), "Ties the proposal to the document you are reading")), form.append(composeActions("Marked as yours, and kept with your notes when you save them.", submit("Add"))), form;
   }
   function lensView(options) {
     let { lens, model, links } = options, view = h("div", "mr-lens");
@@ -16420,7 +16519,7 @@ ${body}</details>
       let kind = "", items = h("ul", "mr-lens-list");
       for (let entity2 of model.entities) {
         entity2.kind !== kind && (kind = entity2.kind, items.append(h("li", "mr-lens-group", kind)));
-        let li = h("li"), b = entityButton(entity2);
+        let li = h("li"), b = entityItem(entity2);
         entity2 === focus && b.setAttribute("aria-current", "true"), li.append(b), items.append(li);
       }
       list2.append(items);
@@ -16428,70 +16527,58 @@ ${body}</details>
       relations.setAttribute("aria-label", "Connections");
       let touching = model.relations.filter((relation) => relation.from === focus.id || relation.to === focus.id);
       relations.append(h("h3", "", `Connections (${touching.length})`));
-      let ul = h("ul", "mr-lens-relations");
+      let ul = h("ul", "mr-repo-edges mr-lens-relations");
       for (let relation of touching) {
         let outgoing = relation.from === focus.id, other = model.entities.find((entity2) => entity2.id === (outgoing ? relation.to : relation.from));
         ul.append(relationItem(relation, outgoing, other, links));
       }
       relations.append(touching.length ? ul : h("p", "mr-repo-quiet", "No connections found.")), grid.append(list2, focusCard(focus, options), relations), view.append(grid);
     }
-    if (lens !== "decisions") {
-      let form = h("form", "mr-lens-propose");
-      form.dataset.act = "propose-entity", form.dataset.lens = lens;
-      let name = h("input");
-      name.name = "name", name.required = !0, name.maxLength = 80, name.placeholder = lens === "architecture" ? "A component, such as Renderer" : "An environment or deployment unit", name.setAttribute("aria-label", "Name");
-      let kindSelect = h("select");
-      kindSelect.name = "kind", kindSelect.setAttribute("aria-label", "Type");
-      for (let value of PROPOSED_KINDS) kindSelect.append(option(value, value, value === (lens === "architecture" ? "Component" : "Environment")));
-      let submit = h("button", "mr-btn mr-outline", "Add");
-      if (submit.type = "submit", form.append(h("h3", "", "Propose something the files do not show"), name, kindSelect), options.reading) {
-        let about = h("label", "mr-lens-about"), check = h("input");
-        check.type = "checkbox", check.name = "anchor", check.defaultChecked = !0, about.append(check, ` About ${options.reading.title}`), form.append(about);
-      }
-      form.append(submit, h("small", "", "Proposals are marked as yours, and are kept with your notes when you save them.")), view.append(form);
-    }
-    return view;
+    return lens !== "decisions" && view.append(proposeForm(lens, options.reading)), view;
   }
-  function kindPicker(selected, name = "kind") {
-    let group = h("fieldset", "mr-note-kinds");
-    group.append(h("legend", "", "Kind"));
-    for (let kind of NOTE_KINDS) {
-      let label2 = h("label"), radio = h("input");
-      radio.type = "radio", radio.name = name, radio.value = kind, radio.defaultChecked = kind === selected, label2.append(radio, ` ${NOTE_NAMES[kind]}`), group.append(label2);
-    }
-    return group;
-  }
-  function textArea(value) {
-    let text4 = h("textarea");
-    return text4.name = "text", text4.required = !0, text4.maxLength = 4e3, text4.rows = 3, text4.defaultValue = value, text4.setAttribute("aria-label", "Note"), text4;
-  }
-  function groupInput(value, groups2) {
-    let label2 = h("label", "mr-note-group", "For alternatives: the question they answer "), input = h("input");
-    input.name = "group", input.maxLength = 200, input.defaultValue = value, input.setAttribute("list", "mr-note-groups");
+  function noteFields(kind, group, groups2) {
+    let kinds = select(
+      "kind",
+      NOTE_KINDS.map((value) => [value, NOTE_NAMES[value]]),
+      kind
+    );
+    kinds.dataset.act = "note-kind";
+    let question = textField("group", group);
+    question.setAttribute("list", "mr-note-groups");
     let list2 = h("datalist");
     list2.id = "mr-note-groups";
-    for (let group of groups2) list2.append(option(group, group));
-    return label2.append(input, list2), label2;
+    for (let value of groups2) list2.append(option(value, value));
+    let groupRow = setRow("Question it answers", question, "Alternatives to the same question sit side by side");
+    return groupRow.classList.add("mr-note-group"), groupRow.hidden = kind !== "alternative", groupRow.append(list2), [setRow("Kind", selectField(kinds)), groupRow];
   }
-  function noteCard(note, options) {
-    let groups2 = [...new Set(options.notes.map((other) => other.group).filter(Boolean))];
+  function noteText(value, placeholder) {
+    let text4 = h("textarea");
+    return text4.name = "text", text4.required = !0, text4.maxLength = MAX_NOTE_CHARS, text4.rows = 2, text4.defaultValue = value, text4.placeholder = placeholder, text4.setAttribute("aria-label", "Note"), text4;
+  }
+  function noteCard(note, options, groups2) {
     if (options.editing === note.id) {
-      let form = h("form", "mr-note is-editing");
-      form.dataset.act = "save-note", form.dataset.id = note.id;
-      let save = h("button", "mr-btn mr-primary", "Save note");
-      save.type = "submit";
-      let actions = h("div", "mr-actions");
-      return actions.append(save, button2("Cancel", "cancel-edit")), form.append(kindPicker(note.kind), textArea(note.text), groupInput(note.group, groups2), actions), form;
+      let form = h("form", "mr-composer mr-note-composer");
+      form.dataset.act = "save-note", form.dataset.id = note.id, form.setAttribute("aria-label", "Edit note");
+      let cancel = button2("Cancel", "cancel-edit", "mr-btn mr-cancel");
+      return form.append(
+        h("p", "mr-comment-target", `Edit ${NOTE_NAMES[note.kind].toLowerCase()}`),
+        noteText(note.text, ""),
+        ...noteFields(note.kind, note.group, groups2),
+        composeActions("", cancel, submit("Save note"))
+      ), form;
     }
-    let card = h("article", `mr-note is-${note.kind}`);
-    card.dataset.id = note.id;
-    let head = h("header"), choose = h("label", "mr-note-choose"), check = h("input");
-    if (check.type = "checkbox", check.dataset.act = "choose-note", check.dataset.id = note.id, check.checked = options.chosen.has(note.id), choose.append(check, " Include in export"), head.append(h("span", "mr-note-kind", NOTE_NAMES[note.kind]), h("span", "mr-origin is-reader", "Your note"), choose), card.append(head, h("p", "mr-note-text", note.text)), note.anchor) {
+    let card = h("aside", "mr-thread is-own mr-note");
+    card.dataset.id = note.id, card.setAttribute("aria-label", `${NOTE_NAMES[note.kind]}: ${note.text.split(`
+`)[0]}`);
+    let meta = h("div", "mr-thread-meta");
+    meta.append(h("span", "mr-thread-author", NOTE_NAMES[note.kind]));
+    let body = h("div", "mr-thread-body");
+    if (body.append(h("p", "mr-note-text", note.text)), card.append(meta, body), note.anchor) {
       let about = h("p", "mr-note-about"), go = button2(note.anchor.label, "open", "mr-repo-proof");
       go.dataset.path = note.anchor.path, note.anchor.heading && (go.dataset.anchor = note.anchor.heading), about.append("About ", go);
       let state = options.anchorStates.get(note.id);
       if (state && (about.append(" · ", h("span", `mr-note-state is-${state}`, ANCHOR_STATES[state])), state === "changed" || state === "missing")) {
-        let again = state === "changed" ? button2("Reconfirm", "reconfirm", "mr-btn mr-outline") : button2("Detach", "detach", "mr-btn mr-outline");
+        let again = state === "changed" ? button2("Reconfirm", "reconfirm", "mr-reply-to") : button2("Detach", "detach", "mr-reply-to");
         again.dataset.id = note.id, about.append(" ", again);
       }
       card.append(about);
@@ -16500,26 +16587,36 @@ ${body}</details>
     if (connected.length) {
       let list2 = h("ul", "mr-note-links");
       for (let link3 of connected) {
-        let li = h("li", "", `Tentatively connected to ${link3.label} `), remove2 = button2("Disconnect", "disconnect", "mr-btn mr-lens-remove");
-        remove2.dataset.id = note.id, remove2.dataset.link = link3.id, li.append(remove2), list2.append(li);
+        let li = h("li", "", `Tentatively connected to ${link3.label}`), remove = button2("Disconnect", "disconnect", "mr-reply-to");
+        remove.dataset.id = note.id, remove.dataset.link = link3.id, li.append(remove), list2.append(li);
       }
       card.append(list2);
     }
-    let foot = h("footer", "mr-actions");
     if (options.connecting === note.id) {
-      let connect = h("select");
-      connect.dataset.act = "connect-note", connect.dataset.id = note.id, connect.setAttribute("aria-label", "Connect this note to"), connect.append(option("", "Choose…"));
-      for (let target of options.targets) target.id !== note.id && !note.links.includes(target.id) && connect.append(option(target.id, target.label));
-      let cancel = button2("Cancel", "cancel-connect");
-      cancel.dataset.id = note.id, foot.append(connect, cancel);
-    } else if (note.links.length < MAX_LINKS) {
-      let connect = button2("Connect…", "connect");
-      connect.dataset.id = note.id, foot.append(connect);
+      let connect = select(
+        "connect",
+        [
+          ["", "Choose…"],
+          ...options.targets.filter((target) => target.id !== note.id && !note.links.includes(target.id)).map((target) => [target.id, target.label])
+        ],
+        ""
+      );
+      connect.dataset.act = "connect-note", connect.dataset.id = note.id;
+      let cancel = button2("Cancel", "cancel-connect", "mr-reply-to");
+      cancel.dataset.id = note.id;
+      let row = setRow("Connect to", selectField(connect));
+      row.append(cancel), card.append(row);
     }
-    let edit = button2("Edit", "edit-note");
-    edit.dataset.id = note.id;
-    let remove = button2("Delete", "delete-note");
-    return remove.dataset.id = note.id, foot.append(edit, remove), card.append(foot), card;
+    let foot = h("div", "mr-thread-foot"), actions = [
+      ...options.connecting !== note.id && note.links.length < MAX_LINKS ? [["Connect…", "connect"]] : [],
+      ["Edit", "edit-note"],
+      ["Delete", "delete-note"]
+    ];
+    for (let [label2, act] of actions) {
+      let b = button2(label2, act, "mr-reply-to");
+      b.dataset.id = note.id, foot.append(b);
+    }
+    return card.append(foot), card;
   }
   function notesView(options) {
     let view = h("section", "mr-notes");
@@ -16527,38 +16624,44 @@ ${body}</details>
     let head = h("header", "mr-notes-head");
     head.append(
       h("h1", "mr-title", "Your notes"),
-      h("p", "mr-repo-quiet", "Private to this browser. Saved only when you choose Save, and shared only through an export you check first.")
+      h("p", "mr-subtitle", "Private to this browser. Saved only when you choose Save, and shared only through an export you check first.")
     );
-    let actions = h("div", "mr-actions"), status = h("span", "mr-notes-state", options.state);
-    status.setAttribute("role", "status");
+    let byline = h("div", "mr-byline"), state = h("span", "mr-notes-state", options.state);
+    state.setAttribute("role", "status");
+    let meta = h("span", "mr-file-meta");
+    meta.append(state);
     let save = button2("Save", "save-notes", "mr-btn mr-primary");
-    if (save.disabled = !options.dirty, actions.append(status, save, button2("Export…", "export"), button2("Delete all notes…", "delete-notes")), head.append(actions), options.confirmDelete) {
-      let confirm = h("div", "mr-repo-limit mr-notes-confirm");
-      confirm.append(
-        h("span", "", "Delete every note, proposal and type you set for this repository, here and in storage?"),
-        button2("Delete all notes", "confirm-delete-notes", "mr-btn mr-primary"),
-        button2("Keep them", "cancel-delete-notes")
-      ), head.append(confirm);
+    save.disabled = !options.dirty;
+    let exporting = button2("Export…", "export");
+    exporting.setAttribute("aria-haspopup", "dialog"), exporting.setAttribute("aria-expanded", "false");
+    let actions = h("span", "mr-file-actions mr-notes-actions");
+    if (actions.append(save, exporting, button2("Delete all notes…", "delete-notes")), byline.append(meta, actions), head.append(byline), options.confirmDelete) {
+      let confirm = composeActions(
+        "Delete every note, proposal and type you set for this repository, here and in storage?",
+        button2("Keep them", "cancel-delete-notes", "mr-btn mr-cancel"),
+        button2("Delete all notes", "confirm-delete-notes", "mr-btn mr-primary")
+      );
+      confirm.classList.add("mr-notes-confirm"), confirm.setAttribute("role", "group"), confirm.setAttribute("aria-label", "Delete all notes"), head.append(confirm);
     }
-    if (options.recovery) {
-      let offer = h("div", "mr-repo-limit mr-notes-recover");
-      offer.append(
-        h("span", "", `You have unsaved notes from ${options.recovery.at}.`),
-        button2("Recover", "recover", "mr-btn mr-primary"),
-        button2("Discard", "discard-draft")
-      ), head.append(offer);
+    if (options.error) {
+      let error2 = h("p", "mr-repo-limit mr-notes-error", options.error);
+      error2.setAttribute("role", "alert"), head.append(error2);
     }
-    options.error && head.append(h("p", "mr-repo-limit", options.error)), view.append(head);
-    let form = h("form", "mr-note-form");
-    form.dataset.act = "add-note";
-    let about = h("label", "mr-note-anchor", "About "), select = h("select");
-    select.name = "anchor", select.append(option("", "No document"));
-    for (let anchor of options.anchors) select.append(option(anchor.value, anchor.label, anchor === options.anchors[0]));
-    about.append(select);
-    let add = h("button", "mr-btn mr-primary", "Add note");
-    add.type = "submit";
-    let groups2 = [...new Set(options.notes.map((note) => note.group).filter(Boolean))];
-    form.append(kindPicker("idea"), textArea(""), groupInput("", groups2), about, add), view.append(form), options.notes.length || view.append(h("p", "mr-repo-quiet", "No notes yet. Ideas, questions, assumptions, next experiments and alternatives you add appear here."));
+    view.append(head);
+    let groups2 = [...new Set(options.notes.map((note) => note.group).filter(Boolean))], form = h("form", "mr-composer mr-note-composer");
+    form.dataset.act = "add-note", form.setAttribute("aria-label", "New note");
+    let about = select(
+      "anchor",
+      [["", "No document"], ...options.anchors.map((anchor) => [anchor.value, anchor.label])],
+      options.anchors[0]?.value ?? ""
+    );
+    form.append(
+      h("p", "mr-comment-target", "New note"),
+      noteText("", "An idea, a question, an assumption, a next experiment or an alternative"),
+      ...noteFields("idea", "", groups2),
+      setRow("About", selectField(about)),
+      composeActions("", submit("Add note"))
+    ), view.append(form), options.notes.length || view.append(h("p", "mr-repo-quiet", "No notes yet. Ideas, questions, assumptions, next experiments and alternatives you add appear here."));
     for (let kind of NOTE_KINDS) {
       let ofKind = options.notes.filter((note) => note.kind === kind);
       if (!ofKind.length) continue;
@@ -16568,25 +16671,43 @@ ${body}</details>
           let compare2 = h("div", "mr-notes-compare");
           compare2.append(h("h3", "", group || "Alternatives without a question"));
           let row = h("div", "mr-notes-row");
-          for (let note of ofKind.filter((other) => other.group === group)) row.append(noteCard(note, options));
+          for (let note of ofKind.filter((other) => other.group === group)) row.append(noteCard(note, options, groups2));
           compare2.append(row), section.append(compare2);
         }
-      else for (let note of ofKind) section.append(noteCard(note, options));
+      else for (let note of ofKind) section.append(noteCard(note, options, groups2));
       view.append(section);
+    }
+    if (options.recovery) {
+      let offer = h("div", "mr-resume mr-notes-recover");
+      offer.setAttribute("role", "status");
+      let discard = button2("×", "discard-draft", "mr-resume-close");
+      discard.setAttribute("aria-label", "Discard unsaved notes"), discard.title = "Discard unsaved notes", offer.append(h("span", "mr-resume-text", `You have unsaved notes from ${options.recovery.at}.`), button2("Recover", "recover", "mr-resume-go"), discard), view.append(offer);
     }
     return view;
   }
-  function exportDialog(options) {
-    let panel = h("div", "mr-export-panel"), head = h("header"), close = button2("Close", "close-export", "mr-btn mr-outline");
-    head.append(h("h2", "", "Export notes"), close), panel.append(head), panel.append(
+  function exportSheet(options) {
+    let chosen = options.notes.filter((note) => note.chosen).length, heading2 = h("header", "mr-settings-heading"), title = h("div"), name = h("h2", "", "Export notes");
+    name.id = "mr-export-title", title.append(
+      name,
       h(
         "p",
-        "mr-repo-quiet",
-        options.chosen ? `${options.chosen} of ${options.total} notes chosen. Only chosen notes are included: read the text before you share it.` : "Choose notes with Include in export first. Nothing else is ever included."
+        "",
+        chosen ? `${chosen} of ${options.notes.length} notes included. Read the text before you share it.` : "Include the notes to export. Nothing else is ever included."
       )
     );
+    let close = button2("", "close-export", "mr-btn mr-icon-btn");
+    close.setAttribute("aria-label", "Close export (Esc)"), close.title = "Close export (Esc)", close.innerHTML = icons.close, heading2.append(title, close);
+    let body = h("div", "mr-settings-body"), include = h("section", "mr-settings-section");
+    include.setAttribute("aria-label", "Notes to include");
+    for (let note of options.notes) {
+      let toggle = switchButton("choose-note", note.chosen);
+      toggle.dataset.id = note.id, include.append(setRow(note.label, toggle, note.about));
+    }
+    options.notes.length || include.append(h("p", "mr-settings-note", "You have no notes for this repository yet."));
+    let output = h("section", "mr-settings-section");
+    output.setAttribute("aria-label", "Format");
     let formats = h("div", "mr-seg");
-    formats.setAttribute("role", "group"), formats.setAttribute("aria-label", "Format");
+    formats.setAttribute("role", "group");
     for (let [format2, label2] of [
       ["markdown", "Markdown"],
       ["mermaid", "Mermaid"]
@@ -16596,18 +16717,25 @@ ${body}</details>
     }
     let preview = h("pre", "mr-export-preview", options.text);
     preview.tabIndex = 0, preview.setAttribute("aria-label", "What will be exported");
-    let actions = h("div", "mr-actions"), copy2 = button2("Copy", "copy-export", "mr-btn mr-primary"), download = button2("Download", "download-export");
-    copy2.disabled = download.disabled = !options.chosen, actions.append(copy2, download), panel.append(formats, preview, actions);
-    let share = h("section", "mr-export-share");
-    return share.append(h("h3", "", "Share it as an issue")), options.chosen ? options.issue ? share.append(
-      h("p", "mr-repo-quiet", `Opens the new-issue form on ${options.platform} in a new tab, with this text. Nothing is posted until you submit it there.`),
-      external("Open a new issue…", options.issue, "mr-btn mr-outline")
-    ) : share.append(h("p", "mr-repo-quiet", "This text is too long to open in an issue form. Copy it instead.")) : share.append(h("p", "mr-repo-quiet", "Choose notes to share first.")), panel.append(share), panel;
+    let copy2 = button2("Copy", "copy-export", "mr-btn mr-primary"), download = button2("Download", "download-export");
+    copy2.disabled = download.disabled = !chosen;
+    let take = h("div", "mr-export-actions");
+    take.append(copy2, download), output.append(setRow("Format", formats, "Markdown reads as text; Mermaid draws the notes as a diagram"), preview, take);
+    let share = h("section", "mr-settings-section");
+    share.setAttribute("aria-label", "Share it as an issue");
+    let explain = chosen ? options.issue ? `Opens the new-issue form on ${options.platform} in a new tab, with this text. Nothing is posted until you submit it there.` : "This text is too long to open in an issue form. Copy it instead." : "Include notes to share first.";
+    return share.append(
+      setRow("Share it as an issue", chosen && options.issue ? external("Open a new issue…", options.issue, "mr-btn mr-outline") : h("span"), explain)
+    ), body.append(
+      include,
+      output,
+      share,
+      h("p", "mr-settings-note", "Only the notes you include leave this browser, and only when you copy, download or open an issue.")
+    ), [heading2, body];
   }
-  var FLAGS = {
-    changed: "Changed in this review",
-    "worth-checking": "Worth checking: it links to a file this review changes"
-  };
+  function flagChip(flag) {
+    return flag === "changed" ? chip("modified", "Changed in this review") : chip(null, "Worth checking: it links to a file this review changes");
+  }
   function reviewView(options) {
     let view = h("section", "mr-review-context");
     view.setAttribute("aria-label", "This review"), view.append(
@@ -16626,13 +16754,13 @@ ${body}</details>
         let box = h("div", "mr-review-file"), head = h("p", "mr-review-path");
         if (file.changedDoc) {
           let open2 = button2(file.path, "open", "mr-repo-edge-doc");
-          open2.dataset.path = file.path, head.append(open2, " ", h("span", "mr-review-flag is-changed", "Changed document"));
+          open2.dataset.path = file.path, head.append(open2, facts(chip("modified", "Changed document")));
         } else head.append(h("code", "", file.path));
         box.append(head), file.declares.length && box.append(h("p", "mr-repo-quiet", `Declares ${file.declares.join(", ")}.`)), file.related.length || box.append(h("p", "mr-repo-quiet", "No document read so far links here."));
         let list2 = h("ul", "mr-repo-edges");
         for (let related of file.related) {
           let li = h("li", "mr-repo-edge"), open2 = button2(related.title, "open", "mr-repo-edge-doc");
-          open2.dataset.path = related.path, li.append(open2), related.kind && li.append(h("span", "mr-repo-kind", related.kind)), li.append(h("span", `mr-review-flag is-${related.flag}`, FLAGS[related.flag]));
+          open2.dataset.path = related.path, li.append(open2, facts(...related.kind ? [chip(null, related.kind)] : [], flagChip(related.flag)));
           let proofs = h("ul", "mr-repo-evidence");
           for (let proof of related.evidence) {
             let item = h("li"), at = button2("", "evidence", "mr-repo-proof");
@@ -16701,7 +16829,7 @@ ${body}</details>
   height: 17px;
 }
 
-/* ------------------------------------------------------------------ documents and settings menus */
+/* ------------------------------------------------------------------ documents menu */
 
 .mr-repo-docs {
   left: 50%;
@@ -16711,8 +16839,7 @@ ${body}</details>
   transform: translateX(-50%);
 }
 
-.mr-repo-docs[hidden],
-.mr-repo-settings[hidden] {
+.mr-repo-docs[hidden] {
   display: none;
 }
 
@@ -16756,13 +16883,6 @@ ${body}</details>
   margin-left: 10px;
 }
 
-.mr-repo-settings {
-  right: 12px;
-  width: min(380px, calc(100vw - 24px));
-  padding: 6px 16px;
-  font-family: var(--sans);
-}
-
 /* ------------------------------------------------------------------ notes and facts */
 
 .mr-repo-quiet {
@@ -16771,49 +16891,23 @@ ${body}</details>
   font: 13.5px / 1.5 var(--sans);
 }
 
+/* What Galley could not read, or stopped at: a quiet note, never a change colour. */
 .mr-repo-limit {
   margin: 6px 8px;
   padding: 6px 10px;
-  border-left: 3px solid var(--gutter-modified);
+  border-left: 3px solid var(--rule);
   border-radius: 0 8px 8px 0;
-  background: color-mix(in srgb, var(--gutter-modified) 8%, var(--bg));
+  background: var(--soft);
   color: var(--fg);
   font: 13px / 1.45 var(--sans);
 }
 
-/* A document's kind: stated, guessed or set by the reader. The reader's own choice has a dashed edge. */
-.mr-repo-kind {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  padding: 2px 9px;
-  border: 1px solid color-mix(in srgb, var(--kind, var(--muted)) 45%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--kind, var(--muted)) 10%, var(--bg));
-  color: var(--fg);
-  font: 500 11.5px / 1.4 var(--sans);
-  white-space: nowrap;
-}
-
-.mr-repo-kind.is-reader {
-  border-style: dashed;
-}
-
-.mr-repo-kind.is-decision {
-  --kind: var(--accent);
-}
-.mr-repo-kind.is-spec {
-  --kind: var(--gutter-modified);
-}
-.mr-repo-kind.is-architecture {
-  --kind: var(--gutter-added);
-}
-.mr-repo-kind.is-runbook {
-  --kind: var(--gutter-removed);
-}
-.mr-repo-kind.is-overview,
-.mr-repo-kind.is-guide {
-  --kind: var(--muted);
+/* Facts in a row, as in a byline: chips and words. */
+.mr-repo-facts {
+  flex: 0 1 auto;
+  gap: 4px 14px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .mr-repo-status {
@@ -16845,18 +16939,6 @@ ${body}</details>
 .mr-repo-open:hover,
 .mr-repo-note:hover {
   color: var(--fg);
-}
-
-/* Where an evidence link landed: a moment of colour, then the page as it was. */
-.mr-repo-flash {
-  animation: mr-repo-flash 1.6s ease-out;
-}
-
-@keyframes mr-repo-flash {
-  from {
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 18%, transparent);
-  }
 }
 
 /* ------------------------------------------------------------------ backlinks and evidence */
@@ -17039,25 +17121,7 @@ ${body}</details>
 }
 
 .mr-map-kind {
-  display: grid;
-  gap: 6px;
-  margin: 0 0 16px;
-  font-size: 13px;
-}
-
-.mr-map-kind select {
-  margin-left: 6px;
-  padding: 4px 8px;
-  border: 1px solid var(--control-rule);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--fg);
-  font: inherit;
-}
-
-.mr-map-kind small {
-  color: var(--muted);
-  font-size: 12px;
+  margin: 0 0 12px;
 }
 
 .mr-map-col h3,
@@ -17104,38 +17168,6 @@ ${body}</details>
   color: var(--muted);
   font-size: 13.5px;
   line-height: 1.6;
-}
-
-/* ------------------------------------------------------------------ where things come from */
-
-/* Every entity and connection says where it comes from, in words; the edge is a second cue. Sources are
-   solid, the reader's own proposals dashed, and Galley's unverified suggestions dotted. */
-.mr-origin {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  padding: 1px 8px;
-  border: 1px solid color-mix(in srgb, var(--origin, var(--muted)) 55%, transparent);
-  border-radius: 999px;
-  color: var(--muted);
-  font: 500 11px / 1.45 var(--sans);
-  white-space: nowrap;
-}
-
-.mr-origin.is-documented {
-  --origin: var(--accent);
-}
-.mr-origin.is-declared {
-  --origin: var(--gutter-added);
-}
-.mr-origin.is-reader {
-  --origin: var(--gutter-modified);
-  border-style: dashed;
-}
-.mr-origin.is-suggested {
-  --origin: var(--muted);
-  border-style: dotted;
-  font-style: italic;
 }
 
 /* ------------------------------------------------------------------ map lenses */
@@ -17196,56 +17228,14 @@ ${body}</details>
   font-weight: 600;
 }
 
-.mr-lens-entity {
-  appearance: none;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  width: 100%;
-  min-height: 36px;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  color: var(--fg);
-  font: inherit;
-  font-size: 14.5px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.mr-lens-entity:hover,
-.mr-lens-entity[aria-current="true"] {
-  background: var(--selected-bg);
-}
-
 .mr-lens-relation {
   padding: 8px 0;
   border-bottom: 1px solid var(--rule);
   font-size: 13.5px;
 }
 
-.mr-lens-relation > p {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  margin: 0;
-}
-
-.mr-lens-relation .mr-lens-entity {
-  width: auto;
-}
-
 .mr-lens-label {
   color: var(--muted);
-}
-
-.mr-lens-remove {
-  height: 28px;
-  color: var(--muted);
-  font-size: 12.5px;
 }
 
 .mr-lens-detail {
@@ -17263,64 +17253,36 @@ ${body}</details>
   text-transform: uppercase;
 }
 
-.mr-lens-focus .mr-actions,
-.mr-lens-connect,
-.mr-lens-propose,
-.mr-lens-kind {
+.mr-lens-focus .mr-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 8px;
   margin: 12px 0 0;
-  font-size: 13.5px;
 }
 
-.mr-lens-propose {
-  max-width: 720px;
-  margin-top: 40px;
-  padding-top: 18px;
+.mr-lens-connect {
+  margin-top: 16px;
+  padding-top: 4px;
   border-top: 1px solid var(--rule);
 }
 
-.mr-lens-propose h3 {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 15px;
+/* With nothing to say, the editor's buttons still sit at its right. */
+.mr-compose-actions > .mr-btn:first-child {
+  margin-left: auto;
 }
 
-.mr-lens-propose small {
-  flex-basis: 100%;
-  color: var(--muted);
-}
-
-.mr-lens select,
-.mr-lens input:not([type="checkbox"]),
-.mr-notes select,
-.mr-notes input:not([type="checkbox"], [type="radio"]),
-.mr-notes textarea {
-  box-sizing: border-box;
-  max-width: 100%;
-  min-height: 36px;
-  padding: 6px 10px;
-  border: 1px solid var(--control-rule);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--fg);
-  font: 14px / 1.4 var(--sans);
-}
-
-.mr-lens input:not([type="checkbox"]) {
-  min-width: 0;
-  flex: 1 1 180px;
+/* Proposing is writing, so it is the comment editor's card. */
+.mr-lens-propose {
+  max-width: 560px;
+  margin-top: 40px;
 }
 
 /* After a refresh: what changed among the documents read at both commits. */
 .mr-map-since {
   margin: 0 0 24px;
-  padding: 12px 16px;
-  border-left: 3px solid var(--accent);
-  border-radius: 0 12px 12px 0;
-  background: color-mix(in srgb, var(--accent) 7%, var(--bg));
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--soft);
   font-size: 14px;
 }
 
@@ -17357,79 +17319,26 @@ ${body}</details>
   display: none;
 }
 
-.mr-notes-head > .mr-repo-quiet {
-  margin: 0;
+.mr-notes-head .mr-byline {
+  margin-bottom: 0;
 }
 
-.mr-notes-head .mr-actions,
-.mr-notes-confirm,
-.mr-notes-recover {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+.mr-notes-confirm {
   margin: 12px 0;
 }
 
-.mr-notes-confirm,
-.mr-notes-recover {
-  margin-left: 0;
-  padding: 10px 12px;
+.mr-notes-error {
+  margin: 12px 0 0;
 }
 
-.mr-notes-state {
-  margin-right: auto;
-  color: var(--muted);
-  font-size: 13.5px;
-}
-
-.mr-note-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+/* Writing a note is the comment editor: the card is the field. */
+.mr-note-composer {
+  max-width: 720px;
   margin: 24px 0 36px;
-  padding: 18px;
-  border-radius: 16px;
-  background: var(--card);
-  box-shadow: var(--card-shadow);
 }
 
-.mr-note-form > .mr-btn {
-  justify-self: start;
-}
-
-.mr-note-kinds {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  font-size: 14px;
-}
-
-.mr-note-kinds legend {
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.mr-note-kinds label {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  cursor: pointer;
-}
-
-.mr-note-group,
-.mr-note-anchor {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 4px;
-  color: var(--muted);
-  font-size: 13px;
+.mr-notes-kind .mr-note-composer {
+  margin: 0 0 12px;
 }
 
 .mr-notes-kind {
@@ -17453,55 +17362,14 @@ ${body}</details>
   gap: 12px;
 }
 
+/* Each note is a thread card of the reader's own. */
 .mr-note {
-  --note: var(--accent);
+  max-width: 720px;
   margin: 0 0 12px;
-  padding: 12px 14px;
-  border: 1px dashed color-mix(in srgb, var(--note) 55%, var(--rule));
-  border-left: 4px solid var(--note);
-  border-radius: 6px 14px 14px 6px;
-  background: var(--bg);
-  font-size: 14px;
 }
 
-.mr-note.is-question {
-  --note: var(--gutter-modified);
-}
-.mr-note.is-assumption {
-  --note: var(--muted);
-}
-.mr-note.is-experiment {
-  --note: var(--gutter-added);
-}
-.mr-note.is-alternative {
-  --note: var(--gutter-removed);
-}
-
-.mr-note.is-editing {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-}
-
-.mr-note > header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-}
-
-.mr-note-kind {
-  font-weight: 600;
-}
-
-.mr-note-choose {
-  display: inline-flex;
-  align-items: center;
-  margin-left: auto;
-  min-height: 32px;
-  color: var(--muted);
-  font-size: 13px;
-  cursor: pointer;
+.mr-notes-row .mr-note {
+  max-width: none;
 }
 
 .mr-note-text {
@@ -17518,6 +17386,7 @@ ${body}</details>
   font-size: 13px;
 }
 
+/* A section that changed or went away asks for a look: said in words, set in the text colour. */
 .mr-note-state.is-changed,
 .mr-note-state.is-missing {
   color: var(--fg);
@@ -17531,71 +17400,16 @@ ${body}</details>
   font-size: 13px;
 }
 
-.mr-note > footer,
-.mr-note.is-editing .mr-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.mr-note > footer select {
-  max-width: 100%;
+.mr-note-links .mr-reply-to {
+  margin-left: 4px;
 }
 
 /* ------------------------------------------------------------------ export */
 
-.mr-repo-export {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: color-mix(in srgb, var(--fg) 30%, transparent);
-  font-family: var(--sans);
-}
-
-.mr-repo-export[hidden] {
-  display: none;
-}
-
-.mr-export-panel {
-  box-sizing: border-box;
-  display: grid;
-  gap: 12px;
-  width: min(760px, 100%);
-  max-height: calc(100vh - 32px);
-  overflow: auto;
-  padding: 20px;
-  border-radius: 18px;
-  background: var(--bg);
-  box-shadow: var(--raised-shadow);
-}
-
-.mr-export-panel > header,
-.mr-export-panel .mr-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.mr-export-panel h2,
-.mr-export-panel h3,
-.mr-export-panel .mr-repo-quiet {
-  margin: 0;
-}
-
-.mr-export-panel .mr-actions {
-  justify-content: flex-start;
-}
-
+/* Export is a sheet like the settings: the preview is what leaves, word for word. */
 .mr-export-preview {
   max-height: 40vh;
-  margin: 0;
+  margin: 12px 0;
   overflow: auto;
   padding: 12px;
   border-radius: 10px;
@@ -17605,39 +17419,18 @@ ${body}</details>
   overflow-wrap: anywhere;
 }
 
-.mr-export-share {
-  display: grid;
+.mr-export-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--rule);
+  margin: 0 0 8px;
 }
 
-.mr-export-share .mr-btn {
-  justify-self: start;
-  color: var(--fg);
+.mr-repo-export .mr-set-row .mr-btn {
   text-decoration: none;
 }
 
 /* ------------------------------------------------------------------ a review's project context */
-
-.mr-review-flag {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  padding: 1px 8px;
-  border-radius: 999px;
-  color: var(--fg);
-  font: 500 11.5px / 1.45 var(--sans);
-}
-
-.mr-review-flag.is-changed {
-  border: 1px solid var(--gutter-modified);
-  background: color-mix(in srgb, var(--gutter-modified) 12%, var(--bg));
-}
-
-.mr-review-flag.is-worth-checking {
-  border: 1px dashed var(--muted);
-}
 
 .mr-review-status .mr-map-status {
   margin-bottom: 8px;
@@ -17665,6 +17458,11 @@ ${body}</details>
   margin: 0 0 4px;
   font: 13px / 1.45 var(--mono);
   overflow-wrap: anywhere;
+}
+
+/* The path is code; the facts beside it are words. */
+.mr-review-path .mr-repo-facts {
+  font-family: var(--sans);
 }
 
 .mr-review-file .mr-repo-quiet {
@@ -17757,24 +17555,164 @@ ${body}</details>
     display: none;
   }
 
-  .mr-note-choose {
-    margin-left: 0;
-  }
-
   .mr-repo-docs {
     width: calc(100vw - 12px);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .mr-repo-flash {
-    animation: none;
-  }
-}
 `;
 
+  // src/ui/settings-sheet.ts
+  var PALETTES = [
+    ["paper", "Paper", "Neutral"],
+    ["eink", "E-ink", "Paper grey"],
+    ["cream", "Cream", "Gentle cream"],
+    ["sepia", "Sepia", "Warm paper"],
+    ["night", "Night", "Evening amber"],
+    ["blush", "Blush", "Warm pastel"],
+    ["sage", "Sage", "Soft green"],
+    ["seafoam", "Seafoam", "Cool green"],
+    ["slate", "Slate", "Cool blue"],
+    ["nord", "Nord", "Arctic blue"],
+    ["dusk", "Dusk", "Soft violet"],
+    ["contrast", "Contrast", "Crisp ink"],
+    ["ocean", "Ocean", "Ink · sea glass"],
+    ["clay", "Clay", "Stone · terracotta"],
+    ["orchid", "Orchid", "Stone · lavender"],
+    ["graphite", "Graphite", "Charcoal · blue"],
+    ["hackerman", "Hackerman", "Terminal green"],
+    ["aurora", "Aurora", "Teal · violet glow"],
+    ["sunset", "Sunset", "Peach · rose glow"]
+  ], PALETTES_PER_PAGE = 6, PALETTE_PAGE_COUNT = Math.ceil(PALETTES.length / PALETTES_PER_PAGE), paletteButton = ([value, name, caption]) => `
+  <button data-value="${value}" aria-label="${name}">
+    <span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span class="mr-theme-lines"><i></i><i></i><i></i></span></span>
+    <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
+    <span class="mr-theme-caption">${caption}</span>
+  </button>`, PALETTE_PAGES = Array.from(
+    { length: PALETTE_PAGE_COUNT },
+    (_, page) => `<div class="mr-palette-page">${PALETTES.slice(page * PALETTES_PER_PAGE, (page + 1) * PALETTES_PER_PAGE).map(paletteButton).join("")}</div>`
+  ).join(""), PALETTE_DOTS = Array.from(
+    { length: PALETTE_PAGE_COUNT },
+    (_, page) => `<button class="mr-carousel-dot" data-act="palette-page" data-page="${page}" aria-label="Palettes, page ${page + 1}"></button>`
+  ).join(""), READING_SECTIONS = `
+      <section class="mr-settings-section" aria-label="Page appearance">
+        <div class="mr-set-row"><span>Appearance</span><div class="mr-seg mr-appearance" data-setting="appearance" role="group" aria-label="Appearance"><button data-value="auto">System</button><button data-value="light">Light</button><button data-value="dark">Dark</button></div></div>
+        <div class="mr-set-row mr-theme-row"><span>Palette<small>Previewed in your current appearance</small></span>
+          <div class="mr-palette-carousel">
+            <div class="mr-theme-options mr-palette-track" data-setting="theme" role="group" aria-label="Palette">${PALETTE_PAGES}</div>
+            <div class="mr-carousel-nav">
+              <button class="mr-btn mr-icon-btn" data-act="palette-prev" aria-label="Previous palettes">${icons.chevronLeft}</button>
+              <span class="mr-carousel-dots">${PALETTE_DOTS}</span>
+              <button class="mr-btn mr-icon-btn" data-act="palette-next" aria-label="More palettes">${icons.chevronRight}</button>
+            </div>
+          </div>
+        </div>
+        <div class="mr-set-row"><span id="mr-top-glow-label">Top glow<small>A soft wash of color to ease into a review</small></span><button class="mr-switch" data-act="top-glow" role="switch" aria-checked="true" aria-labelledby="mr-top-glow-label"></button></div>
+      </section>
+      <section class="mr-settings-section" aria-label="Typography">
+        <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="galley">Galley</option><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
+        <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite">20 px</output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
+        <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>Understand changes. Review in peace.</p><span>Read the context. See the edits. Ask a question.</span></div>
+      </section>`;
+  function keyGroups(shortcuts) {
+    return shortcuts.map(
+      ([title, keys]) => `
+  <section class="mr-settings-section mr-keys-group" aria-label="${title}"><h3 class="mr-keys-title">${title}</h3><dl class="mr-keys">${keys.map(([combo, description]) => `<dt>${combo.map((key) => `<kbd>${key}</kbd>`).join(" ")}</dt><dd>${description}</dd>`).join("")}</dl></section>`
+    ).join("");
+  }
+  function settingsSheet(intro, tabs) {
+    let buttons = tabs.map(
+      (tab, i) => `<button id="mr-${tab.id}-tab" role="tab" data-settings-tab="${tab.id}" aria-selected="${i === 0}" aria-controls="mr-${tab.id}-panel" tabindex="${i === 0 ? 0 : -1}">${tab.icon}${tab.label}</button>`
+    ).join(""), panels = tabs.map((tab, i) => `<div id="mr-${tab.id}-panel" role="tabpanel" aria-labelledby="mr-${tab.id}-tab"${i === 0 ? "" : " hidden"}>${tab.panel}</div>`).join("");
+    return `
+  <div class="mr-settings" hidden>
+    <div class="mr-settings-backdrop" data-act="close-settings"></div>
+    <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
+      <header class="mr-settings-heading"><div><h2 id="mr-settings-title">Reading settings</h2><p>${intro}</p></div><button class="mr-btn mr-icon-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
+      <div class="mr-settings-tabs" role="tablist" aria-label="Settings category">${buttons}</div>
+      <div class="mr-settings-body">${panels}</div>
+    </aside>
+  </div>`;
+  }
+  function selectTab(sheet, name, focus = !1) {
+    for (let tab of sheet.querySelectorAll("[data-settings-tab]")) {
+      let active3 = tab.dataset.settingsTab === name;
+      tab.setAttribute("aria-selected", String(active3)), tab.tabIndex = active3 ? 0 : -1, sheet.querySelector(`#${tab.getAttribute("aria-controls")}`).hidden = !active3, active3 && focus && tab.focus({ preventScroll: !0 });
+    }
+    sheet.querySelector(".mr-settings-body").scrollTop = 0;
+  }
+  function nextTab(tabs, current, key) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(key)) return null;
+    if (key === "Home") return tabs[0];
+    if (key === "End") return tabs[tabs.length - 1];
+    let at = tabs.indexOf(current);
+    return tabs[(at + (key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length];
+  }
+  var PaletteCarousel = class {
+    constructor(root) {
+      this.root = root;
+    }
+    root;
+    get track() {
+      return this.root.querySelector(".mr-palette-track");
+    }
+    /** The page in view. */
+    at() {
+      let track = this.track;
+      return track.clientWidth ? Math.round(track.scrollLeft / track.clientWidth) : 0;
+    }
+    turn(page, smooth = !0) {
+      let track = this.track, target = Math.max(0, Math.min(track.children.length - 1, page));
+      track.scrollTo({ left: target * track.clientWidth, behavior: smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto" }), this.update(target);
+    }
+    update(page = this.at()) {
+      let last = this.track.children.length - 1;
+      this.root.querySelector('[data-act="palette-prev"]').disabled = page <= 0, this.root.querySelector('[data-act="palette-next"]').disabled = page >= last;
+      for (let [i, dot] of this.root.querySelectorAll(".mr-carousel-dot").entries()) dot.setAttribute("aria-current", String(i === page));
+    }
+    /** The settings open on the page that holds the chosen palette. */
+    reveal(theme) {
+      let page = this.track.querySelector(`[data-value="${theme}"]`)?.closest(".mr-palette-page");
+      this.turn([...this.track.children].indexOf(page), !1);
+    }
+    /** A click on an arrow (`palette-prev`, `palette-next`) or a dot (`palette-page`). */
+    onClick(act, el) {
+      act === "palette-prev" ? this.turn(this.at() - 1) : act === "palette-next" ? this.turn(this.at() + 1) : this.turn(Number(el.dataset.page));
+    }
+  };
+  function applyReadingControls(root, s) {
+    root.querySelector("#mr-typeface").value = s.font, root.querySelector(".mr-text-size").textContent = `${TEXT_SIZES[s.size] ?? 20} px`, root.querySelector('[data-act="smaller"]').disabled = s.size <= 0, root.querySelector('[data-act="larger"]').disabled = s.size >= TEXT_SIZES.length - 1, root.querySelector('[data-act="top-glow"]').setAttribute("aria-checked", String(s.topGlow));
+    for (let group of root.querySelectorAll("[data-setting]")) {
+      let value = s[group.dataset.setting];
+      for (let b of group.querySelectorAll("[data-value]")) b.setAttribute("aria-pressed", String(b.dataset.value === value));
+    }
+  }
+
   // src/ui/repo-reader.ts
-  var WORDS_PER_MINUTE = 230, MAP_COLUMN = 8, OPEN_OUTLINE = 40, TOP = 72, CONFIG_CONCURRENCY = 4, MAX_ISSUE_URL = 8e3, TEMPLATE = `
+  var WORDS_PER_MINUTE = 230, MAP_COLUMN = 8, OPEN_OUTLINE = 40, TOP = 72, CONFIG_CONCURRENCY = 4, MAX_ISSUE_URL = 8e3, SHORTCUTS = [
+    [
+      "Move through the docs",
+      [
+        [["/"], "Find a document or heading"],
+        [["Alt", "←"], "Back to where you were"],
+        [["Alt", "→"], "Forward again"]
+      ]
+    ],
+    [
+      "Views",
+      [
+        [["M"], "Open the map, or go back to reading"],
+        [["N"], "Open your notes, or go back to reading"]
+      ]
+    ],
+    [
+      "Settings",
+      [
+        [[","], "Open settings"],
+        [["?"], "Show these shortcuts"],
+        [["Esc"], "Close what is open, then the reader"]
+      ]
+    ]
+  ], SETTINGS_TABS = ["reading", "keys"], TEMPLATE = `
 <div class="mr-root mr-repo" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley: repository docs">
   <div class="mr-progress"><div></div></div>
   <header class="mr-topbar">
@@ -17801,12 +17739,25 @@ ${body}</details>
     <div class="mr-repo-notes"></div>
     <nav class="mr-repo-outline" aria-label="Documents in this repository"></nav>
   </div>
-  <div class="mr-menu mr-repo-settings" role="dialog" aria-label="Reading settings" hidden>
-    <div class="mr-set-row"><span>Appearance</span><div class="mr-seg" data-setting="appearance" role="group" aria-label="Appearance"><button data-value="auto">System</button><button data-value="light">Light</button><button data-value="dark">Dark</button></div></div>
-    <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite"></output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
-    <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-    <p class="mr-settings-note">Palette, typeface and layout follow your review settings.</p>
-  </div>
+${settingsSheet("The same settings as the review reader, so documents read the same way in both.", [
+    {
+      id: "reading",
+      label: "Reading",
+      icon: icons.book,
+      panel: `${READING_SECTIONS}
+      <section class="mr-settings-section" aria-label="Images">
+        <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
+      </section>
+      <p class="mr-settings-note">Changes to your settings appear in both readers right away.</p>`
+    },
+    {
+      id: "keys",
+      label: "Keys",
+      icon: icons.keyboard,
+      panel: `${keyGroups(SHORTCUTS)}
+      <p class="mr-settings-note">Shortcuts work while the reader has focus and no text field is active. Press ? at any time to come back here.</p>`
+    }
+  ])}
   <nav class="mr-toc" aria-label="Contents"></nav>
   <main class="mr-main">
     <article class="mr-article mr-repo-read"><div class="mr-doc"></div></article>
@@ -17814,7 +17765,10 @@ ${body}</details>
     <div class="mr-repo-thinking" hidden></div>
     <div class="mr-repo-review" hidden></div>
   </main>
-  <div class="mr-repo-export" role="dialog" aria-modal="true" aria-label="Export notes" hidden></div>
+  <div class="mr-settings mr-repo-export" hidden>
+    <div class="mr-settings-backdrop" data-act="close-export"></div>
+    <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-export-title" tabindex="-1"></aside>
+  </div>
   <div class="mr-repo-zoom" role="dialog" aria-modal="true" aria-label="Enlarged diagram" hidden><button class="mr-btn mr-icon-btn" data-act="close-zoom" aria-label="Close diagram (Esc)" title="Close (Esc)">${icons.close}</button><img alt=""></div>
   <p class="mr-toast" role="status" aria-live="polite" hidden></p>
 </div>`, shortSha = (sha) => sha.slice(0, 7), edgeKey = (from, to) => `${from}\0${to}`, sectionKey = (anchor) => `${anchor.path}\0${anchor.heading ?? ""}`, newId = (prefix) => `${prefix}:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, plural = (n, one, many = `${one}s`) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`, folderOf = (path) => path.slice(0, Math.max(0, path.lastIndexOf("/"))), safeDecode3 = (value) => {
@@ -17825,20 +17779,22 @@ ${body}</details>
     }
   };
   function typed(root) {
-    let key = (form) => `${form.dataset.act}:${form.dataset.id ?? form.dataset.from ?? form.dataset.lens ?? ""}`, fields = (form) => [...form.querySelectorAll("input, textarea, select")], field = (el) => el.type === "radio" ? `${el.name}=${el.value}` : el.name, active3 = root.getRootNode().activeElement, before = new Map(
+    let key = (form) => `${form.dataset.act}:${form.dataset.id ?? form.dataset.from ?? form.dataset.lens ?? ""}`, fields = (form) => [...form.querySelectorAll('input, textarea, select, [role="switch"]')], isSwitch = (el) => el.getAttribute("role") === "switch", name = (el) => el.name || el.dataset.act, active3 = root.getRootNode().activeElement, before = new Map(
       [...root.querySelectorAll("form")].map((form) => [
         key(form),
-        new Map(fields(form).map((el) => [field(el), { value: el.value, checked: el.checked, focused: el === active3 }]))
+        new Map(fields(form).map((el) => [name(el), { value: isSwitch(el) ? el.getAttribute("aria-checked") : el.value, focused: el === active3 }]))
       ])
     );
     return () => {
       for (let form of root.querySelectorAll("form")) {
         let saved = before.get(key(form));
-        if (saved)
-          for (let el of fields(form)) {
-            let was = saved.get(field(el));
-            was && (el.type === "checkbox" || el.type === "radio" ? el.checked = was.checked : el.value = was.value, was.focused && el.focus());
-          }
+        if (!saved) continue;
+        for (let el of fields(form)) {
+          let was = saved.get(name(el));
+          was && (isSwitch(el) ? el.setAttribute("aria-checked", was.value) : el.value = was.value, was.focused && el.focus());
+        }
+        let group = form.querySelector(".mr-note-group");
+        group && (group.hidden = form.querySelector('[data-act="note-kind"]').value !== "alternative");
       }
     };
   }
@@ -17862,7 +17818,7 @@ ${body}</details>
         let close = this.q('[data-act="close"]');
         close.title = "Back to the review (Esc)", close.setAttribute("aria-label", "Back to the review (Esc)"), this.q('[data-view="review"]').hidden = !1;
       }
-      this.root.addEventListener("scroll", () => this.onScroll(), { passive: !0 }), this.q(".mr-repo-search").addEventListener("input", (e) => {
+      this.root.addEventListener("scroll", () => this.onScroll(), { passive: !0 }), this.q(".mr-palette-track").addEventListener("scroll", () => this.palettes.update(), { passive: !0 }), this.q(".mr-repo-search").addEventListener("input", (e) => {
         this.search = e.target.value, this.buildOutline();
       });
       for (let type of ["keydown", "keyup", "keypress"]) window.addEventListener(type, this.shield, !0);
@@ -17922,6 +17878,9 @@ ${body}</details>
     /** The map reads its first batch by itself once; after that, only when the reader asks. */
     indexedOnce = !1;
     toastTimer = 0;
+    palettes = new PaletteCarousel(this.shadow);
+    /** The control that opened the sheet that is open, to give focus back to: found again, as a view may be drawn anew. */
+    sheetOpener = "";
     closed = !1;
     dark = matchMedia("(prefers-color-scheme: dark)");
     prevOverflow;
@@ -18064,27 +18023,28 @@ ${body}</details>
     article(path, r) {
       let source2 = this.source, frag = document.createDocumentFragment(), intro = [];
       r.description && intro.push(h("p", "mr-subtitle", r.description));
-      let byline = h("div", "mr-byline"), facts = h("span", "mr-file-meta");
-      facts.append(h("span", "", `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE))} min read`));
+      let byline = h("div", "mr-byline"), facts2 = h("span", "mr-file-meta");
+      facts2.append(h("span", "", `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE))} min read`));
       let indexed = this.index?.docs.get(path);
       if (indexed) {
         let { kind, from } = classify(indexed, this.corrections);
-        kind !== "other" && facts.append(this.kindChip(kind, from)), indexed.status && facts.append(h("span", "mr-repo-status", indexed.status));
+        kind !== "other" && facts2.append(this.kindChip(kind, from)), indexed.status && facts2.append(h("span", "mr-repo-status", indexed.status));
       }
-      this.changed.has(path) && facts.append(h("span", "mr-review-flag is-changed", "Changed in this review"));
+      this.changed.has(path) && facts2.append(chip("modified", "Changed in this review"));
       let at = h("span", "mr-repo-at", `${path} · ${source2.ref ?? "default branch"} @ ${shortSha(source2.commit)}`);
-      at.title = `Read at commit ${source2.commit}`, facts.append(at), r.heldImages && facts.append(button2(`Load ${plural(r.heldImages, "external image")}`, "load-images", "mr-btn mr-chip is-images"));
+      at.title = `Read at commit ${source2.commit}`, facts2.append(at), r.heldImages && facts2.append(button2(`Load ${plural(r.heldImages, "external image")}`, "load-images", "mr-btn mr-chip is-images"));
       let actions = h("span", "mr-file-actions");
-      if (actions.append(button2("Add a note", "note-here", "mr-repo-note"), external(`Open on ${source2.platform}`, source2.links.blob(path), "mr-repo-open")), byline.append(facts, actions), intro.push(byline), r.lead) {
+      if (actions.append(button2("Add a note", "note-here", "mr-repo-note"), external(`Open on ${source2.platform}`, source2.links.blob(path), "mr-repo-open")), byline.append(facts2, actions), intro.push(byline), r.lead) {
         let before = [];
         for (let el = r.content.firstElementChild; el && el !== r.lead; el = el.nextElementSibling) before.push(el);
         r.lead.classList.add("mr-lead"), r.lead.after(...intro, ...before);
       } else frag.append(h("h1", "mr-title", r.title ?? fileTitle(path)), ...intro);
       return frag.append(r.content, this.backlinks(path)), frag;
     }
+    /** A document's type as a chip; one the reader set carries the accent, like everything else of theirs. */
     kindChip(kind, from) {
-      let chip2 = h("span", `mr-repo-kind is-${kind}${from === "reader" ? " is-reader" : ""}`, KIND_NAMES[kind]);
-      return chip2.title = `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}`, chip2;
+      let el = chip(from === "reader" ? "own" : null, KIND_NAMES[kind]);
+      return el.title = `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}`, el;
     }
     /** The documents that link here, from the documents read so far, each with the links as evidence. */
     backlinks(path) {
@@ -18148,7 +18108,7 @@ ${body}</details>
       this.root.scrollTo({ top: block2 ? this.root.scrollTop + block2.el.getBoundingClientRect().top - place2.offset : 0 });
     }
     reveal(el) {
-      this.root.scrollTo({ top: this.root.scrollTop + el.getBoundingClientRect().top - TOP }), el.classList.add("mr-repo-flash"), setTimeout(() => el.classList.remove("mr-repo-flash"), 1600);
+      this.root.scrollTo({ top: this.root.scrollTop + el.getBoundingClientRect().top - TOP }), el.classList.add("mr-flash"), setTimeout(() => el.classList.remove("mr-flash"), 1600);
     }
     /**
      * A link's evidence is a source line; show the paragraph that holds it. Every link sits in a block
@@ -18234,7 +18194,7 @@ ${body}</details>
         let { kind, from } = classify(doc, this.corrections);
         kind !== "other" && item.append(this.kindChip(kind, from));
       }
-      return this.changed.has(path) && item.append(h("span", "mr-review-flag is-changed", "Changed")), path === this.path && item.setAttribute("aria-current", "true"), item;
+      return this.changed.has(path) && item.append(chip("modified", "Changed")), path === this.path && item.setAttribute("aria-current", "true"), item;
     }
     // ---------------------------------------------------------------- map
     setView(view) {
@@ -18338,8 +18298,8 @@ ${body}</details>
       crumbs.append(h("span", "", `In ${folder ? `${folder}/` : "the top folder"}${siblings ? ` with ${plural(siblings, "other document")}` : ""}`));
       let center = h("div", "mr-map-center"), title = h("h2", "mr-map-title", this.titleOf(focus));
       if (title.tabIndex = -1, center.append(title, h("p", "mr-path-dir", focus)), doc) {
-        let { kind, from } = classify(doc, this.corrections), facts = h("p", "mr-map-facts");
-        facts.append(this.kindChip(kind, from)), doc.status && facts.append(h("span", "mr-repo-status", doc.status)), this.changed.has(focus) && facts.append(h("span", "mr-review-flag is-changed", "Changed in this review")), doc.unread && facts.append(h("span", "mr-repo-limit", doc.unread === "failed" ? "Could not be read" : "Too large to read")), center.append(facts, this.kindEditor(focus, kind, from));
+        let { kind, from } = classify(doc, this.corrections), facts2 = h("p", "mr-map-facts");
+        facts2.append(this.kindChip(kind, from)), doc.status && facts2.append(h("span", "mr-repo-status", doc.status)), this.changed.has(focus) && facts2.append(chip("modified", "Changed in this review")), doc.unread && facts2.append(h("span", "mr-repo-limit", doc.unread === "failed" ? "Could not be read" : "Too large to read")), center.append(facts2, this.kindEditor(focus, kind, from));
       } else center.append(h("p", "mr-repo-quiet", "Not read yet: its own links are not shown."));
       let read = button2("Read", "open", "mr-btn mr-primary");
       read.dataset.path = focus, center.append(read);
@@ -18368,21 +18328,26 @@ ${body}</details>
       }
       map2.replaceChildren(...parts);
     }
-    /** The reader can correct a kind for this session; Galley says where every kind came from. */
+    /** The reader can correct a type, as a settings row; Galley says where every type came from. */
     kindEditor(path, kind, from) {
-      let box = h("div", "mr-map-kind"), label2 = h("label", "", "Type "), select = h("select");
-      select.dataset.act = "kind", select.dataset.path = path;
-      for (let value of DOC_KINDS) {
-        let option2 = h("option", "", KIND_NAMES[value]);
-        option2.value = value, option2.selected = value === kind, select.append(option2);
-      }
-      label2.append(select), box.append(label2);
+      let box = h("div", "mr-map-kind"), select2 = h("select");
+      select2.dataset.act = "kind", select2.dataset.path = path;
+      for (let value of DOC_KINDS) select2.append(option(value, KIND_NAMES[value], value === kind));
+      box.append(
+        setRow(
+          "Type",
+          selectField(select2),
+          from === "reader" ? "Set by you. Kept with your notes when you save them." : `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}.`
+        )
+      );
       let folder = folderOf(path);
-      if (folder) {
-        let all2 = h("label", "mr-map-kind-all"), check = h("input");
-        check.type = "checkbox", check.dataset.act = "kind-folder", check.checked = this.corrections.folders.has(folder) && !this.corrections.docs.has(path), all2.append(check, ` Everything in ${folder}/`), box.append(all2);
-      }
-      return box.append(h("small", "", from === "reader" ? "Set by you. Kept with your notes when you save them." : `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}.`)), box;
+      return folder && box.append(
+        setRow(
+          `Everything in ${folder}/`,
+          switchButton("kind-folder", this.corrections.folders.has(folder) && !this.corrections.docs.has(path)),
+          "The same type for the whole folder"
+        )
+      ), box;
     }
     /** A type the reader sets is part of their notes: kept when they save, both types visible on the map. */
     setKind(path, kind, folderWide) {
@@ -18486,7 +18451,7 @@ ${body}</details>
     proposeEntity(form) {
       let data = new FormData(form), name = String(data.get("name")).trim();
       if (!name) return;
-      let reading = data.get("anchor") && this.path ? { path: this.path, label: this.titleOf(this.path).slice(0, 200) } : null, entity2 = { id: newId("reader"), name, kind: String(data.get("kind")), lens: form.dataset.lens, anchor: reading };
+      let reading = form.querySelector('[data-act="propose-about"]')?.getAttribute("aria-checked") === "true" ? { path: this.path, label: this.titleOf(this.path).slice(0, 200) } : null, entity2 = { id: newId("reader"), name, kind: String(data.get("kind")), lens: form.dataset.lens, anchor: reading };
       this.notes.change((thinking) => thinking.entities.push(entity2)), this.entityFocus = entity2.id, form.reset(), this.drawMap(), this.toast(`${name} added as your proposal. Save your notes to keep it.`);
     }
     proposeRelation(form) {
@@ -18528,7 +18493,6 @@ ${body}</details>
       pane.replaceChildren(
         notesView({
           notes: notes2.thinking.notes,
-          chosen: this.chosen,
           state: notes2.state,
           dirty: notes2.dirty,
           error: notes2.error,
@@ -18635,24 +18599,25 @@ ${body}</details>
       return this.exportFormat === "markdown" ? exportMarkdown(thinking, this.chosen, ctx) : exportMermaid(thinking, this.chosen, ctx);
     }
     drawExport() {
-      let source2 = this.source, notes2 = this.notes.thinking.notes, chosen = notes2.filter((note) => this.chosen.has(note.id)).length, text4 = chosen ? this.exportText() : "", issue = chosen ? source2.newIssue(`Notes on ${source2.name}`, text4) : "";
-      this.q(".mr-repo-export").replaceChildren(
-        exportDialog({
+      let source2 = this.source, notes2 = this.notes.thinking.notes, text4 = notes2.some((note) => this.chosen.has(note.id)) ? this.exportText() : "", issue = text4 ? source2.newIssue(`Notes on ${source2.name}`, text4) : "";
+      this.q(".mr-repo-export .mr-settings-panel").replaceChildren(
+        ...exportSheet({
           format: this.exportFormat,
           text: text4,
-          chosen,
-          total: notes2.length,
+          notes: notes2.map((note) => ({
+            id: note.id,
+            label: note.text.split(`
+`)[0],
+            about: note.anchor ? `${NOTE_NAMES[note.kind]} about ${note.anchor.label}` : NOTE_NAMES[note.kind],
+            chosen: this.chosen.has(note.id)
+          })),
           issue: issue.length <= MAX_ISSUE_URL ? issue : null,
           platform: source2.platform
         })
       );
     }
     openExport() {
-      this.q(".mr-repo-export").hidden = !1, this.drawExport(), this.q('[data-act="close-export"]').focus();
-    }
-    closeExport() {
-      let panel = this.q(".mr-repo-export");
-      return panel.hidden ? !1 : (panel.hidden = !0, this.shadow.querySelector('[data-act="export"]')?.focus(), !0);
+      this.drawExport(), this.openSheet(this.q(".mr-repo-export"), '[data-act="export"]');
     }
     downloadExport() {
       let markdown = this.exportFormat === "markdown", url = URL.createObjectURL(new Blob([this.exportText()], { type: markdown ? "text/markdown" : "text/plain" })), a = h("a");
@@ -18719,12 +18684,32 @@ ${body}</details>
         toast.hidden = !0;
       }, 4e3);
     }
+    get settingsSheet() {
+      return this.q(".mr-settings:not(.mr-repo-export)");
+    }
+    openSheetEl() {
+      return this.shadow.querySelector(".mr-settings:not([hidden])");
+    }
+    openSettings(tab) {
+      selectTab(this.settingsSheet, tab, !1), this.openSheet(this.settingsSheet, '[data-act="settings"]'), this.palettes.reveal(this.settings.theme);
+    }
+    /** Settings and export open as sheets: the reader behind goes inert, and focus comes back to what opened them. */
+    openSheet(sheet, opener) {
+      this.closeMenus(), sheet.hidden = !1, this.sheetOpener = opener, this.q(opener).setAttribute("aria-expanded", "true");
+      for (let el of this.root.querySelectorAll(".mr-topbar, .mr-main, .mr-toc")) el.inert = !0;
+      sheet.querySelector(".mr-settings-heading .mr-icon-btn").focus();
+    }
+    closeSheet() {
+      let sheet = this.openSheetEl();
+      if (!sheet) return !1;
+      sheet.hidden = !0;
+      for (let el of this.root.querySelectorAll(".mr-topbar, .mr-main, .mr-toc")) el.inert = !1;
+      let opener = this.q(this.sheetOpener);
+      return opener.setAttribute("aria-expanded", "false"), opener.focus({ preventScroll: !0 }), !0;
+    }
     closeMenus() {
       let closed = !1;
-      for (let [menu, control] of [
-        [".mr-repo-docs", '[data-act="docs"]'],
-        [".mr-repo-settings", '[data-act="settings"]']
-      ])
+      for (let [menu, control] of [[".mr-repo-docs", '[data-act="docs"]']])
         this.q(menu).hidden || (closed = !0), this.q(menu).hidden = !0, this.q(control).setAttribute("aria-expanded", "false");
       return closed;
     }
@@ -18758,6 +18743,11 @@ ${body}</details>
         this.update({ [key]: value.dataset.value });
         return;
       }
+      let tab = target.closest("[data-settings-tab]");
+      if (tab) {
+        selectTab(this.settingsSheet, tab.dataset.settingsTab);
+        return;
+      }
       if (!el) {
         target.closest('.mr-menu, [data-act="docs"], [data-act="settings"]') || this.closeMenus();
         return;
@@ -18776,11 +18766,21 @@ ${body}</details>
         case "docs":
           this.toggleDocs();
           return;
-        case "settings": {
-          let open2 = this.q(".mr-repo-settings").hidden;
-          this.closeMenus(), this.q(".mr-repo-settings").hidden = !open2, el.setAttribute("aria-expanded", String(open2));
+        case "settings":
+          this.openSettings("reading");
           return;
-        }
+        case "close-settings":
+        case "close-export":
+          this.closeSheet();
+          return;
+        case "palette-prev":
+        case "palette-next":
+        case "palette-page":
+          this.palettes.onClick(el.dataset.act, el);
+          return;
+        case "top-glow":
+          this.update({ topGlow: !this.settings.topGlow });
+          return;
         case "refresh":
           return void this.refresh();
         case "open":
@@ -18837,6 +18837,14 @@ ${body}</details>
           return;
         case "read-configs":
           return void this.readConfigs();
+        case "kind-folder": {
+          let select2 = el.closest(".mr-map-kind").querySelector('[data-act="kind"]');
+          this.setKind(select2.dataset.path, select2.value, el.getAttribute("aria-checked") !== "true"), this.q('[data-act="kind-folder"]').focus();
+          return;
+        }
+        case "propose-about":
+          el.setAttribute("aria-checked", String(el.getAttribute("aria-checked") !== "true"));
+          return;
         case "remove-entity":
           notes2.change((thinking) => {
             thinking.entities = thinking.entities.filter((entity2) => entity2.id !== id), thinking.relations = thinking.relations.filter((relation) => relation.from !== id && relation.to !== id);
@@ -18910,8 +18918,8 @@ ${body}</details>
         case "export":
           this.openExport();
           return;
-        case "close-export":
-          this.closeExport();
+        case "choose-note":
+          this.chosen.has(id) ? this.chosen.delete(id) : this.chosen.add(id), this.drawExport(), this.q(`[data-act="choose-note"][data-id="${CSS.escape(id)}"]`).focus();
           return;
         case "export-format":
           this.exportFormat = el.dataset.format, this.drawExport(), this.q(`[data-act="export-format"][data-format="${this.exportFormat}"]`).focus();
@@ -18936,13 +18944,19 @@ ${body}</details>
     }
     onChange(e) {
       let el = e.target, id = el.dataset.id;
+      if (el.id === "mr-typeface") {
+        this.update({ font: el.value });
+        return;
+      }
       switch (el.dataset.act) {
-        case "kind":
-        case "kind-folder": {
-          let box = el.closest(".mr-map-kind"), select = box.querySelector('[data-act="kind"]'), all2 = box.querySelector('[data-act="kind-folder"]');
-          this.setKind(select.dataset.path, select.value, !!all2?.checked);
+        case "kind": {
+          let folderWide = el.closest(".mr-map-kind").querySelector('[data-act="kind-folder"]')?.getAttribute("aria-checked") === "true";
+          this.setKind(el.dataset.path, el.value, folderWide), this.q('[data-act="kind"]').focus();
           return;
         }
+        case "note-kind":
+          el.closest("form").querySelector(".mr-note-group").hidden = el.value !== "alternative";
+          return;
         case "entity-kind": {
           let kind = el.value;
           this.notes.change((thinking) => {
@@ -18954,9 +18968,6 @@ ${body}</details>
           }), this.drawMap(), this.q('[data-act="entity-kind"]').focus();
           return;
         }
-        case "choose-note":
-          el.checked ? this.chosen.add(id) : this.chosen.delete(id);
-          return;
         case "connect-note": {
           let to = el.value;
           this.connecting = null, this.changeNote(id, (note) => {
@@ -18990,11 +19001,25 @@ ${body}</details>
     };
     onKey(e) {
       if (e.key === "Escape") {
-        if (e.preventDefault(), this.closeExport() || this.closeZoom() || this.closeMenus()) {
+        if (e.preventDefault(), this.closeSheet()) return;
+        if (this.closeZoom() || this.closeMenus()) {
           this.root.focus({ preventScroll: !0 });
           return;
         }
         this.close();
+        return;
+      }
+      let sheet = this.openSheetEl();
+      if (sheet && e.key === "Tab") {
+        let controls = [...sheet.querySelectorAll('button, a[href], input, textarea, select, [tabindex="0"]')].filter(
+          (el) => el.getClientRects().length && !el.matches(":disabled")
+        ), at = controls.indexOf(this.shadow.activeElement);
+        controls[e.shiftKey ? at <= 0 ? controls.length - 1 : at - 1 : (at + 1) % controls.length].focus(), e.preventDefault();
+        return;
+      }
+      let target = e.composedPath()[0], tab = target instanceof HTMLElement && target.matches("[data-settings-tab]") ? nextTab(SETTINGS_TABS, target.dataset.settingsTab, e.key) : null;
+      if (tab) {
+        e.preventDefault(), selectTab(this.settingsSheet, tab, !0);
         return;
       }
       if (!this.shadow.activeElement?.matches("input, select, textarea")) {
@@ -19002,7 +19027,7 @@ ${body}</details>
           e.preventDefault(), this.go(e.key === "ArrowLeft" ? -1 : 1);
           return;
         }
-        e.altKey || e.ctrlKey || e.metaKey || (e.key === "/" ? (e.preventDefault(), this.toggleDocs(!0)) : e.key === "m" || e.key === "M" ? (e.preventDefault(), this.view === "map" ? this.q('[data-view="read"]').click() : this.showMap()) : (e.key === "n" || e.key === "N") && (e.preventDefault(), this.view === "notes" ? this.q('[data-view="read"]').click() : this.showNotes()));
+        e.altKey || e.ctrlKey || e.metaKey || sheet || (e.key === "/" ? (e.preventDefault(), this.toggleDocs(!0)) : e.key === "," || e.key === "?" ? (e.preventDefault(), this.openSettings(e.key === "?" ? "keys" : "reading")) : e.key === "m" || e.key === "M" ? (e.preventDefault(), this.view === "map" ? this.q('[data-view="read"]').click() : this.showMap()) : (e.key === "n" || e.key === "N") && (e.preventDefault(), this.view === "notes" ? this.q('[data-view="read"]').click() : this.showNotes()));
       }
     }
     // ---------------------------------------------------------------- settings
@@ -19015,12 +19040,7 @@ ${body}</details>
       let s = this.settings, r = this.root;
       r.dataset.font = s.font, r.dataset.theme = s.theme, r.dataset.density = s.density, r.classList.toggle("no-top-glow", !s.topGlow), r.classList.toggle("is-dark", s.appearance === "dark" || s.appearance === "auto" && this.dark.matches);
       let text4 = TEXT_SIZES[s.size] ?? TEXT_SIZES[DEFAULT_SETTINGS.size];
-      r.style.setProperty("--text-scale", String(Math.round(text4 / TEXT_SIZES[DEFAULT_SETTINGS.size] * 1e3) / 1e3)), r.style.setProperty("--body-size", `${text4}px`), this.q(".mr-text-size").textContent = `${text4} px`, this.q('[data-act="smaller"]').disabled = s.size <= 0, this.q('[data-act="larger"]').disabled = s.size >= TEXT_SIZES.length - 1;
-      for (let group of this.shadow.querySelectorAll("[data-setting]")) {
-        let value = s[group.dataset.setting];
-        for (let b of group.querySelectorAll("[data-value]")) b.setAttribute("aria-pressed", String(b.dataset.value === value));
-      }
-      this.drawDiagrams();
+      r.style.setProperty("--text-scale", String(Math.round(text4 / TEXT_SIZES[DEFAULT_SETTINGS.size] * 1e3) / 1e3)), r.style.setProperty("--body-size", `${text4}px`), applyReadingControls(this.shadow, s), this.drawDiagrams();
     }
     onSchemeChange = () => this.applySettings();
     drawDiagrams() {
@@ -19046,38 +19066,7 @@ ${body}</details>
   }
 
   // src/ui/reader.ts
-  var STATUS_LABEL = { added: "New", removed: "Deleted", modified: "Edited", renamed: "Renamed" }, WORDS_PER_MINUTE2 = 230, FOCUS_LINE = 0.3, PALETTES = [
-    ["paper", "Paper", "Neutral"],
-    ["eink", "E-ink", "Paper grey"],
-    ["cream", "Cream", "Gentle cream"],
-    ["sepia", "Sepia", "Warm paper"],
-    ["night", "Night", "Evening amber"],
-    ["blush", "Blush", "Warm pastel"],
-    ["sage", "Sage", "Soft green"],
-    ["seafoam", "Seafoam", "Cool green"],
-    ["slate", "Slate", "Cool blue"],
-    ["nord", "Nord", "Arctic blue"],
-    ["dusk", "Dusk", "Soft violet"],
-    ["contrast", "Contrast", "Crisp ink"],
-    ["ocean", "Ocean", "Ink · sea glass"],
-    ["clay", "Clay", "Stone · terracotta"],
-    ["orchid", "Orchid", "Stone · lavender"],
-    ["graphite", "Graphite", "Charcoal · blue"],
-    ["hackerman", "Hackerman", "Terminal green"],
-    ["aurora", "Aurora", "Teal · violet glow"],
-    ["sunset", "Sunset", "Peach · rose glow"]
-  ], PALETTES_PER_PAGE = 6, paletteButton = ([value, name, caption]) => `
-  <button data-value="${value}" aria-label="${name}">
-    <span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span class="mr-theme-lines"><i></i><i></i><i></i></span></span>
-    <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
-    <span class="mr-theme-caption">${caption}</span>
-  </button>`, PALETTE_PAGES = Array.from(
-    { length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) },
-    (_, page) => `<div class="mr-palette-page">${PALETTES.slice(page * PALETTES_PER_PAGE, (page + 1) * PALETTES_PER_PAGE).map(paletteButton).join("")}</div>`
-  ).join(""), PALETTE_DOTS = Array.from(
-    { length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) },
-    (_, page) => `<button class="mr-carousel-dot" data-act="palette-page" data-page="${page}" aria-label="Palettes, page ${page + 1}"></button>`
-  ).join(""), LAYOUT_CHOICES = [
+  var STATUS_LABEL = { added: "New", removed: "Deleted", modified: "Edited", renamed: "Renamed" }, WORDS_PER_MINUTE2 = 230, FOCUS_LINE = 0.3, LAYOUT_CHOICES = [
     ["balanced", "Balanced", "Contents, text and comments side by side"],
     ["files", "Files", "Every file in the margin, for large reviews"],
     ["review", "Review", "More space for review comments"],
@@ -19091,7 +19080,7 @@ ${body}</details>
     <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
     <span class="mr-theme-caption">${caption}</span>
   </button>`
-  ).join(""), SETTINGS_TABS = ["reading", "layout", "review", "keys"], SHORTCUTS = [
+  ).join(""), SETTINGS_TABS2 = ["reading", "layout", "review", "keys"], SHORTCUTS2 = [
     [
       "Move through the review",
       [
@@ -19130,10 +19119,28 @@ ${body}</details>
         [["Esc"], "Close settings, then the reader"]
       ]
     ]
-  ], KEY_GROUPS = SHORTCUTS.map(
-    ([title, keys]) => `
-  <section class="mr-settings-section mr-keys-group" aria-label="${title}"><h3 class="mr-keys-title">${title}</h3><dl class="mr-keys">${keys.map(([combo, description]) => `<dt>${combo.map((key) => `<kbd>${key}</kbd>`).join(" ")}</dt><dd>${description}</dd>`).join("")}</dl></section>`
-  ).join(""), TEMPLATE2 = `
+  ], KEY_GROUPS = keyGroups(SHORTCUTS2), LAYOUT_PANEL = `
+      <section class="mr-settings-section" aria-label="Layout">
+        <div class="mr-set-row mr-theme-row"><span>Layout<small>Arrange text and comments on wide screens. Narrow screens use one column.</small></span>
+          <div class="mr-theme-options mr-layout-options" data-setting="layout" role="group" aria-label="Layout">${LAYOUT_OPTIONS}</div>
+        </div>
+        <div class="mr-set-row"><span>Density<small>Compact fits more on the screen</small></span><div class="mr-seg" data-setting="density" role="group" aria-label="Density"><button data-value="comfortable">Comfortable</button><button data-value="compact">Compact</button></div></div>
+      </section>
+      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>`, REVIEW_PANEL = `
+      <section class="mr-settings-section" aria-label="Review">
+        <div class="mr-set-row"><span>Change marks<small>Highlight inserted and removed text</small></span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Marked</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
+        <div class="mr-set-row"><span>Context<small>Show changed sections or read the full files</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
+        <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Show the request’s title and description before the files</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
+        <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
+        <div class="mr-set-row"><span id="mr-signs-label">+ and − signs<small>Mark added and removed lines of code with + and −</small></span><button class="mr-switch" data-act="signs" role="switch" aria-checked="true" aria-labelledby="mr-signs-label"></button></div>
+        <div class="mr-set-row"><span id="mr-fold-label">Fold files you can skip<small>Lockfiles, generated code and whitespace-only edits start as one line</small></span><button class="mr-switch" data-act="fold" role="switch" aria-checked="true" aria-labelledby="mr-fold-label"></button></div>
+        <div class="mr-set-row"><span>File order<small>Suggested reads tests after their code, and skippable files last</small></span><div class="mr-seg" data-setting="order" role="group" aria-label="File order"><button data-value="suggested">Suggested</button><button data-value="listed">As listed</button></div></div>
+        <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
+        <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
+        <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
+      </section>
+      <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>`, KEYS_PANEL = `${KEY_GROUPS}
+      <p class="mr-settings-note">Shortcuts work while the reader has focus and no text field is active. Press ? at any time to come back here.</p>`, TEMPLATE2 = `
 <div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley reader">
   <div class="mr-progress"><div></div></div>
   <header class="mr-topbar">
@@ -19156,69 +19163,18 @@ ${body}</details>
   <p class="mr-viewed-feedback" role="status" hidden></p>
   <div class="mr-menu mr-files" role="menu" aria-label="Changed files" hidden></div>
   <div class="mr-menu mr-project" role="menu" aria-label="Project docs" hidden></div>
-  <div class="mr-settings" hidden>
-    <div class="mr-settings-backdrop" data-act="close-settings"></div>
-    <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
-      <header class="mr-settings-heading"><div><h2 id="mr-settings-title">Reading settings</h2><p>Choose a view that helps you follow the changes.</p></div><button class="mr-btn mr-icon-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
-      <div class="mr-settings-tabs" role="tablist" aria-label="Settings category">
-        <button id="mr-reading-tab" role="tab" data-settings-tab="reading" aria-selected="true" aria-controls="mr-reading-panel" tabindex="0">${icons.book}Reading</button>
-        <button id="mr-layout-tab" role="tab" data-settings-tab="layout" aria-selected="false" aria-controls="mr-layout-panel" tabindex="-1">${icons.layout}Layout</button>
-        <button id="mr-review-tab" role="tab" data-settings-tab="review" aria-selected="false" aria-controls="mr-review-panel" tabindex="-1">${icons.check}Review</button>
-        <button id="mr-keys-tab" role="tab" data-settings-tab="keys" aria-selected="false" aria-controls="mr-keys-panel" tabindex="-1">${icons.keyboard}Keys</button>
-      </div>
-      <div class="mr-settings-body">
-      <div id="mr-reading-panel" role="tabpanel" aria-labelledby="mr-reading-tab">
-      <section class="mr-settings-section" aria-label="Page appearance">
-        <div class="mr-set-row"><span>Appearance</span><div class="mr-seg mr-appearance" data-setting="appearance" role="group" aria-label="Appearance"><button data-value="auto">System</button><button data-value="light">Light</button><button data-value="dark">Dark</button></div></div>
-        <div class="mr-set-row mr-theme-row"><span>Palette<small>Previewed in your current appearance</small></span>
-          <div class="mr-palette-carousel">
-            <div class="mr-theme-options mr-palette-track" data-setting="theme" role="group" aria-label="Palette">${PALETTE_PAGES}</div>
-            <div class="mr-carousel-nav">
-              <button class="mr-btn mr-icon-btn" data-act="palette-prev" aria-label="Previous palettes">${icons.chevronLeft}</button>
-              <span class="mr-carousel-dots">${PALETTE_DOTS}</span>
-              <button class="mr-btn mr-icon-btn" data-act="palette-next" aria-label="More palettes">${icons.chevronRight}</button>
-            </div>
-          </div>
-        </div>
-        <div class="mr-set-row"><span id="mr-top-glow-label">Top glow<small>A soft wash of color to ease into a review</small></span><button class="mr-switch" data-act="top-glow" role="switch" aria-checked="true" aria-labelledby="mr-top-glow-label"></button></div>
-      </section>
-      <section class="mr-settings-section" aria-label="Typography">
-        <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="galley">Galley</option><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
-        <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite">20 px</output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
-        <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>Understand changes. Review in peace.</p><span>Read the context. See the edits. Ask a question.</span></div>
-      </section>
-      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>
-      </div>
-      <div id="mr-layout-panel" role="tabpanel" aria-labelledby="mr-layout-tab" hidden>
-      <section class="mr-settings-section" aria-label="Layout">
-        <div class="mr-set-row mr-theme-row"><span>Layout<small>Arrange text and comments on wide screens. Narrow screens use one column.</small></span>
-          <div class="mr-theme-options mr-layout-options" data-setting="layout" role="group" aria-label="Layout">${LAYOUT_OPTIONS}</div>
-        </div>
-        <div class="mr-set-row"><span>Density<small>Compact fits more on the screen</small></span><div class="mr-seg" data-setting="density" role="group" aria-label="Density"><button data-value="comfortable">Comfortable</button><button data-value="compact">Compact</button></div></div>
-      </section>
-      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>
-      </div>
-      <div id="mr-review-panel" role="tabpanel" aria-labelledby="mr-review-tab" hidden>
-      <section class="mr-settings-section" aria-label="Review">
-        <div class="mr-set-row"><span>Change marks<small>Highlight inserted and removed text</small></span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Marked</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
-        <div class="mr-set-row"><span>Context<small>Show changed sections or read the full files</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
-        <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Show the request’s title and description before the files</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
-        <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
-        <div class="mr-set-row"><span id="mr-signs-label">+ and − signs<small>Mark added and removed lines of code with + and −</small></span><button class="mr-switch" data-act="signs" role="switch" aria-checked="true" aria-labelledby="mr-signs-label"></button></div>
-        <div class="mr-set-row"><span id="mr-fold-label">Fold files you can skip<small>Lockfiles, generated code and whitespace-only edits start as one line</small></span><button class="mr-switch" data-act="fold" role="switch" aria-checked="true" aria-labelledby="mr-fold-label"></button></div>
-        <div class="mr-set-row"><span>File order<small>Suggested reads tests after their code, and skippable files last</small></span><div class="mr-seg" data-setting="order" role="group" aria-label="File order"><button data-value="suggested">Suggested</button><button data-value="listed">As listed</button></div></div>
-        <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
-        <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
-        <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-      </section>
-      <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>
-      </div>
-      <div id="mr-keys-panel" role="tabpanel" aria-labelledby="mr-keys-tab" hidden>${KEY_GROUPS}
-      <p class="mr-settings-note">Shortcuts work while the reader has focus and no text field is active. Press ? at any time to come back here.</p>
-      </div>
-      </div>
-    </aside>
-  </div>
+${settingsSheet("Choose a view that helps you follow the changes.", [
+    {
+      id: "reading",
+      label: "Reading",
+      icon: icons.book,
+      panel: `${READING_SECTIONS}
+      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>`
+    },
+    { id: "layout", label: "Layout", icon: icons.layout, panel: LAYOUT_PANEL },
+    { id: "review", label: "Review", icon: icons.check, panel: REVIEW_PANEL },
+    { id: "keys", label: "Keys", icon: icons.keyboard, panel: KEYS_PANEL }
+  ])}
   <nav class="mr-toc" aria-label="Contents"></nav>
   <main class="mr-main">
     <article class="mr-article">
@@ -19246,19 +19202,11 @@ ${body}</details>
     <button class="mr-btn" data-act="next" title="Next change (J)" aria-label="Next change">${icons.down}</button>
   </div>
 </div>`;
-  function h2(tag, className = "", text4) {
-    let el = document.createElement(tag);
-    return className && (el.className = className), text4 !== void 0 && (el.textContent = text4), el;
-  }
   function baseName(path) {
     return path.slice(path.lastIndexOf("/") + 1);
   }
-  function chip(kind, text4) {
-    let el = h2("span", `mr-chip is-${kind}`);
-    return el.append(h2("span", "mr-dot"), text4), el;
-  }
   function actionButton(label2, act, className) {
-    let b = h2("button", `mr-btn ${className}`, label2);
+    let b = h("button", `mr-btn ${className}`, label2);
     return b.dataset.act = act, b;
   }
   function prettyName(path) {
@@ -19349,7 +19297,7 @@ ${body}</details>
         reorder: (docs2) => this.reorderChapters(docs2),
         state: (doc) => this.chapterState(doc),
         diffUrl: () => this.source.diffUrl
-      }), this.commentBtn.type = "button", this.commentBtn.dataset.act = "comment-block", this.commentBtn.innerHTML = icons.comment, this.commentBtn.append(h2("span", "mr-comment-btn-label", "Comment")), this.commentBtn.hidden = !0, this.rail.setAttribute("aria-label", "Review comments"), this.el.article.prepend(this.rail, this.commentBtn), q(".mr-tb-right").prepend(this.el.pill), this.root.addEventListener("mouseup", (e) => this.captureSelection(e)), this.el.doc.addEventListener("pointerover", (e) => this.onHover(e.target, e)), this.el.doc.addEventListener("focusin", (e) => this.onHover(e.target)), this.root.addEventListener("pointermove", (e) => this.trackPointer(e), { passive: !0 }), this.root.addEventListener("pointerleave", () => this.clearHover()), this.root.addEventListener("pointerover", (e) => this.linkCard(e.target)), this.root.addEventListener("focusin", (e) => this.onFocusIn(e.target)), this.el.doc.addEventListener("pointerup", (e) => {
+      }), this.commentBtn.type = "button", this.commentBtn.dataset.act = "comment-block", this.commentBtn.innerHTML = icons.comment, this.commentBtn.append(h("span", "mr-comment-btn-label", "Comment")), this.commentBtn.hidden = !0, this.rail.setAttribute("aria-label", "Review comments"), this.el.article.prepend(this.rail, this.commentBtn), q(".mr-tb-right").prepend(this.el.pill), this.root.addEventListener("mouseup", (e) => this.captureSelection(e)), this.el.doc.addEventListener("pointerover", (e) => this.onHover(e.target, e)), this.el.doc.addEventListener("focusin", (e) => this.onHover(e.target)), this.root.addEventListener("pointermove", (e) => this.trackPointer(e), { passive: !0 }), this.root.addEventListener("pointerleave", () => this.clearHover()), this.root.addEventListener("pointerover", (e) => this.linkCard(e.target)), this.root.addEventListener("focusin", (e) => this.onFocusIn(e.target)), this.el.doc.addEventListener("pointerup", (e) => {
         if (e.pointerType === "touch") {
           let node2 = e.target;
           setTimeout(() => this.onTap(e, node2), 0);
@@ -19367,7 +19315,7 @@ ${body}</details>
       ), stage.querySelector("img").addEventListener("dblclick", (e) => {
         let box = stage.getBoundingClientRect();
         this.zoomDiagram(2, e.clientX - box.left, e.clientY - box.top);
-      }), this.paletteTrack().addEventListener("scroll", () => this.updatePaletteNav(), { passive: !0 }), this.shadow.querySelector("#mr-typeface").addEventListener("change", (e) => {
+      }), this.shadow.querySelector(".mr-palette-track").addEventListener("scroll", () => this.palettes.update(), { passive: !0 }), this.shadow.querySelector("#mr-typeface").addEventListener("change", (e) => {
         this.update({ font: e.target.value });
       }), this.root.addEventListener("galley:context", () => {
         this.rendered && this.buildToc(this.rendered), this.schedule(!0);
@@ -19393,6 +19341,7 @@ ${body}</details>
     shadow = this.host.attachShadow({ mode: "open" });
     root;
     chapters;
+    palettes = new PaletteCarousel(this.shadow);
     chapterOrder = null;
     el;
     settings = { ...DEFAULT_SETTINGS };
@@ -19423,7 +19372,7 @@ ${body}</details>
     aimTimer = 0;
     /** Text marked because the pointer is on its card or on the comment control. */
     linked = null;
-    commentBtn = h2("button", "mr-comment-btn");
+    commentBtn = h("button", "mr-comment-btn");
     chipTarget = null;
     threads = [];
     ownThreads = /* @__PURE__ */ new WeakSet();
@@ -19440,7 +19389,7 @@ ${body}</details>
     /** The card the comments column is arranged around: the one being written in, or the last one used. */
     active = null;
     threadEls = [];
-    rail = h2("div", "mr-threads");
+    rail = h("div", "mr-threads");
     toastTimer = 0;
     editorCount = 0;
     frame = 0;
@@ -19461,7 +19410,7 @@ ${body}</details>
         return;
       }
       this.index = Math.min(Math.max(start2, 0), all2.length - 1), this.views = all2.map((doc, i) => {
-        let section = h2(
+        let section = h(
           "section",
           `mr-document${doc.status === "removed" || doc.status === "added" ? ` doc-${doc.status}` : ""}${doc.kind === "code" ? " is-code" : ""}`
         );
@@ -19484,7 +19433,7 @@ ${body}</details>
       if (this.closed) return;
       let e = err instanceof ReaderError ? err : new ReaderError("Galley could not load this review.", err instanceof Error ? err.message : String(err)), extra = [];
       if (e.needsToken) {
-        let p = h2("p"), a = h2("a", "", "Create a fine-grained token");
+        let p = h("p"), a = h("a", "", "Create a fine-grained token");
         a.href = "https://github.com/settings/personal-access-tokens/new", a.target = "_blank", a.rel = "noopener noreferrer", p.append(a, " with read-only access to Contents and Pull requests, then click the Galley icon in your browser toolbar to save it."), extra.push(p);
       }
       this.showMessage(e.message, e.hint, extra);
@@ -19546,9 +19495,9 @@ ${body}</details>
           }), index === this.index && (this.rendered = r, this.buildToc(r)), this.schedule(!0), this.source.viewed ? (this.updateViewed(), this.foldIfViewed(view)) : await this.initLocalViewed(view.doc, contents2);
         } catch (err) {
           if (this.closed) return;
-          let box = h2("div", "mr-message");
-          box.append(h2("h2", "", view.doc.path), h2("p", "", err instanceof Error ? err.message : String(err)));
-          let platform = h2("a", "mr-outline", "Open platform diff");
+          let box = h("div", "mr-message");
+          box.append(h("h2", "", view.doc.path), h("p", "", err instanceof Error ? err.message : String(err)));
+          let platform = h("a", "mr-outline", "Open platform diff");
           platform.href = this.source.diffUrl, platform.target = "_blank", platform.rel = "noopener noreferrer", box.append(platform), box.append(actionButton("Try again", "retry-doc", "mr-outline")), view.section.replaceChildren(box), view.failed = !0, this.chapters.update(), this.schedule(!0);
         } finally {
           this.loading.delete(view.doc);
@@ -19569,17 +19518,17 @@ ${body}</details>
     }
     /** One line for a folded file: what it is, why it is folded (Galley's reason, or the reviewer's), and how much changed. */
     quietCard(view) {
-      let { doc, quiet } = view, card = h2("div", "mr-quiet"), name = h2("p", "mr-quiet-name"), slash = doc.path.lastIndexOf("/");
-      slash > 0 && name.append(h2("span", "mr-code-dir", doc.path.slice(0, slash + 1))), name.append(doc.path.slice(slash + 1));
-      let meta = h2("p", "mr-quiet-meta");
-      meta.append(h2("span", "mr-quiet-label", quiet?.label ?? "Folded")), quiet && meta.append(h2("span", "mr-quiet-reason", quiet.reason));
+      let { doc, quiet } = view, card = h("div", "mr-quiet"), name = h("p", "mr-quiet-name"), slash = doc.path.lastIndexOf("/");
+      slash > 0 && name.append(h("span", "mr-code-dir", doc.path.slice(0, slash + 1))), name.append(doc.path.slice(slash + 1));
+      let meta = h("p", "mr-quiet-meta");
+      meta.append(h("span", "mr-quiet-label", quiet?.label ?? "Folded")), quiet && meta.append(h("span", "mr-quiet-reason", quiet.reason));
       let counts = quiet ?? { ...view.rendered.stats };
       "modified" in counts && counts.modified && meta.append(chip("modified", `${counts.modified.toLocaleString("en-US")} edited`)), counts.added && meta.append(chip("added", `${counts.added.toLocaleString("en-US")} added`)), counts.removed && meta.append(chip("removed", `${counts.removed.toLocaleString("en-US")} removed`));
-      let show = actionButton("", "show-quiet", "mr-quiet-show"), icon = h2("span", "mr-file-action-icon");
-      icon.setAttribute("aria-hidden", "true"), icon.innerHTML = icons.down, show.append(h2("span", "", "Show changes"), icon), show.setAttribute("aria-label", `Show changes in ${doc.path}`);
-      let text4 = h2("div", "mr-quiet-text");
+      let show = actionButton("", "show-quiet", "mr-quiet-show"), icon = h("span", "mr-file-action-icon");
+      icon.setAttribute("aria-hidden", "true"), icon.innerHTML = icons.down, show.append(h("span", "", "Show changes"), icon), show.setAttribute("aria-label", `Show changes in ${doc.path}`);
+      let text4 = h("div", "mr-quiet-text");
       text4.append(name, meta);
-      let actions = h2("div", "mr-quiet-actions");
+      let actions = h("div", "mr-quiet-actions");
       return actions.append(this.viewedToggle(doc), show), card.append(text4, actions), card;
     }
     /** Put the files in the order the File order setting asks for, keeping the current file current. */
@@ -19647,66 +19596,66 @@ ${body}</details>
     }
     buildArticle(doc, r) {
       let frag = document.createDocumentFragment(), intro = [];
-      if (r.description && intro.push(h2("p", "mr-subtitle", r.description)), intro.push(this.byline(doc, r)), r.lead) {
+      if (r.description && intro.push(h("p", "mr-subtitle", r.description)), intro.push(this.byline(doc, r)), r.lead) {
         let before = [];
         for (let el = r.content.firstElementChild; el && el !== r.lead; el = el.nextElementSibling) before.push(el);
         r.lead.classList.add("mr-lead"), r.lead.after(...intro, ...before);
       } else if (doc.kind === "code") {
-        let title = h2("h1", "mr-title mr-code-title"), slash = doc.path.lastIndexOf("/");
-        slash > 0 && title.append(h2("span", "mr-code-dir", doc.path.slice(0, slash + 1))), title.append(doc.path.slice(slash + 1)), frag.append(title, ...intro);
+        let title = h("h1", "mr-title mr-code-title"), slash = doc.path.lastIndexOf("/");
+        slash > 0 && title.append(h("span", "mr-code-dir", doc.path.slice(0, slash + 1))), title.append(doc.path.slice(slash + 1)), frag.append(title, ...intro);
       } else
-        frag.append(h2("h1", "mr-title", r.title ?? prettyName(doc.path)), ...intro);
-      return frag.append(r.content), r.blocks.some((block2) => block2.kind !== "same") || frag.append(h2("p", "mr-empty-changes", "No visible text changes. Choose Whole files in Reading settings → Review → Context to read this file.")), frag;
+        frag.append(h("h1", "mr-title", r.title ?? prettyName(doc.path)), ...intro);
+      return frag.append(r.content), r.blocks.some((block2) => block2.kind !== "same") || frag.append(h("p", "mr-empty-changes", "No visible text changes. Choose Whole files in Reading settings → Review → Context to read this file.")), frag;
     }
     byline(doc, r) {
-      let line = h2("div", "mr-byline");
+      let line = h("div", "mr-byline");
       line.append(
-        h2(
+        h(
           "span",
           "",
           doc.kind === "code" ? languageName(languageOf(doc.path)) ?? "Source file" : `${Math.max(1, Math.round(r.words / WORDS_PER_MINUTE2))} min read`
         )
       );
       let noun = doc.kind === "code" ? "file" : "document";
-      if (doc.status === "added" && line.append(chip("added", `New ${noun}`)), doc.status === "removed" && line.append(chip("removed", `Deleted ${noun}`), h2("span", "mr-byline-note", "You are reading its last version")), doc.status !== "added" && doc.status !== "removed") {
+      if (doc.status === "added" && line.append(chip("added", `New ${noun}`)), doc.status === "removed" && line.append(chip("removed", `Deleted ${noun}`), h("span", "mr-byline-note", "You are reading its last version")), doc.status !== "added" && doc.status !== "removed") {
         let { added, modified, removed } = r.stats;
-        !added && !modified && !removed && line.append(h2("span", "", doc.status === "renamed" ? "Moved, text unchanged" : "No visible text changes")), modified && line.append(chip("modified", `${modified} edited`)), added && line.append(chip("added", `${added} added`)), removed && line.append(chip("removed", `${removed} removed`));
+        !added && !modified && !removed && line.append(h("span", "", doc.status === "renamed" ? "Moved, text unchanged" : "No visible text changes")), modified && line.append(chip("modified", `${modified} edited`)), added && line.append(chip("added", `${added} added`)), removed && line.append(chip("removed", `${removed} removed`));
       }
       if (r.hiddenLines) {
-        let hidden = h2("a", "mr-chip is-hidden", `${r.hiddenLines} line${r.hiddenLines === 1 ? "" : "s"} not shown`);
+        let hidden = h("a", "mr-chip is-hidden", `${r.hiddenLines} line${r.hiddenLines === 1 ? "" : "s"} not shown`);
         hidden.href = this.source.diffUrl, hidden.target = "_blank", hidden.rel = "noopener noreferrer", hidden.title = "Changed source lines this view cannot show, such as HTML comments, link definitions or raw HTML. Opens the platform diff.", line.append(hidden);
       }
       if (r.heldImages) {
         let load = actionButton(`Load ${r.heldImages} external image${r.heldImages === 1 ? "" : "s"}`, "load-images", "mr-chip is-images");
         load.title = "Images hosted outside this site were not loaded, so their hosts cannot see that you are reading. To load them automatically, choose Load in Reading settings → Review → External images.", line.append(load);
       }
-      let actions = h2("span", "mr-file-actions"), fold = actionButton("", "fold-file", "mr-fold-file"), icon = h2("span", "mr-file-action-icon");
-      icon.setAttribute("aria-hidden", "true"), icon.innerHTML = icons.up, fold.append(icon, h2("span", "mr-file-action-label", "Fold")), fold.title = "Fold this file to one line", fold.setAttribute("aria-label", `Fold ${doc.path}`), actions.append(this.viewedToggle(doc), fold);
-      let facts = h2("span", "mr-file-meta");
-      return facts.append(...line.childNodes), line.append(facts, actions), line;
+      let actions = h("span", "mr-file-actions"), fold = actionButton("", "fold-file", "mr-fold-file"), icon = h("span", "mr-file-action-icon");
+      icon.setAttribute("aria-hidden", "true"), icon.innerHTML = icons.up, fold.append(icon, h("span", "mr-file-action-label", "Fold")), fold.title = "Fold this file to one line", fold.setAttribute("aria-label", `Fold ${doc.path}`), actions.append(this.viewedToggle(doc), fold);
+      let facts2 = h("span", "mr-file-meta");
+      return facts2.append(...line.childNodes), line.append(facts2, actions), line;
     }
     /** Every file of the review, as the margin of the Files layout lists them: status, folded, viewed. */
     fileList() {
-      let list2 = h2("nav", "mr-toc-list mr-file-list");
+      let list2 = h("nav", "mr-toc-list mr-file-list");
       list2.setAttribute("aria-label", "Files in this review");
       let visible = this.views.filter((view) => !view.section.hidden);
-      list2.append(h2("p", "mr-toc-title", `${visible.length} file${visible.length === 1 ? "" : "s"}`));
+      list2.append(h("p", "mr-toc-title", `${visible.length} file${visible.length === 1 ? "" : "s"}`));
       for (let view of visible) {
-        let index = this.views.indexOf(view), link3 = h2("button", "mr-file-link");
+        let index = this.views.indexOf(view), link3 = h("button", "mr-file-link");
         link3.type = "button", link3.dataset.act = "doc", link3.dataset.doc = String(index), link3.title = view.doc.path, index === this.index && (link3.classList.add("is-current"), link3.setAttribute("aria-current", "true")), (view.quiet && !view.open || view.folded) && link3.classList.add("is-folded");
-        let dot = h2("span", `mr-status-dot is-${view.doc.status}`);
-        if (dot.setAttribute("aria-hidden", "true"), link3.append(dot, h2("span", "mr-file-link-name", baseName(view.doc.path))), this.viewed.get(view.doc).value) {
-          let check = h2("span", "mr-file-check");
+        let dot = h("span", `mr-status-dot is-${view.doc.status}`);
+        if (dot.setAttribute("aria-hidden", "true"), link3.append(dot, h("span", "mr-file-link-name", baseName(view.doc.path))), this.viewed.get(view.doc).value) {
+          let check = h("span", "mr-file-check");
           check.innerHTML = icons.check, check.setAttribute("aria-label", "Viewed"), link3.append(check);
         }
-        list2.append(link3), index === this.index && list2.append(h2("div", "mr-file-headings"));
+        list2.append(link3), index === this.index && list2.append(h("div", "mr-file-headings"));
       }
       return list2;
     }
     /** A file's own Viewed check, in its byline or folded card, kept in step with the one in the top bar. */
     viewedToggle(doc) {
       let toggle = actionButton("", "viewed-file", "mr-file-viewed");
-      return toggle.append(h2("span", "mr-file-viewed-box"), h2("span", "mr-file-action-label", "Viewed")), toggle.setAttribute("role", "switch"), toggle.setAttribute("aria-checked", "false"), toggle.setAttribute("aria-label", `Viewed: ${doc.path}`), toggle;
+      return toggle.append(h("span", "mr-file-viewed-box"), h("span", "mr-file-action-label", "Viewed")), toggle.setAttribute("role", "switch"), toggle.setAttribute("aria-checked", "false"), toggle.setAttribute("aria-label", `Viewed: ${doc.path}`), toggle;
     }
     buildToc(r) {
       this.headings = [];
@@ -19717,16 +19666,16 @@ ${body}</details>
       let all2 = [...r.content.querySelectorAll("h1, h2, h3")].filter((el) => el !== r.lead && !el.closest(".mr-ghost") && !el.hidden);
       if (all2.length < 3) return;
       let top = Math.min(...all2.map((el) => Number(el.tagName[1]))), list2 = files?.querySelector(".mr-file-headings");
-      list2 || (list2 = h2("div", "mr-toc-list"), list2.append(h2("p", "mr-toc-title", "Contents")), toc.append(list2)), all2.forEach((el, i) => {
-        let link3 = h2("a", `lvl-${Math.min(3, Number(el.tagName[1]) - top + 1)}`);
-        link3.href = "#", link3.dataset.act = "heading", link3.dataset.i = String(i), link3.append(h2("span", "", textWithoutDeletions(el))), list2.append(link3), this.headings.push({ el, link: link3 });
+      list2 || (list2 = h("div", "mr-toc-list"), list2.append(h("p", "mr-toc-title", "Contents")), toc.append(list2)), all2.forEach((el, i) => {
+        let link3 = h("a", `lvl-${Math.min(3, Number(el.tagName[1]) - top + 1)}`);
+        link3.href = "#", link3.dataset.act = "heading", link3.dataset.i = String(i), link3.append(h("span", "", textWithoutDeletions(el))), list2.append(link3), this.headings.push({ el, link: link3 });
       });
       for (let changed of r.content.querySelectorAll("[data-mr-change]")) {
         let owner2 = null;
         for (let hd of this.headings)
           if (hd.el === changed || hd.el.compareDocumentPosition(changed) & Node.DOCUMENT_POSITION_FOLLOWING) owner2 = hd;
           else break;
-        owner2 && !owner2.link.querySelector(".mr-dot") && owner2.link.append(h2("span", "mr-dot"));
+        owner2 && !owner2.link.querySelector(".mr-dot") && owner2.link.append(h("span", "mr-dot"));
       }
     }
     // ---------------------------------------------------------------- chrome
@@ -19741,39 +19690,39 @@ ${body}</details>
       this.el.fileBtn.dataset.path = doc.path, this.el.fileCount.textContent = docs2.length > 1 ? `${position + 1} of ${docs2.length}` : "", this.el.fileBtn.title = `${STATUS_LABEL[doc.status]}: ${doc.status === "renamed" ? `${doc.oldPath} → ` : ""}${doc.path}`, this.el.fileBtn.setAttribute("aria-label", `Browse files: ${STATUS_LABEL[doc.status].toLowerCase()} ${doc.path}, ${position + 1} of ${docs2.length}`), this.el.fileStatus.className = `mr-status-dot is-${doc.status}`, this.el.fileName.textContent = baseName(doc.path);
       let menu = this.el.files;
       menu.replaceChildren();
-      let head = h2("div", "mr-files-head");
-      head.setAttribute("role", "presentation"), head.append(h2("p", "mr-files-title", this.source.title));
-      let meta = h2("p", "mr-files-meta");
-      this.source.subtitle && meta.append(h2("span", "mr-files-source", this.source.subtitle)), meta.append(h2("span", "mr-files-progress", `${docs2.filter((doc2) => this.viewed.get(doc2)?.value).length} of ${docs2.length} viewed`));
+      let head = h("div", "mr-files-head");
+      head.setAttribute("role", "presentation"), head.append(h("p", "mr-files-title", this.source.title));
+      let meta = h("p", "mr-files-meta");
+      this.source.subtitle && meta.append(h("span", "mr-files-source", this.source.subtitle)), meta.append(h("span", "mr-files-progress", `${docs2.filter((doc2) => this.viewed.get(doc2)?.value).length} of ${docs2.length} viewed`));
       let folded = this.views.filter((view) => !view.section.hidden && (view.quiet && !view.open || view.folded)).length;
-      if (folded && meta.append(h2("span", "mr-files-folded", `${folded} folded`)), head.append(meta), menu.append(head), docs2.forEach((d) => {
-        let i = this.views.findIndex((view) => view.doc === d), item = h2("button", "mr-menu-item");
+      if (folded && meta.append(h("span", "mr-files-folded", `${folded} folded`)), head.append(meta), menu.append(head), docs2.forEach((d) => {
+        let i = this.views.findIndex((view) => view.doc === d), item = h("button", "mr-menu-item");
         item.setAttribute("role", "menuitem"), item.dataset.act = "doc", item.dataset.doc = String(i), item.title = `${STATUS_LABEL[d.status]}: ${d.path}`, i === this.index && item.setAttribute("aria-current", "true");
-        let dot = h2("span", `mr-status-dot is-${d.status}`);
+        let dot = h("span", `mr-status-dot is-${d.status}`);
         dot.setAttribute("aria-hidden", "true");
-        let name = h2("span", "mr-menu-name"), dir = d.path.slice(0, d.path.length - baseName(d.path).length);
-        name.append(h2("span", "mr-path-name", baseName(d.path))), dir && name.append(h2("span", "mr-path-dir", dir)), item.append(dot, name);
+        let name = h("span", "mr-menu-name"), dir = d.path.slice(0, d.path.length - baseName(d.path).length);
+        name.append(h("span", "mr-path-name", baseName(d.path))), dir && name.append(h("span", "mr-path-dir", dir)), item.append(dot, name);
         let { quiet, open: open2, folded: folded2 } = this.views[i];
-        if ((quiet && !open2 || folded2) && item.append(h2("span", "mr-menu-quiet", quiet?.label ?? "Folded")), item.append(h2("span", "mr-menu-status", STATUS_LABEL[d.status])), this.viewed.get(d)?.value) {
-          let check = h2("span", "mr-file-check");
+        if ((quiet && !open2 || folded2) && item.append(h("span", "mr-menu-quiet", quiet?.label ?? "Folded")), item.append(h("span", "mr-menu-status", STATUS_LABEL[d.status])), this.viewed.get(d)?.value) {
+          let check = h("span", "mr-file-check");
           check.innerHTML = icons.check, check.setAttribute("aria-label", "Viewed"), item.append(check);
         }
         menu.append(item);
       }), this.source.project) {
-        let head2 = h2("p", "mr-files-project", "Project docs");
+        let head2 = h("p", "mr-files-project", "Project docs");
         head2.setAttribute("role", "presentation"), menu.append(head2, ...this.projectItems(this.source.project));
       }
       this.updateActiveViewed(), this.settings.layout === "files" && this.buildToc(this.rendered);
     }
     skeleton() {
-      let s = h2("div", "mr-skeleton");
+      let s = h("div", "mr-skeleton");
       return s.innerHTML = '<i class="h"></i><i></i><i></i><i class="s"></i><i></i><i></i><i></i><i class="s"></i>', s;
     }
     showMessage(title, body, extra = []) {
       this.rendered = null, this.el.toc.replaceChildren(), this.el.gutter.replaceChildren(), this.el.pill.hidden = !0;
-      let box = h2("div", "mr-message");
-      box.append(h2("h2", "", title)), body && box.append(h2("p", "", body)), box.append(...extra);
-      let actions = h2("div", "mr-actions");
+      let box = h("div", "mr-message");
+      box.append(h("h2", "", title)), body && box.append(h("p", "", body)), box.append(...extra);
+      let actions = h("div", "mr-actions");
       actions.append(actionButton("Back to the diff", "close", "mr-outline")), box.append(actions), this.el.doc.replaceChildren(box);
     }
     toggleMenu(menu, button3) {
@@ -19791,17 +19740,17 @@ ${body}</details>
     /** Project docs: the repository behind the review, at its base or its head, read over the review (RFC 0049). */
     offerProject(project) {
       this.shadow.querySelector('[data-act="project"]').hidden = !1, this.el.project.replaceChildren(
-        h2("p", "mr-project-intro", "Read the repository’s docs and map at one side of this review. Close them to come back here, where you were."),
+        h("p", "mr-project-intro", "Read the repository’s docs and map at one side of this review. Close them to come back here, where you were."),
         ...this.projectItems(project)
       );
     }
     /** The two sides of the review to read the project's docs at: in the Project docs menu, and in the files menu. */
     projectItems(project) {
       let item = (revision, title) => {
-        let at = project[revision], b = h2("button", "mr-menu-item");
+        let at = project[revision], b = h("button", "mr-menu-item");
         b.type = "button", b.setAttribute("role", "menuitem"), b.dataset.act = "project-open", b.dataset.revision = revision;
-        let name = h2("span", "mr-menu-name");
-        return name.append(h2("span", "mr-path-name", title), h2("span", "mr-path-dir", `${at.ref} @ ${at.commit.slice(0, 7)}`)), b.append(name), b;
+        let name = h("span", "mr-menu-name");
+        return name.append(h("span", "mr-path-name", title), h("span", "mr-path-dir", `${at.ref} @ ${at.commit.slice(0, 7)}`)), b.append(name), b;
       };
       return [item("head", "As this change leaves them"), item("base", "Before this change")];
     }
@@ -19825,11 +19774,7 @@ ${body}</details>
       return wasOpen;
     }
     selectSettingsTab(name, focus = !1) {
-      for (let tab of this.el.settings.querySelectorAll("[data-settings-tab]")) {
-        let active3 = tab.dataset.settingsTab === name;
-        tab.setAttribute("aria-selected", String(active3)), tab.tabIndex = active3 ? 0 : -1, this.shadow.querySelector(`#${tab.getAttribute("aria-controls")}`).hidden = !active3, active3 && focus && tab.focus({ preventScroll: !0 });
-      }
-      this.el.settings.querySelector(".mr-settings-body").scrollTop = 0;
+      selectTab(this.el.settings, name, focus);
     }
     // Viewed status is optional; failures never remove the document or imply a successful save.
     async initLocalViewed(doc, contents2) {
@@ -19913,7 +19858,7 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
       for (let view of this.views) view.rendered && filterDocument(view.rendered, s.scope === "changed");
       this.rendered && this.buildToc(this.rendered);
       let overviewToggle = this.shadow.querySelector('[data-act="overview"]');
-      overviewToggle.setAttribute("aria-checked", String(s.overview)), overviewToggle.closest(".mr-set-row").hidden = !!this.source && !this.source?.overview, this.overview && (this.overview.hidden = !s.overview), this.shadow.querySelector('[data-act="signs"]').setAttribute("aria-checked", String(s.signs)), this.shadow.querySelector('[data-act="top-glow"]').setAttribute("aria-checked", String(s.topGlow)), r.classList.toggle("no-top-glow", !s.topGlow), this.shadow.querySelector('[data-act="fold"]').setAttribute("aria-checked", String(s.fold)), s.fold || this.views.forEach((view, index) => {
+      overviewToggle.setAttribute("aria-checked", String(s.overview)), overviewToggle.closest(".mr-set-row").hidden = !!this.source && !this.source?.overview, this.overview && (this.overview.hidden = !s.overview), this.shadow.querySelector('[data-act="signs"]').setAttribute("aria-checked", String(s.signs)), r.classList.toggle("no-top-glow", !s.topGlow), this.shadow.querySelector('[data-act="fold"]').setAttribute("aria-checked", String(s.fold)), s.fold || this.views.forEach((view, index) => {
         view.quiet && !view.open && this.openQuiet(index);
       }), this.source && s.order !== this.orderedBy && this.orderViews(), r.classList.toggle("no-signs", !s.signs);
       let codeToggle = this.shadow.querySelector('[data-act="code-files"]');
@@ -19923,12 +19868,8 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
         view.doc.kind === "code" && (view.section.hidden = !s.codeFiles, loadCode ||= s.codeFiles && !view.rendered);
       this.source && (this.updateFileButton(), this.buildToc(this.rendered)), loadCode && this.loadAll(0);
       for (let b of this.shadow.querySelectorAll("[data-scope]")) b.setAttribute("aria-pressed", String(b.dataset.scope === s.scope));
-      r.classList.toggle("mode-changes", s.mode === "changes"), r.classList.toggle("mode-clean", s.mode === "clean"), r.dataset.font = s.font, r.dataset.theme = s.theme, r.dataset.layout = s.layout, r.dataset.density = s.density, r.classList.toggle("is-dark", s.appearance === "dark" || s.appearance === "auto" && this.dark.matches), this.applyFit(), this.shadow.querySelector("#mr-typeface").value = s.font, this.shadow.querySelector(".mr-text-size").textContent = `${TEXT_SIZES[s.size] ?? 20} px`, this.shadow.querySelector('[data-act="smaller"]').disabled = s.size <= 0, this.shadow.querySelector('[data-act="larger"]').disabled = s.size >= TEXT_SIZES.length - 1;
+      r.classList.toggle("mode-changes", s.mode === "changes"), r.classList.toggle("mode-clean", s.mode === "clean"), r.dataset.font = s.font, r.dataset.theme = s.theme, r.dataset.layout = s.layout, r.dataset.density = s.density, r.classList.toggle("is-dark", s.appearance === "dark" || s.appearance === "auto" && this.dark.matches), this.applyFit(), applyReadingControls(this.shadow, s);
       for (let b of this.shadow.querySelectorAll("[data-mode]")) b.setAttribute("aria-pressed", String(b.dataset.mode === s.mode));
-      for (let group of this.shadow.querySelectorAll("[data-setting]")) {
-        let value = s[group.dataset.setting];
-        for (let b of group.querySelectorAll("[data-value]")) b.setAttribute("aria-pressed", String(b.dataset.value === value));
-      }
       for (let view of this.views) view.rendered?.isCode && this.applyCodeView(view);
       let palette = this.palette();
       for (let view of this.views)
@@ -20075,45 +20016,23 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
     }
     /** The settings sheet, open at one of its tabs. */
     openSettings(tab) {
-      this.selectSettingsTab(tab), this.toggleMenu(this.el.settings, this.shadow.querySelector('[data-act="settings"]')), this.revealPalette();
+      this.selectSettingsTab(tab), this.toggleMenu(this.el.settings, this.shadow.querySelector('[data-act="settings"]')), this.palettes.reveal(this.settings.theme);
     }
     /** A first document of the request's own title, author and description, folded under its title on demand. */
     renderOverview(overview) {
-      let section = h2("section", "mr-document mr-overview");
+      let section = h("section", "mr-document mr-overview");
       section.setAttribute("aria-label", `${overview.kind} description`), section.hidden = !this.settings.overview;
-      let byline = h2("div", "mr-byline");
-      overview.author && byline.append(h2("span", "mr-overview-author", `Opened by ${overview.author}`));
+      let byline = h("div", "mr-byline");
+      overview.author && byline.append(h("span", "mr-overview-author", `Opened by ${overview.author}`));
       let href = platformLink(overview.url, location.origin);
       if (href) {
-        let link3 = h2("a", "mr-overview-link", `Open on ${new URL(href, location.href).host}`);
+        let link3 = h("a", "mr-overview-link", `Open on ${new URL(href, location.href).host}`);
         link3.href = href, link3.target = "_blank", link3.rel = "noopener noreferrer", byline.append(link3);
       }
-      let body = h2("details", "mr-overview-body");
+      let body = h("details", "mr-overview-body");
       body.open = !0;
-      let content = h2("div", "mr-content");
-      return overview.description.trim() ? content.append(renderSnippet(document, overview.description, location.origin, this.settings.images)) : content.append(h2("p", "mr-overview-empty", "No description was added to this request.")), body.append(h2("summary", "", "Description"), content), section.append(h2("p", "mr-overview-kind", overview.kind), h2("h1", "mr-title", overview.title), byline, body), section;
-    }
-    paletteTrack() {
-      return this.shadow.querySelector(".mr-palette-track");
-    }
-    /** The palette page in view; pages are as wide as the track. */
-    paletteAt() {
-      let track = this.paletteTrack();
-      return track.clientWidth ? Math.round(track.scrollLeft / track.clientWidth) : 0;
-    }
-    turnPalettes(page, smooth = !0) {
-      let track = this.paletteTrack(), target = Math.max(0, Math.min(track.children.length - 1, page));
-      track.scrollTo({ left: target * track.clientWidth, behavior: smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto" }), this.updatePaletteNav(target);
-    }
-    updatePaletteNav(page = this.paletteAt()) {
-      let last = this.paletteTrack().children.length - 1;
-      this.shadow.querySelector('[data-act="palette-prev"]').disabled = page <= 0, this.shadow.querySelector('[data-act="palette-next"]').disabled = page >= last;
-      for (let [i, dot] of this.shadow.querySelectorAll(".mr-carousel-dot").entries()) dot.setAttribute("aria-current", String(i === page));
-    }
-    /** The settings open on the page that holds the chosen palette. */
-    revealPalette() {
-      let track = this.paletteTrack(), page = track.querySelector(`[data-value="${this.settings.theme}"]`)?.closest(".mr-palette-page");
-      this.turnPalettes([...track.children].indexOf(page), !1);
+      let content = h("div", "mr-content");
+      return overview.description.trim() ? content.append(renderSnippet(document, overview.description, location.origin, this.settings.images)) : content.append(h("p", "mr-overview-empty", "No description was added to this request.")), body.append(h("summary", "", "Description"), content), section.append(h("p", "mr-overview-kind", overview.kind), h("h1", "mr-title", overview.title), byline, body), section;
     }
     stepDoc(direction) {
       let indices = this.views.flatMap((view, i) => view.section.hidden ? [] : [i]), next = indices[indices.indexOf(this.index) + direction];
@@ -20165,11 +20084,9 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
         }
       }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      let target = e.composedPath()[0];
-      if (target instanceof HTMLElement && target.matches("[data-settings-tab]") && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-        e.preventDefault();
-        let at = SETTINGS_TABS.indexOf(target.dataset.settingsTab), step = e.key === "ArrowRight" ? 1 : -1, next = e.key === "Home" ? 0 : e.key === "End" ? SETTINGS_TABS.length - 1 : (at + step + SETTINGS_TABS.length) % SETTINGS_TABS.length;
-        this.selectSettingsTab(SETTINGS_TABS[next], !0);
+      let target = e.composedPath()[0], tab = target instanceof HTMLElement && target.matches("[data-settings-tab]") ? nextTab(SETTINGS_TABS2, target.dataset.settingsTab, e.key) : null;
+      if (tab) {
+        e.preventDefault(), this.selectSettingsTab(tab, !0);
         return;
       }
       if (e.key === "Tab") {
@@ -20310,16 +20227,12 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
             this.closeMenus(), this.openProject(action.dataset.revision);
             return;
           case "settings":
-            this.source && !this.views.some((view) => !view.section.hidden) && this.selectSettingsTab("review"), this.toggleMenu(this.el.settings, action), this.el.settings.hidden || this.revealPalette();
+            this.source && !this.views.some((view) => !view.section.hidden) && this.selectSettingsTab("review"), this.toggleMenu(this.el.settings, action), this.el.settings.hidden || this.palettes.reveal(this.settings.theme);
             return;
           case "palette-prev":
-            this.turnPalettes(this.paletteAt() - 1);
-            return;
           case "palette-next":
-            this.turnPalettes(this.paletteAt() + 1);
-            return;
           case "palette-page":
-            this.turnPalettes(Number(action.dataset.page));
+            this.palettes.onClick(action.dataset.act, action);
             return;
           case "overview":
             if (!this.source?.overview) return;
@@ -20621,7 +20534,7 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
           this.postDraft(built);
         }
       ), draft = Object.assign(editor, { target, view, anchor, range, marks: [...new Set(elements.map(surfaceOf))], plan: null });
-      draft.form.prepend(h2("p", "mr-comment-target", `Comment on ${place2}`)), range && draft.form.insertBefore(h2("blockquote", `mr-comment-quote${target.doc.kind === "code" ? " is-code" : ""}`, target.quote), draft.textarea), draft.cancel.addEventListener("click", () => this.closeDraft(draft)), draft.form.addEventListener(
+      draft.form.prepend(h("p", "mr-comment-target", `Comment on ${place2}`)), range && draft.form.insertBefore(h("blockquote", `mr-comment-quote${target.doc.kind === "code" ? " is-code" : ""}`, target.quote), draft.textarea), draft.cancel.addEventListener("click", () => this.closeDraft(draft)), draft.form.addEventListener(
         "focusout",
         () => setTimeout(() => {
           this.drafts.includes(draft) && !draft.busy && !hasDraft(draft) && !draft.form.contains(this.shadow.activeElement) && document.hasFocus() && this.closeDraft(draft);
@@ -20685,19 +20598,19 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
     }
     /** `send` posts what the editor holds; the editor it is given is the one being built, later extended into a Draft or ReplyEditor. */
     createEditor(className, label2, placeholder, action, send) {
-      let form = h2("form", className);
+      let form = h("form", className);
       form.setAttribute("aria-label", label2);
-      let textarea = h2("textarea");
+      let textarea = h("textarea");
       textarea.rows = 1, textarea.placeholder = placeholder, textarea.setAttribute("aria-label", label2);
-      let status = h2("p", "mr-comment-status");
+      let status = h("p", "mr-comment-status");
       status.id = `mr-comment-status-${++this.editorCount}`, status.setAttribute("role", "status"), status.setAttribute("aria-live", "polite"), textarea.setAttribute("aria-describedby", status.id);
-      let cancel = h2("button", "mr-btn mr-cancel", "Cancel");
+      let cancel = h("button", "mr-btn mr-cancel", "Cancel");
       cancel.type = "button";
-      let submit = h2("button", "mr-btn mr-primary mr-submit", action);
-      submit.type = "submit", submit.disabled = !0;
-      let actions = h2("div", "mr-compose-actions");
-      actions.append(status, cancel, submit), form.append(textarea, actions);
-      let editor = { form, textarea, status, cancel, submit, ready: !1, busy: !1, prefill: "", send: () => send(editor) };
+      let submit2 = h("button", "mr-btn mr-primary mr-submit", action);
+      submit2.type = "submit", submit2.disabled = !0;
+      let actions = h("div", "mr-compose-actions");
+      actions.append(status, cancel, submit2), form.append(textarea, actions);
+      let editor = { form, textarea, status, cancel, submit: submit2, ready: !1, busy: !1, prefill: "", send: () => send(editor) };
       return form.addEventListener("submit", (e) => {
         e.preventDefault(), editor.send();
       }), form.addEventListener("click", (e) => {
@@ -20731,7 +20644,7 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
       toast.replaceChildren(text4);
       let href = url && platformLink(url, location.origin);
       if (href) {
-        let link3 = h2("a", "", "View on platform");
+        let link3 = h("a", "", "View on platform");
         link3.href = href, link3.target = "_blank", link3.rel = "noopener noreferrer", toast.append(" · ", link3);
       }
       toast.hidden = !1, clearTimeout(this.toastTimer), this.toastTimer = window.setTimeout(() => {
@@ -20745,7 +20658,7 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
       if (existing) return existing;
       let base = this.createEditor("mr-reply", `Reply to ${thread.comments[0].author}`, "Write a reply…", "Reply", () => {
         this.postReply(thread);
-      }), editor = Object.assign(base, { thread, to: 0, context: h2("p", "mr-reply-context") });
+      }), editor = Object.assign(base, { thread, to: 0, context: h("p", "mr-reply-context") });
       return editor.form.prepend(editor.context), editor.form.hidden = !0, editor.ready = !0, editor.cancel.addEventListener("click", () => this.closeReply(thread)), editor.textarea.addEventListener("focus", () => {
         editor.status.textContent || (editor.status.textContent = `${SUBMIT_KEY} to reply`);
       }), this.replyEditors.set(thread, editor), editor;
@@ -20827,8 +20740,8 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
         block2.el.dataset.mrThreads = "", this.threadEls.push({ view, card, anchor: block2.el });
       }
       if (fileLevel.length) {
-        let box = h2("section", "mr-file-threads");
-        box.setAttribute("aria-label", "Comments on this file"), box.append(h2("p", "mr-file-threads-title", `${fileLevel.length} comment${fileLevel.length === 1 ? "" : "s"} on this file`), ...fileLevel), view.section.querySelector(".mr-byline")?.after(box);
+        let box = h("section", "mr-file-threads");
+        box.setAttribute("aria-label", "Comments on this file"), box.append(h("p", "mr-file-threads-title", `${fileLevel.length} comment${fileLevel.length === 1 ? "" : "s"} on this file`), ...fileLevel), view.section.querySelector(".mr-byline")?.after(box);
       }
       filterDocument(r, this.settings.scope === "changed"), this.schedule(!0);
     }
@@ -20839,17 +20752,17 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
       this.attachThreads(view), this.refreshMarks();
     }
     threadCard(thread) {
-      let own = this.ownThreads.has(thread), card = h2("aside", `mr-thread${own ? " is-own" : ""}${thread.resolved ? " is-resolved" : ""}`);
+      let own = this.ownThreads.has(thread), card = h("aside", `mr-thread${own ? " is-own" : ""}${thread.resolved ? " is-resolved" : ""}`);
       this.threadByCard.set(card, thread);
       let first = thread.comments[0];
       card.setAttribute("aria-label", `Comment by ${first.author}${thread.line ? ` on ${thread.side === "base" ? "old" : "new"} line ${thread.line}` : ""}`);
       let fold = thread.comments.length > 3, editor = this.replyEditors.get(thread);
       thread.comments.forEach((comment, i) => {
-        let item = h2("div", `mr-thread-comment${i ? " is-reply" : ""}${fold && i > 0 && i < thread.comments.length - 1 ? " is-folded" : ""}`), meta = h2("div", "mr-thread-meta"), name = h2("span", "mr-thread-author", comment.author);
-        name.title = comment.handle && comment.handle !== comment.author ? `${comment.author} (@${comment.handle})` : comment.author, meta.append(h2("span", "mr-avatar", comment.author.slice(0, 1).toUpperCase()), name);
-        let time = h2("time", "mr-thread-time", relativeTime(comment.createdAt));
+        let item = h("div", `mr-thread-comment${i ? " is-reply" : ""}${fold && i > 0 && i < thread.comments.length - 1 ? " is-folded" : ""}`), meta = h("div", "mr-thread-meta"), name = h("span", "mr-thread-author", comment.author);
+        name.title = comment.handle && comment.handle !== comment.author ? `${comment.author} (@${comment.handle})` : comment.author, meta.append(h("span", "mr-avatar", comment.author.slice(0, 1).toUpperCase()), name);
+        let time = h("time", "mr-thread-time", relativeTime(comment.createdAt));
         time.dateTime = comment.createdAt, time.title = new Date(comment.createdAt).toLocaleString(), meta.append(time);
-        let body = h2("div", "mr-thread-body");
+        let body = h("div", "mr-thread-body");
         if (body.append(renderSnippet(document, comment.body, location.origin, this.settings.images)), item.append(meta, body), thread.reply) {
           let reply = actionButton("Reply", "reply-to", "mr-reply-to");
           reply.insertAdjacentHTML("afterbegin", icons.reply), reply.dataset.comment = String(i), reply.setAttribute("aria-label", `Reply to ${comment.author}`), item.append(reply);
@@ -20859,11 +20772,11 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
           more.dataset.label = more.textContent, card.append(more);
         }
       });
-      let foot = h2("div", "mr-thread-foot");
-      thread.outdated && foot.append(h2("span", "mr-thread-tag", "Outdated")), thread.resolved && foot.append(h2("span", "mr-thread-tag", "Resolved"));
+      let foot = h("div", "mr-thread-foot");
+      thread.outdated && foot.append(h("span", "mr-thread-tag", "Outdated")), thread.resolved && foot.append(h("span", "mr-thread-tag", "Resolved"));
       let href = platformLink(thread.url, location.origin);
       if (href) {
-        let link3 = h2("a", "mr-thread-link", "View on platform");
+        let link3 = h("a", "mr-thread-link", "View on platform");
         link3.href = href, link3.target = "_blank", link3.rel = "noopener noreferrer", foot.append(link3);
       }
       return card.append(foot), card;
@@ -20968,7 +20881,7 @@ ${state.error ?? this.source.viewed?.label ?? "Saved in this browser; resets whe
       }
       let label2 = { added: "Added", modified: "Edited", removed: "Removed" };
       spans.forEach((s, i) => {
-        let mark2 = h2("div", `mr-mark is-${s.kind}${s.point ? " is-point" : ""}`);
+        let mark2 = h("div", `mr-mark is-${s.kind}${s.point ? " is-point" : ""}`);
         mark2.style.top = `${s.top}px`, mark2.style.height = `${Math.max(4, s.bottom - s.top)}px`, mark2.dataset.label = label2[s.kind], mark2.dataset.act = "mark", mark2.dataset.i = String(i), this.markTargets.push(s.point ? nextVisible(s.target, s.target.closest(".mr-content")) : s.target), gutter.append(mark2);
       });
     }
