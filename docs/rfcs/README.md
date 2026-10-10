@@ -101,6 +101,7 @@ Generated from the RFC files by `npm run docs:index`; do not edit by hand.
 | [0047](0047-shared-review-responsibilities.md) | Shared review responsibilities and explicit handoffs | Proposed | Never lose the thread | [#47](https://github.com/m9rc1n/galley/issues/47) | [0002](../adr/0002-no-server-no-telemetry.md), [0008](../adr/0008-comment-through-platform-review-apis.md) |
 | [0048](0048-personal-review-inbox.md) | A personal review inbox for deliberate workload planning | Proposed | Never lose the thread | [#48](https://github.com/m9rc1n/galley/issues/48) | [0002](../adr/0002-no-server-no-telemetry.md), [0019](../adr/0019-review-progress-as-fingerprints.md) |
 | [0049](0049-repository-docs-and-project-maps.md) | Repository docs reading, project maps and architecture exploration | Proposed | Read the project, understand the change | [#49](https://github.com/m9rc1n/galley/issues/49) | [0001](../adr/0001-record-decisions-and-proposals.md), [0009](../adr/0009-github-tokens-in-the-background-worker.md), [0011](../adr/0011-sandbox-third-party-engines.md), [0019](../adr/0019-review-progress-as-fingerprints.md), [0024](../adr/0024-read-a-repository-at-one-commit.md), [0025](../adr/0025-repository-reads-in-the-token-allowlist.md), [0026](../adr/0026-an-evidence-only-project-map.md), [0027](../adr/0027-read-configuration-statically.md), [0028](../adr/0028-private-project-notes.md) |
+| [0055](0055-choose-where-galley-runs.md) | Choose where Galley runs, how it opens and which features it offers | Proposed | Galley where you want it | [#55](https://github.com/m9rc1n/galley/issues/55) | [0002](../adr/0002-no-server-no-telemetry.md), [0019](../adr/0019-review-progress-as-fingerprints.md), [0022](../adr/0022-review-chapters-from-evidence.md) |
 <!-- rfc-index:end -->
 
 ## How the current RFCs fit together
@@ -122,6 +123,7 @@ flowchart LR
   C36 -.-> C47["0047 Shared responsibilities"]
   C38 -.-> C48["0048 Review inbox"]
   C49["0049 Read the project"]
+  C49 -.-> C55["0055 Where Galley runs"]
 ```
 
-Solid arrows are the sequencing the RFCs state; dotted ones are the exploratory follow-ups and the RFC each builds on most. **Never lose the thread** has three core RFCs (0036 to 0038), two planned follow-ups (0039, 0040) and eight exploratory ones (0041 to 0048). **Read the project, understand the change** (0049) is a separate initiative; Galley's own `docs/` folder, with its linked ADRs and RFCs, is meant to be one of its test repositories.
+Solid arrows are the sequencing the RFCs state; dotted ones are the exploratory follow-ups and the RFC each builds on most. **Never lose the thread** has three core RFCs (0036 to 0038), two planned follow-ups (0039, 0040) and eight exploratory ones (0041 to 0048). **Read the project, understand the change** (0049) is a separate initiative; Galley's own `docs/` folder, with its linked ADRs and RFCs, is meant to be one of its test repositories. **Galley where you want it** (0055) lets reviewers choose the sites and repositories Galley runs on, whether the reader opens from a button on the page or from the toolbar, and which features appear; every later surface, starting with 0049's **Read docs**, ships with a switch there.

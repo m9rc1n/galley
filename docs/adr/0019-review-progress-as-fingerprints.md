@@ -3,7 +3,7 @@ status: Accepted
 date: 2026-10-05
 recorded: 2026-10-10
 deciders: [m9rc1n]
-rfcs: [37, 38, 39, 48, 49]
+rfcs: [37, 38, 39, 48, 49, 55]
 tags: [privacy, review]
 ---
 
