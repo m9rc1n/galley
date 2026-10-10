@@ -32,9 +32,9 @@ Press **Read** on a GitHub pull request or GitLab merge request. Documents open 
 
 Your team gets more context for its feedback, using the GitHub or GitLab workflow it already knows.
 
-Between reviews, press **Read docs** on a repository, folder or Markdown file to read the project's own documentation at one commit. Follow links between specs, decisions and guides without losing your place, and open the **Map** to see which documents link to the one you are reading, with each link as evidence. Switch the map to **Architecture**, **Infrastructure** or **Decisions** for what the configuration declares and what the decision records state, keep private **Notes** you save only when you choose, and from a review open **Project docs** at its base or head.
+Between reviews, press **Read the project** on a repository, folder or Markdown file to read the project's own documentation at one commit. Follow links between specs, decisions and guides without losing your place, and open the **Map** to see which documents link to the one you are reading, with each link as evidence. Switch the map to **Architecture**, **Infrastructure** or **Decisions** for what the configuration declares and what the decision records state, keep private **Notes** you save only when you choose, and from a review open **Project library** at its base or head. Library reading starts in Focus; choose Balanced or Wide text in **Reading settings → Layout**, or cycle them with <kbd>L</kbd>, without changing the review's layout.
 
-Prefer a clear platform page? In the toolbar popup, choose **Settings…** and turn off **Read button on the page**. Open with **Read this review** or **Read docs** in the popup, or <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd> (changeable in your browser's extension shortcuts). With the page button off, Galley fetches files only when you ask.
+Prefer a clear platform page? In the toolbar popup, choose **Settings…** and turn off **Read button on the page**. Open with **Read this review** or **Read the project** in the popup, or <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd> (changeable in your browser's extension shortcuts). With the page button off, Galley fetches files only when you ask.
 
 ## Before / after
 
@@ -100,7 +100,7 @@ The [user guide](docs/GUIDE.md) covers every setting, token and platform detail.
 | <kbd>,</kbd> · <kbd>?</kbd> | Settings · these shortcuts |
 | <kbd>Esc</kbd> | Close the innermost thing, and finally the reader. Drafts are kept. |
 
-Reading repository docs: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>M</kbd> map, <kbd>N</kbd> notes, <kbd>,</kbd> settings, <kbd>?</kbd> these keys.
+Reading Project library: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>L</kbd> next reading layout, <kbd>M</kbd> map, <kbd>N</kbd> notes, <kbd>,</kbd> settings, <kbd>?</kbd> these keys.
 
 ## FAQ
 

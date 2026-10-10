@@ -76,7 +76,7 @@ function start(): void {
     current = ctx;
     launcher.hide();
     if (!settingsReady || !readButton) return;
-    // A repository page is read on request only: nothing is fetched until Read docs is chosen.
+    // A repository page is read on request only: nothing is fetched until Read the project is chosen.
     // Hiding the button there hides it for the whole repository.
     if ('view' in ctx) launcher.show(ctx.repository, null, () => openRepository(loadRepository(ctx)));
     else present(ctx);

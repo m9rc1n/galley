@@ -26,39 +26,18 @@ import { chip, h } from './dom.ts';
 import { openRepository, type RepoReaderHandle } from './repo-reader.ts';
 import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
 import { icons } from './icons.ts';
+import { layoutPanel, LAYOUT_NAMES } from './layout-controls.ts';
 import css from './reader.css';
 import { loadReaderFonts } from './fonts.ts';
 import { loadImage, platformLink, renderDocument, renderSnippet, type RenderedBlock, type RenderedDoc } from './render.ts';
 import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
-import { DEFAULT_SETTINGS, LAYOUTS, TEXT_SIZES, loadSettings, updateSettings, type Layout, type Settings } from './settings.ts';
+import { DEFAULT_SETTINGS, LAYOUTS, TEXT_SIZES, loadSettings, updateSettings, type Settings } from './settings.ts';
 import { applyReadingControls, keyGroups, nextTab, PaletteCarousel, READING_SECTIONS, selectTab, settingsSheet, type Shortcuts } from './settings-sheet.ts';
 
 const STATUS_LABEL: Record<DocStatus, string> = { added: 'New', removed: 'Deleted', modified: 'Edited', renamed: 'Renamed' };
 const WORDS_PER_MINUTE = 230;
 /** Changes are brought to this fraction of the viewport height when navigating. */
 const FOCUS_LINE = 0.3;
-
-/**
- * Each layout is drawn as a page: a contents column (c), the text (t, with lines) and the comments
- * column (m) in the proportions that layout gives them on a wide screen.
- */
-const LAYOUT_CHOICES: Array<[Layout, string, string]> = [
-  ['balanced', 'Balanced', 'Contents, text and comments side by side'],
-  ['files', 'Files', 'Every file in the margin, for large reviews'],
-  ['review', 'Review', 'More space for review comments'],
-  ['wide', 'Wide text', 'For tables, code and diagrams'],
-  ['focus', 'Focus', 'Text in one column, with comments below'],
-  ['fit', 'Fit to screen', 'Uses the full window width'],
-];
-const LAYOUT_NAMES = Object.fromEntries(LAYOUT_CHOICES.map(([value, name]) => [value, name])) as Record<Layout, string>;
-const LAYOUT_OPTIONS = LAYOUT_CHOICES.map(
-  ([value, name, caption]) => `
-  <button data-value="${value}" aria-label="${name}: ${caption}">
-    <span class="mr-layout-preview" aria-hidden="true"><i class="c"></i><i class="t"><b></b><b></b><b></b><b></b></i><i class="m"><b></b><b></b></i></span>
-    <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
-    <span class="mr-theme-caption">${caption}</span>
-  </button>`,
-).join('');
 
 /** Settings tabs, in order: arrow keys move through them. */
 const SETTINGS_TABS = ['reading', 'layout', 'review', 'keys'] as const;
@@ -109,15 +88,6 @@ const KEY_GROUPS = keyGroups(SHORTCUTS);
 /** Settings chosen from a group of buttons in the settings sheet (data-setting / data-value). */
 type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'tests' | 'codeComments' | 'layout' | 'density' | 'order';
 
-/** The Layout tab: how text and comments share a wide screen, and how dense the page is. */
-const LAYOUT_PANEL = `
-      <section class="mr-settings-section" aria-label="Layout">
-        <div class="mr-set-row mr-theme-row"><span>Layout<small>Arrange text and comments on wide screens. Narrow screens use one column.</small></span>
-          <div class="mr-theme-options mr-layout-options" data-setting="layout" role="group" aria-label="Layout">${LAYOUT_OPTIONS}</div>
-        </div>
-        <div class="mr-set-row"><span>Density<small>Compact fits more on the screen</small></span><div class="mr-seg" data-setting="density" role="group" aria-label="Density"><button data-value="comfortable">Comfortable</button><button data-value="compact">Compact</button></div></div>
-      </section>
-      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>`;
 /** The Review tab: how changes, files, tests and code comments are shown. */
 const REVIEW_PANEL = `
       <section class="mr-settings-section" aria-label="Review">
@@ -150,7 +120,7 @@ const TEMPLATE = `
       </button>
     </div>
     <div class="mr-tb-right">
-      <button type="button" class="mr-btn mr-project-btn" data-act="project" hidden aria-haspopup="menu" aria-expanded="false" title="Read the repository’s docs at this review’s base or head" aria-label="Project docs">${icons.book}<span class="mr-project-label">Project docs</span></button>
+      <button type="button" class="mr-btn mr-project-btn" data-act="project" hidden aria-haspopup="menu" aria-expanded="false" title="Read project material at this review’s base or head" aria-label="Project library">${icons.book}<span class="mr-project-label">Library</span></button>
       <button type="button" class="mr-btn mr-chapters-toggle" hidden aria-haspopup="dialog" aria-expanded="false">Chapters</button>
       <button class="mr-btn mr-icon-btn mr-viewed" data-act="viewed" aria-pressed="false" disabled hidden>${icons.viewed}</button>
       <button class="mr-btn mr-icon-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
@@ -158,7 +128,7 @@ const TEMPLATE = `
   </header>
   <p class="mr-viewed-feedback" role="status" hidden></p>
   <div class="mr-menu mr-files" role="menu" aria-label="Changed files" hidden></div>
-  <div class="mr-menu mr-project" role="menu" aria-label="Project docs" hidden></div>
+  <div class="mr-menu mr-project" role="menu" aria-label="Project library" hidden></div>
 ${settingsSheet('Choose a view that helps you follow the changes.', [
   {
     id: 'reading',
@@ -167,7 +137,7 @@ ${settingsSheet('Choose a view that helps you follow the changes.', [
     panel: `${READING_SECTIONS}
       <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>`,
   },
-  { id: 'layout', label: 'Layout', icon: icons.layout, panel: LAYOUT_PANEL },
+  { id: 'layout', label: 'Layout', icon: icons.layout, panel: layoutPanel('review') },
   { id: 'review', label: 'Review', icon: icons.check, panel: REVIEW_PANEL },
   { id: 'keys', label: 'Keys', icon: icons.keyboard, panel: KEYS_PANEL },
 ])}
@@ -448,7 +418,7 @@ class Reader {
   private frame = 0;
   private needLayout = false;
   private closed = false;
-  /** The repository's docs, opened over the review from Project docs; the review waits underneath, as it was. */
+  /** The repository's docs, opened over the review from Project library; the review waits underneath, as it was. */
   private layer: RepoReaderHandle | null = null;
   private readonly dark = matchMedia('(prefers-color-scheme: dark)');
   private readonly resize = new ResizeObserver(() => this.schedule(true));
@@ -1177,9 +1147,9 @@ class Reader {
       }
       menu.append(item);
     });
-    // Phones have no room for Project docs in the top bar; it is here instead.
+    // Phones have no room for Project library in the top bar; it is here instead.
     if (this.source!.project) {
-      const head = h('p', 'mr-files-project', 'Project docs');
+      const head = h('p', 'mr-files-project', 'Project library');
       head.setAttribute('role', 'presentation');
       menu.append(head, ...this.projectItems(this.source!.project));
     }
@@ -1229,7 +1199,7 @@ class Reader {
     }
   }
 
-  /** Project docs: the repository behind the review, at its base or its head, read over the review (RFC 0049). */
+  /** Project library: the repository behind the review, at its base or its head, read over the review (RFC 0049). */
   private offerProject(project: ReviewProject): void {
     this.shadow.querySelector<HTMLElement>('[data-act="project"]')!.hidden = false;
     this.el.project.replaceChildren(
@@ -1238,7 +1208,7 @@ class Reader {
     );
   }
 
-  /** The two sides of the review to read the project's docs at: in the Project docs menu, and in the files menu. */
+  /** The two sides of the review to read the project's docs at: in the Project library menu, and in the files menu. */
   private projectItems(project: ReviewProject): HTMLElement[] {
     const item = (revision: 'base' | 'head', title: string) => {
       const at = project[revision];

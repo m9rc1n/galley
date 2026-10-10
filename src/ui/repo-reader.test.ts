@@ -12,6 +12,58 @@ vi.mock('./code.ts', async (original) => ({ ...(await original<typeof import('./
 
 const ui = repoHarness();
 
+it('library layouts start in Focus, survive navigation and never change the saved review layout', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ layout: 'review', theme: 'nord' }));
+  await ui.open(repository());
+  await vi.waitFor(() => expect(ui.q('.mr-root').dataset.theme).toBe('nord'));
+  expect(ui.q('.mr-root').dataset.layout).toBe('focus');
+  expect(ui.all('[data-setting="layout"] [data-value]').map((button) => button.dataset.value)).toEqual(['focus', 'balanced', 'wide']);
+  ui.click('[data-act="settings"]');
+  ui.click('[data-settings-tab="layout"]');
+  expect(ui.q('#mr-layout-panel').hidden).toBe(false);
+  ui.click('[data-setting="layout"] [data-value="balanced"]');
+  expect(ui.q('.mr-root').dataset.layout).toBe('balanced');
+  expect(ui.q('[data-setting="layout"] [data-value="balanced"]').getAttribute('aria-pressed')).toBe('true');
+  const wide = ui.q('[data-setting="layout"] [data-value="wide"]');
+  wide.dataset.value = 'review';
+  wide.click();
+  expect(ui.q('.mr-root').dataset.layout).toBe('balanced');
+  wide.dataset.value = 'wide';
+  ui.click('[data-setting="density"] [data-value="compact"]');
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!)).toMatchObject({ layout: 'review', density: 'compact' }));
+  ui.click('.mr-settings-heading [data-act="close-settings"]');
+  ui.press('the decision', '.mr-content a');
+  await ui.settled();
+  expect(ui.q('.mr-root').dataset.layout).toBe('balanced');
+  ui.key('L');
+  expect(ui.q('.mr-root').dataset.layout).toBe('wide');
+  ui.key('l');
+  expect(ui.q('.mr-root').dataset.layout).toBe('focus');
+  ui.key('l');
+  expect(ui.q('.mr-root').dataset.layout).toBe('balanced');
+  ui.close();
+  await ui.open(repository());
+  expect(ui.q('.mr-root').dataset.layout).toBe('focus');
+});
+
+it('layout can be chosen before a document loads and while reading a map, without inventing a document position', async () => {
+  const pending = deferred<ReturnType<typeof repository>>();
+  const handle = openRepository(pending.promise);
+  ui.key('l');
+  expect(ui.q('.mr-root').dataset.layout).toBe('balanced');
+  expect(ui.scroll).not.toHaveBeenCalled();
+  pending.resolve(repository());
+  await pending.promise;
+  await ui.settled();
+  expect(ui.q('.mr-root').dataset.layout).toBe('balanced');
+  ui.key('m');
+  ui.scroll.mockClear();
+  ui.key('l');
+  expect(ui.q('.mr-root').dataset.layout).toBe('wide');
+  expect(ui.scroll).not.toHaveBeenCalled();
+  handle.close();
+});
+
 it('a repository opens at its README, read at one commit, with nothing from a review', async () => {
   const source = repository();
   await ui.open(source);
@@ -26,7 +78,7 @@ it('a repository opens at its README, read at one commit, with nothing from a re
   expect(ui.text('.mr-repo-commit-label')).toBe('c0ffee1');
   // Read as it is: no change marks, comments or Viewed.
   expect(ui.all('[data-mr-change], .mr-comment-btn, .mr-viewed')).toHaveLength(0);
-  expect(ui.q('.mr-root').getAttribute('aria-label')).toBe('Galley: repository docs');
+  expect(ui.q('.mr-root').getAttribute('aria-label')).toBe('Galley: project library');
   expect(document.documentElement.style.overflow).toBe('hidden');
 });
 
@@ -389,7 +441,7 @@ it('settings are the review reader’s sheet: the same Reading tab, a Keys tab, 
   const close = ui.q('.mr-settings-heading [data-act="close-settings"]');
   ui.click('[data-act="settings"]');
   expect(sheet.querySelector('[role="dialog"]')!.getAttribute('aria-labelledby')).toBe('mr-settings-title');
-  expect(ui.all('[data-settings-tab]').map(words)).toStrictEqual(['Reading', 'Keys']);
+  expect(ui.all('[data-settings-tab]').map(words)).toStrictEqual(['Reading', 'Layout', 'Keys']);
   expect(ui.q('[data-act="settings"]').getAttribute('aria-expanded')).toBe('true');
   expect(ui.all('.mr-topbar, .mr-main, .mr-toc').map((el) => el.inert)).toStrictEqual([true, true, true]);
   expect(ui.shadow().activeElement).toBe(close);
@@ -437,7 +489,7 @@ it('settings are the review reader’s sheet: the same Reading tab, a Keys tab, 
   ui.click('[data-settings-tab="keys"]');
   expect(ui.q('#mr-keys-panel').hidden).toBe(false);
   expect(ui.q('#mr-reading-panel').hidden).toBe(true);
-  expect(ui.all('#mr-keys-panel .mr-keys-title').map((title) => title.textContent)).toStrictEqual(['Move through the docs', 'Views', 'Settings']);
+  expect(ui.all('#mr-keys-panel .mr-keys-title').map((title) => title.textContent)).toStrictEqual(['Move through the library', 'Views', 'Settings']);
   ui.q('[data-settings-tab="keys"]').focus();
   ui.key('ArrowRight');
   expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="reading"]'));

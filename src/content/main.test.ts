@@ -190,7 +190,7 @@ it('keeps the error launcher when the retry fails too, without an unhandled reje
   expect(mocks.show).toHaveBeenCalledOnce();
 });
 
-it('offers repository pages Read docs without fetching anything until it is chosen', async () => {
+it('offers repository pages Read the project without fetching anything until it is chosen', async () => {
   context = null;
   const page = (path: string): RepoContext => ({
     platform: 'github',

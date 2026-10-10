@@ -135,7 +135,7 @@ export async function checkOpening(executablePath, screenshots) {
     const githubPopup = await githubPopupTarget.asPage();
     await githubPopup.waitForSelector('#reader button');
     await githubPopup.waitForSelector('#token-form', { visible: true });
-    assert.equal(await githubPopup.$eval('#reader button', (button) => button.textContent), 'Read docs');
+    assert.equal(await githubPopup.$eval('#reader button', (button) => button.textContent), 'Read the project');
     assert.equal(
       await githubPopup.$eval('#reader p', (label) => label.getBoundingClientRect().height > Number.parseFloat(getComputedStyle(label).lineHeight)),
       true,

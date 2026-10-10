@@ -36,6 +36,7 @@ import { renderDiagrams } from './diagrams.ts';
 import { loadReaderFonts } from './fonts.ts';
 import { chip, option, selectField, setRow, switchButton } from './dom.ts';
 import { icons } from './icons.ts';
+import { layoutPanel, LibraryLayout, LAYOUT_NAMES } from './layout-controls.ts';
 import css from './reader.css';
 import { digestText, ProjectNotes, when } from './project-store.ts';
 import { loadImage, renderDocument, type RenderedDoc } from './render.ts';
@@ -80,7 +81,7 @@ const MAX_ISSUE_URL = 8_000;
 /** Every shortcut of the repository reader; the Keys tab lists them and onKey() handles them. */
 const SHORTCUTS: Shortcuts = [
   [
-    'Move through the docs',
+    'Move through the library',
     [
       [['/'], 'Find a document or heading'],
       [['Alt', '←'], 'Back to where you were'],
@@ -91,6 +92,7 @@ const SHORTCUTS: Shortcuts = [
     'Views',
     [
       [['M'], 'Open the map, or go back to reading'],
+      [['L'], 'Next reading layout'],
       [['N'], 'Open your notes, or go back to reading'],
     ],
   ],
@@ -103,10 +105,10 @@ const SHORTCUTS: Shortcuts = [
     ],
   ],
 ];
-const SETTINGS_TABS = ['reading', 'keys'];
+const SETTINGS_TABS = ['reading', 'layout', 'keys'];
 
 const TEMPLATE = `
-<div class="mr-root mr-repo" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley: repository docs">
+<div class="mr-root mr-repo" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley: project library">
   <div class="mr-progress"><div></div></div>
   <header class="mr-topbar">
     <div class="mr-tb-left">
@@ -118,7 +120,7 @@ const TEMPLATE = `
       </span>
     </div>
     <div class="mr-tb-center">
-      <button class="mr-btn mr-file-btn" data-act="docs" aria-haspopup="dialog" aria-expanded="false" title="Documents (/)"><span class="mr-file-name">Documents</span>${icons.chevronDown}</button>
+      <button class="mr-btn mr-file-btn" data-act="docs" aria-haspopup="dialog" aria-expanded="false" title="Project library (/)"><span class="mr-file-name">Project library</span>${icons.chevronDown}</button>
     </div>
     <div class="mr-tb-right">
       <div class="mr-seg mr-repo-views" role="group" aria-label="View"><button data-view="review" aria-pressed="false" aria-label="This review" hidden>${icons.review}<span>This review</span></button><button data-view="read" aria-pressed="true" aria-label="Read">${icons.book}<span>Read</span></button><button data-view="map" aria-pressed="false" aria-label="Map" title="Map (M)">${icons.map}<span>Map</span></button><button data-view="notes" aria-pressed="false" aria-label="Notes" title="Your notes (N)">${icons.note}<span>Notes</span></button></div>
@@ -126,13 +128,13 @@ const TEMPLATE = `
       <button class="mr-btn mr-icon-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
     </div>
   </header>
-  <div class="mr-menu mr-repo-docs" role="dialog" aria-label="Documents" hidden>
+  <div class="mr-menu mr-repo-docs" role="dialog" aria-label="Project library" hidden>
     <div class="mr-files-head"><p class="mr-files-title"></p><p class="mr-files-meta"></p></div>
     <input type="search" class="mr-repo-search" placeholder="Find a document or heading" aria-label="Find a document or heading">
     <div class="mr-repo-notes"></div>
     <nav class="mr-repo-outline" aria-label="Documents in this repository"></nav>
   </div>
-${settingsSheet('The same settings as the review reader, so documents read the same way in both.', [
+${settingsSheet('Set type, appearance and layout for comfortable reading.', [
   {
     id: 'reading',
     label: 'Reading',
@@ -143,6 +145,7 @@ ${settingsSheet('The same settings as the review reader, so documents read the s
       </section>
       <p class="mr-settings-note">Changes to your settings appear in both readers right away.</p>`,
   },
+  { id: 'layout', label: 'Layout', icon: icons.layout, panel: layoutPanel('library') },
   {
     id: 'keys',
     label: 'Keys',
@@ -262,6 +265,7 @@ class RepoReader {
   private readonly root: HTMLElement;
   private readonly q = <T extends HTMLElement = HTMLElement>(selector: string) => this.shadow.querySelector<T>(selector)!;
   private settings: Settings = { ...DEFAULT_SETTINGS };
+  private readonly layouts = new LibraryLayout();
   private source: RepositorySource | null = null;
   private discovery: Promise<RepoDiscovery> | null = null;
   private listing: RepoDiscovery | null = null;
@@ -730,6 +734,14 @@ class RepoReader {
     const i = this.root.scrollTop > 0 ? blocks.findIndex((block) => block.el.getBoundingClientRect().bottom > TOP) : -1;
     place.block = i;
     place.offset = i < 0 ? 0 : blocks[i].el.getBoundingClientRect().top;
+  }
+
+  /** Reflow the article around the paragraph in view, without moving a map or notes view. */
+  private arrangeLayout(): void {
+    this.remember();
+    this.applySettings();
+    const place = this.history[this.at];
+    if (this.view === 'read' && place && this.rendered) this.restore(place);
   }
 
   private restore(place: Place): void {
@@ -1717,7 +1729,9 @@ class RepoReader {
     const value = target.closest<HTMLElement>('[data-setting] [data-value]');
     if (value) {
       const key = value.closest<HTMLElement>('[data-setting]')!.dataset.setting!;
-      this.update({ [key]: value.dataset.value });
+      if (key === 'layout') {
+        if (this.layouts.select(value.dataset.value!)) this.arrangeLayout();
+      } else this.update({ [key]: value.dataset.value });
       return;
     }
     const tab = target.closest<HTMLElement>('[data-settings-tab]');
@@ -2090,6 +2104,11 @@ class RepoReader {
     } else if (e.key === ',' || e.key === '?') {
       e.preventDefault();
       this.openSettings(e.key === '?' ? 'keys' : 'reading');
+    } else if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      this.layouts.next();
+      this.arrangeLayout();
+      this.toast(`Layout: ${LAYOUT_NAMES[this.layouts.value]}`);
     } else if (e.key === 'm' || e.key === 'M') {
       e.preventDefault();
       if (this.view === 'map') this.q<HTMLElement>('[data-view="read"]').click();
@@ -2117,12 +2136,13 @@ class RepoReader {
     r.dataset.font = s.font;
     r.dataset.theme = s.theme;
     r.dataset.density = s.density;
+    r.dataset.layout = this.layouts.value;
     r.classList.toggle('no-top-glow', !s.topGlow);
     r.classList.toggle('is-dark', s.appearance === 'dark' || (s.appearance === 'auto' && this.dark.matches));
     const text = TEXT_SIZES[s.size] ?? TEXT_SIZES[DEFAULT_SETTINGS.size];
     r.style.setProperty('--text-scale', String(Math.round((text / TEXT_SIZES[DEFAULT_SETTINGS.size]) * 1000) / 1000));
     r.style.setProperty('--body-size', `${text}px`);
-    applyReadingControls(this.shadow, s);
+    applyReadingControls(this.shadow, { ...s, layout: this.layouts.value });
     this.drawDiagrams();
   }
 

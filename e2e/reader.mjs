@@ -182,7 +182,7 @@ try {
   );
   await page.screenshot({ path: join(screenshots, 'galley-reader-desktop.png') });
   // Toolbar controls stay centred, ordered and within the viewport at every supported width.
-  for (const width of [1440, 1100, 900, 768, 760, 390, 320]) {
+  for (const width of [1440, 1280, 1100, 900, 768, 760, 390, 320]) {
     await page.setViewport({ width, height: 1000 });
     const aligned = await inspect(() => {
       const s = document.querySelector('#galley-reader').shadowRoot;

@@ -98,7 +98,7 @@ export function allowedRequest(origin: string, page: string | null, url: string,
   if (method === 'GET') {
     if (repository) return repositoryRead(resource, target.searchParams);
     if (/^pulls\/\d+(?:\/files|\/comments)?$/.test(resource) || /^compare\/[^/]+$/.test(resource)) return true;
-    // A pull request page lists its repository's tree for Project docs; it never resolves other refs.
+    // A pull request page lists its repository's tree for Project library; it never resolves other refs.
     // Tests call without a page, and may use every endpoint.
     return page ? treeRead(resource, target.searchParams) : repositoryRead(resource, target.searchParams);
   }

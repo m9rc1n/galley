@@ -3,7 +3,7 @@
 //   ?closed  start closed   ?doc=N  start at file N   ?code-only / ?diagram-error  exercise fallbacks
 //   ?spec  a test file   ?comments  code comments   ?large  folded files and moved code   ?chapters  mixed review map
 //   ?repo  read a sample repository's docs, as from a repository page   ?repo=docs/adr/0003-queue-for-reviews.md  from one document
-//   (in a review, Project docs opens the same sample repository at the merge request's base or head)
+//   (in a review, Project library opens the same sample repository at the merge request's base or head)
 import { structuredPatch } from 'diff';
 import type { DocRef, RepositorySource, ReviewSource, Thread } from '../src/platforms/types.ts';
 import { Launcher } from '../src/ui/launcher.ts';
@@ -298,7 +298,7 @@ const repository: RepositorySource = {
   newIssue: (title, body) => `https://github.com/acme/handbook/issues/new?${new URLSearchParams({ title, body })}`,
 };
 
-// The merge request's own repository: its docs at the base or head, opened over the review (Project docs).
+// The merge request's own repository: its docs at the base or head, opened over the review (Project library).
 source.project = {
   base: { ref: 'main', commit: repository.commit },
   head: { ref: 'docs/reading-first', commit: '9c1d7e3b5a2f4c6e8d0b1a3c5e7f9b2d4a6c8e0f' },

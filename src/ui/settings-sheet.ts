@@ -3,8 +3,8 @@ import { TEXT_SIZES, type Settings, type Theme } from './settings.ts';
 
 /**
  * The settings sheet both readers share (docs/design/patterns.md): a heading, tabs, and rows of
- * labelled controls. The review reader adds its Layout and Review tabs; the repository reader shows
- * the same Reading tab, so documents read the same way in both.
+ * labelled controls. Both readers add the shared layout picker; the review reader also adds its Review
+ * tab. The shared Reading tab keeps typography and appearance consistent across both.
  */
 
 /** Palettes chosen for reading: neutral, warm, then cool. The settings show them six to a page. */

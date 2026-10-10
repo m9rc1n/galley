@@ -36,7 +36,7 @@ The words Galley uses, what they mean, and what they are called in the code. Use
 | **Declared** | What a configuration file asks for at the commit read; never what is running | `DeclaredItem`, `config-frame` |
 | **Note** | The reader's own idea, question, assumption, next experiment or alternative about a repository | `Note`, `Thinking` (`src/core/notes.ts`) |
 | **Anchor** | The document section a note is about, with the commit and a fingerprint of the section, to say when it changes | `Anchor`, `anchorState()` |
-| **Project docs** | A review's repository read at its base or head, over the review | `ReviewSource.project`, `ReviewProject` |
+| **Project library** | A review's repository read at its base or head, over the review | `ReviewSource.project`, `ReviewProject` |
 | **Thread** | An existing platform conversation anchored to a line | `Thread` |
 | **Draft** | An unsent comment or reply; kept while the reader is open | `Draft`, `Editor`, `ReplyEditor` in `reader.ts` |
 | **Comments column** | The right margin on wide screens where cards sit level with their text | `.mr-threads` ("the rail" in code comments) |
