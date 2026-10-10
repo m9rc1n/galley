@@ -1,0 +1,67 @@
+name: Publish website and MR demos
+
+on:
+  workflow_run:
+    workflows: [Website]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Optional successful Website MR run to publish; leave blank to rebuild main and clean up closed previews
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# Pages replaces the entire site. Queue publications so concurrent MRs and close events all survive.
+concurrency:
+  group: pages-publication
+  queue: max
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+      id-token: write
+      pull-requests: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Always run the publisher and production build from main, never a pull request checkout.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build:site
+      - run: npm run test:site
+      - name: Prepare active MR demos
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          node scripts/prepare-pages.mjs
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Upload website and active previews
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: dist/site
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - name: Update MR demo comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pages-comments.mjs
