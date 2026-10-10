@@ -169,31 +169,42 @@ describe('picking up where the reader left off', () => {
     await vi.waitFor(async () => expect(await positions.loadPosition(source().diffUrl, ['docs/guide.md'])).toEqual({ path: 'docs/guide.md', offset: 300 }));
   });
 
-  it('stays quiet near the top, for files not in the review, when opened at a file, or once reading began', async () => {
-    await remember('docs/guide.md', 100);
+  it.each([0, 599, 600])('offers to resume in the first file only after reading at least 600 pixels (saved at %i)', async (offset) => {
+    await remember('docs/guide.md', offset);
+    const loaded = vi.spyOn(positions, 'loadPosition');
     await ui.open(source());
-    await ui.tick();
-    expect(ui.q('.mr-resume').hidden).toBe(true);
-    ui.close();
+    await vi.waitFor(() => expect(loaded).toHaveBeenCalledOnce());
+    // SHA-256 runs asynchronously: a timer tick can finish before the saved position is read.
+    expect(await loaded.mock.results[0].value).toEqual({ path: 'docs/guide.md', offset });
+    expect(ui.q('.mr-resume').hidden).toBe(offset < 600);
+    if (offset >= 600) expect(ui.q('.mr-resume-text').textContent).toBe('Pick up where you left off: guide.md');
+  });
+
+  it('stays quiet when the saved file is no longer in the review', async () => {
     await remember('docs/gone.md', 900);
+    const loaded = vi.spyOn(positions, 'loadPosition');
     await ui.open(source());
-    await ui.tick();
+    await vi.waitFor(() => expect(loaded).toHaveBeenCalledOnce());
+    expect(await loaded.mock.results[0].value).toBeNull();
     expect(ui.q('.mr-resume').hidden).toBe(true);
-    ui.close();
+  });
+
+  it('stays quiet when opened at a requested file', async () => {
     await remember('docs/later.md', 900);
     await ui.open(source(), { start: 1 });
-    await ui.tick();
     expect(ui.q('.mr-resume').hidden).toBe(true);
-    ui.close();
-    const loaded = deferred<DocContents>();
-    const handle = openReader(source({ load: () => loaded.promise }));
-    await vi.waitFor(() => expect(ui.q('.mr-root')).toBeTruthy());
+    expect(ui.q('.mr-file-name').textContent).toBe('later.md');
+  });
+
+  it('stays quiet if reading began before the saved position arrives', async () => {
+    const position = deferred<{ path: string; offset: number } | null>();
+    const loaded = vi.spyOn(positions, 'loadPosition').mockReturnValue(position.promise);
+    await ui.open(source());
+    await vi.waitFor(() => expect(loaded).toHaveBeenCalledOnce());
     ui.q('.mr-root').scrollTop = 400;
-    loaded.resolve({ base: 'Old.', head: 'New.' });
-    await ui.tick();
-    await ui.tick();
+    position.resolve({ path: 'docs/later.md', offset: 900 });
+    await position.promise;
     expect(ui.q('.mr-resume').hidden).toBe(true);
-    handle.close();
   });
 
   it('remembers a scroll made just before closing, and nothing before a review loads', async () => {

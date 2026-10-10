@@ -2386,65 +2386,52 @@
   border-bottom-color: var(--rule);
 }
 
-/* An aurora under the top bar at the start of a review: soft ribbons of teal, violet and rose, each
-   blended with the palette's accent, drifting slowly past one another from left to right and back. It
-   fades and stops as soon as reading begins, and keeps still for reduced motion. */
+/* Light washes down from the whole top edge: teal, violet and rose blend with the palette's accent.
+   The broad glow stays anchored to the screen, gently brightening and fading until reading begins. */
 .mr-topbar {
-  --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 14%), transparent);
-  --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 14%), transparent);
-  --aurora-c: color-mix(in srgb, color-mix(in srgb, #f472b6 55%, var(--accent)) var(--aurora-strength, 14%), transparent);
+  --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 24%), transparent);
+  --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 24%), transparent);
+  --aurora-c: color-mix(in srgb, color-mix(in srgb, #f472b6 55%, var(--accent)) var(--aurora-strength, 24%), transparent);
+  overflow-x: clip;
 }
 .mr-root.is-dark .mr-topbar {
-  --aurora-strength: 20%;
-}
-/* The ribbons drift sideways past the bar's edges: clip them there, so the page never scrolls sideways,
-   while the glow still falls below the bar. */
-.mr-topbar {
-  overflow-x: clip;
+  --aurora-strength: 32%;
 }
 .mr-topbar::before,
 .mr-topbar::after {
   content: "";
   position: absolute;
-  top: -24px;
+  inset: 0 0 auto;
   z-index: -1;
-  height: 170px;
+  background: linear-gradient(100deg, var(--aurora-a), var(--aurora-b) 48%, var(--aurora-c));
   pointer-events: none;
   transition: opacity 0.5s ease;
 }
 .mr-topbar::before {
-  left: 0;
-  width: 70%;
-  background: radial-gradient(45% 26% at 30% 34%, var(--aurora-a), transparent 72%), radial-gradient(40% 22% at 72% 46%, var(--aurora-b), transparent 72%);
-  transform: skewY(-4deg);
-  animation: mr-aurora-east 30s ease-in-out infinite alternate;
+  height: 240px;
+  mask-image: linear-gradient(#000, rgba(0, 0, 0, 0.55) 28%, rgba(0, 0, 0, 0.12) 65%, transparent);
+  animation: mr-aurora-glow 12s ease-in-out infinite alternate;
 }
 .mr-topbar::after {
-  right: 0;
-  width: 60%;
-  background: radial-gradient(48% 24% at 50% 40%, var(--aurora-c), transparent 72%);
-  transform: skewY(3deg);
-  animation: mr-aurora-west 38s ease-in-out infinite alternate;
+  height: 64px;
+  mask-image: linear-gradient(#000, transparent);
 }
 .mr-topbar.is-scrolled::before,
 .mr-topbar.is-scrolled::after {
   opacity: 0;
   animation-play-state: paused;
 }
-@keyframes mr-aurora-east {
+@keyframes mr-aurora-glow {
   from {
-    transform: translateX(-12%) skewY(-4deg);
+    filter: opacity(0.65);
   }
   to {
-    transform: translateX(52%) skewY(-2deg);
+    filter: opacity(1);
   }
 }
-@keyframes mr-aurora-west {
-  from {
-    transform: translateX(8%) skewY(3deg);
-  }
-  to {
-    transform: translateX(-62%) skewY(5deg);
+@media (prefers-reduced-motion: reduce) {
+  .mr-topbar::before {
+    animation: none;
   }
 }
 
