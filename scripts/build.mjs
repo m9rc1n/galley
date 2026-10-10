@@ -56,9 +56,10 @@ const bundles = [
   { name: 'spec-frame', entryPoints: ['src/ui/spec-frame.ts'], outfile: 'dist/.build/spec-frame.js', shipped: true },
   // The YAML parser reads repository configuration only inside its frame (src/ui/configs.ts).
   { name: 'config-frame', entryPoints: ['src/ui/config-frame.ts'], outfile: 'dist/.build/config-frame.js', shipped: true },
+  { name: 'image-frame', entryPoints: ['src/ui/image-frame.ts'], outfile: 'dist/.build/image-frame.js', shipped: true },
   { name: 'demo', entryPoints: ['demo/main.ts'], outfile: 'demo/build/demo.js', shipped: false },
 ];
-const FRAMES = ['diagram-frame', 'highlight-frame', 'spec-frame', 'config-frame'];
+const FRAMES = ['diagram-frame', 'highlight-frame', 'spec-frame', 'config-frame', 'image-frame'];
 const metafiles = new Map();
 
 /** License texts of every npm package that ends up inside the shipped bundles. */

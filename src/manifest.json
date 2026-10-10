@@ -35,14 +35,14 @@
     }
   ],
   "sandbox": {
-    "pages": ["diagram-frame.html", "highlight-frame.html", "spec-frame.html", "config-frame.html"]
+    "pages": ["diagram-frame.html", "highlight-frame.html", "spec-frame.html", "config-frame.html", "image-frame.html"]
   },
   "content_security_policy": {
-    "sandbox": "sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'unsafe-inline'"
+    "sandbox": "sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src https: http:"
   },
   "web_accessible_resources": [
     {
-      "resources": ["diagram-frame.html", "highlight-frame.html", "spec-frame.html", "config-frame.html"],
+      "resources": ["diagram-frame.html", "highlight-frame.html", "spec-frame.html", "config-frame.html", "image-frame.html"],
       "matches": ["https://*/*", "http://*/*"],
       "use_dynamic_url": true
     }

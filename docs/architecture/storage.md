@@ -19,6 +19,8 @@ Everything Galley keeps, where, and for how long. [PRIVACY.md](../../PRIVACY.md)
 
 Review contents, rendered documents, threads, comment drafts, chapter edits and the platform source cache live in the page's memory while the reader or page is open, and are gone when it closes. So do a repository's listing, documents, configuration, project map and reading history in the repository reader.
 
+Consented image fallbacks keep only their image address and dimensions in a sandboxed frame until that document is removed. They add no storage key or host permission.
+
 ## In the demo
 
 The demo uses `localStorage` for settings, Viewed, positions and repository notes, and `sessionStorage` for its simulated comments. Nothing is sent anywhere.

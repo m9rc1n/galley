@@ -1191,7 +1191,8 @@
   text-align: center;
 }
 
-.mr-content figure img {
+.mr-content figure img,
+.mr-content figure .mr-image-frame {
   display: block;
   margin: 0 auto;
 }

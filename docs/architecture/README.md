@@ -70,6 +70,7 @@ flowchart TB
 | Content script | The review page's renderer | The page's DOM and origin (the reviewer's session), `chrome.storage.local`, runtime messages | GitHub tokens |
 | Reader | The same content script, inside a shadow root | Its own DOM, settings and progress storage | The page's styles, tokens |
 | Sandbox frames | Sandboxed extension pages with opaque origins | Only the `MessagePort` the reader hands them | The page, the session, extension APIs, storage, the network |
+| Image fallback | A separate sandboxed frame with an opaque origin | One HTTP(S) image after the reader permits loading; a transferred reply port | Page DOM, tokens, extension APIs, storage, API requests, remote code |
 | Background worker | The extension's service worker | Tokens, the GitHub API (allowlisted calls only), `chrome.scripting` for enabled sites | Page DOM |
 | Popup | An extension page | Tokens (save and remove), site permissions | Review content |
 
@@ -205,7 +206,7 @@ Both readers compose their layout picker from `src/ui/layout-controls.ts`, teste
 
 | Output | Contents |
 | --- | --- |
-| `dist/chrome/`, `dist/firefox/` | `content.js`, `background.js`, `popup.*`, the four frame pages and scripts, `elk.js`, icons, the manifest with the package version, `THIRD_PARTY_NOTICES.txt` |
+| `dist/chrome/`, `dist/firefox/` | `content.js`, `background.js`, `popup.*`, the five frame pages and scripts (four engines and the image fallback), `elk.js`, icons, the manifest with the package version, `THIRD_PARTY_NOTICES.txt` |
 | `dist/*.zip` | Store-ready archives with `--zip`; releases also attach a source archive |
 | `demo/build/` | The demo bundle and copies of the frames |
 | `dist/dev/` | The development build (`npm run dev`): orange icon, DEV badges, source maps, live reload, its own storage |

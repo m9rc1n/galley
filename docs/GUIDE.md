@@ -60,7 +60,7 @@ Both versions of each document are parsed as GitHub-flavoured Markdown: tables, 
 - **Changes that render nowhere** (HTML comments, link definitions) are counted in the byline and linked to the platform diff, so you can inspect changes that do not appear in the rendered document.
 - **Emoji shortcodes** such as `:tada:` show as the emoji, as they do on GitHub and GitLab, in documents and comments alike. Emoticons such as `:)` and anything in code stay as written.
 - **Clean mode** (<kbd>C</kbd>) hides the marks and reads the new version as it will be published, with quiet bars left in the margin.
-- **Images** hosted on the review site load normally. Images hosted elsewhere wait behind a **Load** button, so a pull request cannot track who reads it; **External images: Load** changes that.
+- **Images** hosted on the review site load normally. Images hosted elsewhere wait behind a **Load** button, so a pull request cannot track who reads it; **External images: Load** changes that. If the platform blocks a loaded badge or image, the extension displays it in an isolated image frame.
 
 ## Code
 
