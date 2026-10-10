@@ -32,22 +32,30 @@ flowchart LR
 flowchart TB
   subgraph Page["Review page (github.com, gitlab.com, enabled self-hosted sites)"]
     CS["Content script<br/>src/content/main.ts"]
-    L["Launcher: Read button<br/>src/ui/launcher.ts"]
+    L["Launcher: Read or Read docs<br/>src/ui/launcher.ts"]
     subgraph Shadow["#galley-reader shadow root"]
       RD["Reader<br/>src/ui/reader.ts + reader.css"]
       DF["diagram-frame<br/>(Mermaid)"]
       HF["highlight-frame<br/>(highlight.js)"]
       SF["spec-frame<br/>(Babel parser)"]
     end
+    subgraph RepoShadow["#galley-repo-reader shadow root"]
+      RR["Repository reader<br/>src/ui/repo-reader.ts + repo.css"]
+      CF["config-frame<br/>(YAML reader)"]
+    end
   end
   subgraph Ext["Extension context"]
     W["Background worker<br/>src/background/worker.ts"]
     PU["Toolbar popup<br/>src/popup/"]
     DB[("Extension IndexedDB<br/>GitHub tokens")]
-    ST[("chrome.storage.local<br/>settings, progress, sites")]
+    ST[("chrome.storage.local<br/>settings, progress, sites,<br/>repository notes")]
   end
   CS --> L --> RD
+  L --> RR
+  RD -- "Project docs" --> RR
   RD <-- "MessageChannel,<br/>one request at a time" --> DF & HF & SF
+  RR <-- "MessageChannel" --> CF
+  RR --> ST
   CS -- "runtime message:<br/>allowlisted GitHub call" --> W
   W --> DB
   PU --> DB
@@ -138,17 +146,17 @@ A failure keeps the draft; writes are never retried ([ADR 0008](../adr/0008-comm
 | Folder | Responsibility | Key files | Environment |
 | --- | --- | --- | --- |
 | `src/content/` | Page detection, launcher, single-page navigation, token-change signal | `main.ts` | Page (jsdom in tests) |
-| `src/platforms/` | GitHub and GitLab adapters behind `ReviewSource`; detection; HTTP with retries; comments and threads; Viewed sync; tokens and enabled sites | `types.ts`, `index.ts`, `detect.ts`, `github.ts`, `github-api.ts`, `github-queries.ts`, `github-viewed.ts`, `gitlab.ts`, `comments.ts`, `http.ts`, `tokens.ts`, `sites.ts` | Node in tests |
-| `src/core/` | Pure logic, no DOM: Markdown units, block and word diffs, limits, DOM highlighting of ops, patch reversal, paths and links, reading order, folded-file rules, chapters | `markdown.ts`, `blockdiff.ts`, `worddiff.ts`, `limits.ts`, `highlight.ts`, `patch.ts`, `paths.ts`, `order.ts`, `quiet.ts`, `chapters.ts` | Node in tests |
-| `src/ui/` | The reader: overlay, rendering pipeline, settings, storage of progress and positions, sandbox frames and their clients, code views, chapters UI | `reader.ts`, `reader.css`, `render.ts`, `reading.ts`, `settings.ts`, `viewed.ts`, `positions.ts`, `sandbox.ts`, `*-frame.ts`, `code*.ts`, `specs.ts`, `symbols.ts`, `moves.ts`, `source-comments.ts`, `diagrams.ts`, `chapters.ts`, `icons.ts`, `fonts.ts` | jsdom in tests |
+| `src/platforms/` | GitHub and GitLab adapters behind `ReviewSource` and `RepositorySource`; detection of reviews and repository pages; HTTP with retries; comments and threads; Viewed sync; tokens and enabled sites | `types.ts`, `index.ts`, `detect.ts`, `github.ts`, `github-api.ts`, `github-read.ts`, `github-repo.ts`, `github-queries.ts`, `github-viewed.ts`, `gitlab.ts`, `gitlab-repo.ts`, `comments.ts`, `http.ts`, `tokens.ts`, `sites.ts` | Node in tests |
+| `src/core/` | Pure logic, no DOM: Markdown units, block and word diffs, limits, DOM highlighting of ops, patch reversal, paths and links, reading order, folded-file rules, chapters; repository listing budgets, the document index, architecture and decision views, notes and their export | `markdown.ts`, `blockdiff.ts`, `worddiff.ts`, `limits.ts`, `highlight.ts`, `patch.ts`, `paths.ts`, `order.ts`, `quiet.ts`, `chapters.ts`, `discovery.ts`, `docindex.ts`, `architecture.ts`, `notes.ts` | Node in tests |
+| `src/ui/` | The reader: overlay, rendering pipeline, settings, storage of progress and positions, sandbox frames and their clients, code views, chapters UI; the repository reader, its views and the notes store | `reader.ts`, `reader.css`, `render.ts`, `reading.ts`, `settings.ts`, `viewed.ts`, `positions.ts`, `sandbox.ts`, `*-frame.ts`, `code*.ts`, `specs.ts`, `symbols.ts`, `moves.ts`, `source-comments.ts`, `diagrams.ts`, `chapters.ts`, `icons.ts`, `fonts.ts`, `repo-reader.ts`, `repo-views.ts`, `repo.css`, `configs.ts`, `project-store.ts`; shared by both readers: `dom.ts` (chips, settings rows, switches, selects, text fields) and `settings-sheet.ts` | jsdom in tests |
 | `src/background/` | The only holder of GitHub tokens; allowlisted API proxy; restores enabled sites | `worker.ts` | Node in tests |
 | `src/popup/` | Enable a self-hosted site; save or remove a GitHub token | `popup.ts`, `popup.html`, `popup.css` | jsdom in tests |
 | `src/dev/` | Live reload for `npm run dev` | `reload.ts` | Node in tests |
-| `src/testing/` | Test helpers; never shipped | `reader.ts`, `render.ts`, `http.ts`, `indexeddb.ts`, `sandbox.ts` | — |
-| `demo/` | The real reader on a sample review; `?spec`, `?comments`, `?large`, `?chapters`, `?code-only`, `?diagram-error` | `main.ts`, `index.html`, `samples/` | Browser |
+| `src/testing/` | Test helpers; never shipped | `reader.ts`, `repo.ts`, `render.ts`, `http.ts`, `indexeddb.ts`, `sandbox.ts` | — |
+| `demo/` | The real reader on a sample review; `?spec`, `?comments`, `?large`, `?chapters`, `?code-only`, `?diagram-error`; `?repo` for the repository reader on a sample handbook | `main.ts`, `index.html`, `samples/` | Browser |
 | `site/` | The website | `index.html`, `styles.css`, `main.js` | Browser |
-| `scripts/` | Build, dev server, demo and site servers, store assets, Pages previews, docs check | `build.mjs`, `dev.mjs`, `docs.mjs`, `pages-*.mjs` | Node |
-| `e2e/` | Browser checks in Chrome with Puppeteer | `reader.mjs`, `specs.mjs`, `large.mjs`, `files.mjs`, `chapters.mjs`, `site.mjs` | Chrome |
+| `scripts/` | Build, dev server, demo and site servers, store assets, Pages previews, docs check, the repository reading report | `build.mjs`, `dev.mjs`, `docs.mjs`, `pages-*.mjs`, `repo-report.mjs` | Node |
+| `e2e/` | Browser checks in Chrome with Puppeteer | `reader.mjs`, `specs.mjs`, `large.mjs`, `files.mjs`, `chapters.mjs`, `repo.mjs`, `site.mjs` | Chrome |
 
 Dependencies point inwards: `core` imports only types from `platforms/types.ts`; `platforms` imports `core`; `ui` imports `core` and `platforms/types.ts`; `content` wires `platforms` and `ui` together. Nothing outside `src/background/` and `src/popup/` imports token storage, and the build enforces it.
 
@@ -167,7 +175,24 @@ Dependencies point inwards: `core` imports only types from `platforms/types.ts`;
 | `loadThreads?()` | Existing review threads, each with `reply?()` |
 | `overview?` | The request's own title and description |
 
-Errors meant for the reviewer are `ReaderError(message, hint, needsToken)`. A new platform implements this interface; the reader does not change. [RFC 0049](../rfcs/0049-repository-docs-and-project-maps.md) proposes a separate repository source alongside it rather than a fabricated review.
+Errors meant for the reviewer are `ReaderError(message, hint, needsToken)`. A new platform implements this interface; the reader does not change. `project?` opens the review's repository at its base or head (`ReviewProject`, below).
+
+## The `RepositorySource` contract
+
+The repository reader (`src/ui/repo-reader.ts`) reads a project's own docs through a separate interface, not a fabricated review ([RFC 0049](../rfcs/0049-repository-docs-and-project-maps.md), [ADR 0024](../adr/0024-read-a-repository-at-one-commit.md)):
+
+| Member | Purpose |
+| --- | --- |
+| `id`, `name`, `platform`, `url` | The repository, whichever commit is read; `id` keys the reader's notes ([ADR 0028](../adr/0028-private-project-notes.md)) |
+| `ref`, `commit`, `pinned` | The branch or tag the page showed, the one commit every read uses, and whether there is anything newer to check |
+| `start` | The document or folder the reader opened at |
+| `discover()` | Markdown documents and configuration files at the commit, within the listing budgets (`src/core/discovery.ts`) |
+| `load(path)` | One file at the commit |
+| `links` | Raw and platform URLs at the commit |
+| `refresh()` | The same branch or tag again: a new snapshot when it moved |
+| `newIssue(title, body)` | The platform's new-issue form filled in, for an export the reader chooses to share |
+
+The reader keeps one `ProjectIndex` (`src/core/docindex.ts`) per snapshot for the outline, backlinks and the map; the architecture and decision views (`src/core/architecture.ts`) are built from it, from configuration read in `config-frame`, and from the reader's own proposals.
 
 ## Build outputs
 
@@ -175,7 +200,7 @@ Errors meant for the reviewer are `ReaderError(message, hint, needsToken)`. A ne
 
 | Output | Contents |
 | --- | --- |
-| `dist/chrome/`, `dist/firefox/` | `content.js`, `background.js`, `popup.*`, the three frame pages and scripts, `elk.js`, icons, the manifest with the package version, `THIRD_PARTY_NOTICES.txt` |
+| `dist/chrome/`, `dist/firefox/` | `content.js`, `background.js`, `popup.*`, the four frame pages and scripts, `elk.js`, icons, the manifest with the package version, `THIRD_PARTY_NOTICES.txt` |
 | `dist/*.zip` | Store-ready archives with `--zip`; releases also attach a source archive |
 | `demo/build/` | The demo bundle and copies of the frames |
 | `dist/dev/` | The development build (`npm run dev`): orange icon, DEV badges, source maps, live reload, its own storage |

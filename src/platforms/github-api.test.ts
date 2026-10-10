@@ -56,6 +56,40 @@ it('anything else is refused, including other repositories and pull requests', (
   );
 });
 
+it('a repository page may only resolve a ref and list the tree of that repository', () => {
+  const tree = 'https://github.com/acme/docs/tree/release/2.0/docs';
+  const ok = (url: string, from = tree) => allowedRequest('https://github.com', from, url, 'GET');
+  expect(ok(`${api}/commits?sha=release%2F2.0&per_page=1`)).toBe(true);
+  expect(ok(`${api}/commits?per_page=1`, 'https://github.com/acme/docs')).toBe(true);
+  expect(ok(`${api}/git/trees/abc123?recursive=1`, 'https://github.com/acme/docs/blob/main/README.md')).toBe(true);
+  expect(ok(`${api}/git/trees/abc123`)).toBe(true);
+  const no = (url: string, method = 'GET', body?: string, from = tree) =>
+    expect(allowedRequest('https://github.com', from, url, method, body), `${method} ${url} from ${from}`).toBe(false);
+  no(`${api}/commits?sha=main&path=secret`);
+  no(`${api}/git/trees/abc123?recursive=1&page=2`);
+  no(`${api}/git/trees/abc/def`);
+  no(`${api}/commits/main`);
+  no(`${api}/contents/README.md`);
+  no(`${api}/pulls/12`);
+  no(`${api}/compare/a...b`);
+  no(`${api}/pulls/12/comments`, 'POST', '{}');
+  no('https://api.github.com/repos/other/docs/commits?per_page=1');
+  no('https://api.github.com/graphql', 'POST', graphql(VIEWED_FILES_QUERY));
+  // Other pages read nothing.
+  no(`${api}/commits?per_page=1`, 'GET', undefined, 'https://github.com/acme/docs/blob/main/src/app.ts');
+  no(`${api}/commits?per_page=1`, 'GET', undefined, 'https://github.com/settings/profile');
+});
+
+it('a pull request page may list its own repository’s tree for Project docs, and resolve no refs', () => {
+  const ok = (url: string) => allowedRequest('https://github.com', page, url, 'GET');
+  expect(ok(`${api}/git/trees/headsha?recursive=1`)).toBe(true);
+  expect(ok(`${api}/git/trees/subtree`)).toBe(true);
+  expect(ok(`${api}/commits?per_page=1`)).toBe(false);
+  expect(ok(`${api}/commits?sha=main&per_page=1`)).toBe(false);
+  expect(ok(`${api}/git/trees/headsha?recursive=1&path=x`)).toBe(false);
+  expect(ok('https://api.github.com/repos/other/docs/git/trees/headsha?recursive=1')).toBe(false);
+});
+
 it('tokens are only attached to https requests', async () => {
   const seen: Array<Record<string, string>> = [];
   mockFetch((_url, init) => {

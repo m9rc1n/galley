@@ -27,6 +27,7 @@
     "test:docs": "node --test scripts/docs.test.mjs",
     "docs:check": "node scripts/docs.mjs",
     "docs:index": "node scripts/docs.mjs --write",
+    "repo:report": "node scripts/repo-report.mjs",
     "icons": "node scripts/icons.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -57,7 +58,8 @@
     "markdown-it": "^15.0.2",
     "markdown-it-emoji": "^3.1.0",
     "markdown-it-footnote": "^4.0.0",
-    "mermaid": "^12.1.0"
+    "mermaid": "^12.1.0",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

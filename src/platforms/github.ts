@@ -4,8 +4,10 @@ import { reconstructBase } from '../core/patch.ts';
 import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitHubContext } from './detect.ts';
 import type { GitHubApi } from './github-api.ts';
-import { getText, HttpError } from './http.ts';
-import { ReaderError, type DocRef, type DocStatus, type ReviewSource, type Thread } from './types.ts';
+import { githubRepositoryAt } from './github-repo.ts';
+import { explainGitHub, readRawFile, readWithRetry } from './github-read.ts';
+import { HttpError } from './http.ts';
+import { ReaderError, type DocRef, type DocStatus, type RepositorySource, type ReviewProject, type ReviewSource, type Thread } from './types.ts';
 
 interface GitHubFile {
   filename: string;
@@ -21,28 +23,6 @@ interface GitHubDoc extends DocRef {
 }
 
 const MAX_PAGES = 10;
-const READ_RETRY_DELAYS = [250, 750];
-
-/** Briefly retry transient reads, keeping the same URL/revision. Writes never pass through here. */
-async function readWithRetry<T>(read: () => Promise<T>): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await read();
-    } catch (err) {
-      if (!(err instanceof HttpError) || attempt >= READ_RETRY_DELAYS.length) throw err;
-      const retryAfter = err.headers?.get('retry-after');
-      if (err.status === 403 || err.status === 429) {
-        // Secondary limits may name a short cooldown. Quota and permission failures need action.
-        if (!retryAfter || err.headers?.get('x-ratelimit-remaining') === '0' || err.headers?.get('x-github-sso')) throw err;
-      } else if (![0, 408, 500, 502, 503, 504].includes(err.status)) throw err;
-      const cooldown = Number(retryAfter ?? '0') * 1000;
-      // Do not retry before GitHub's requested cooldown or leave the reader waiting for a long one.
-      if (!Number.isFinite(cooldown) || cooldown < 0 || cooldown > 2000) throw err;
-      await new Promise((resolve) => setTimeout(resolve, Math.max(READ_RETRY_DELAYS[attempt], cooldown)));
-    }
-  }
-}
-
 function mapStatus(status: string): DocStatus {
   if (status === 'added' || status === 'copied') return 'added';
   if (status === 'removed') return 'removed';
@@ -51,23 +31,8 @@ function mapStatus(status: string): DocStatus {
 }
 
 function explain(err: unknown, hasToken: boolean): Error {
-  if (!(err instanceof HttpError)) return err instanceof Error ? err : new Error(String(err));
-  const remaining = err.headers?.get('x-ratelimit-remaining');
-  if ((err.status === 403 || err.status === 429) && remaining === '0') {
-    return new ReaderError(
-      'GitHub API rate limit reached.',
-      hasToken
-        ? 'Wait a few minutes and try again.'
-        : 'Without a token GitHub allows 60 requests per hour. Add a read-only token in the Galley toolbar popup to raise the limit.',
-      !hasToken,
-    );
-  }
-  if (err.status === 403 && err.headers?.get('x-github-sso')) {
-    return new ReaderError('Your GitHub token is not authorized for this organization.', 'Authorize the token for SSO in your GitHub token settings.', true);
-  }
-  if (err.status === 401) return new ReaderError('GitHub rejected the token.', 'Replace it in the Galley toolbar popup.', true);
-  if (err.status === 404) {
-    return hasToken
+  return explainGitHub(err, hasToken, () =>
+    hasToken
       ? new ReaderError(
           'GitHub could not find this pull request with your token.',
           'Make sure the token can read this repository (Contents and Pull requests: read-only).',
@@ -77,10 +42,8 @@ function explain(err: unknown, hasToken: boolean): Error {
           'This pull request is in a private repository.',
           'Add a read-only GitHub token in the Galley toolbar popup to read private pull requests.',
           true,
-        );
-  }
-  if (err.status === 0) return new ReaderError('Could not reach GitHub.', 'Check your connection and try again.');
-  return new ReaderError(`GitHub returned an error (${err.status}).`, 'Try again in a moment.');
+        ),
+  );
 }
 
 /**
@@ -98,9 +61,13 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
     }
   };
 
-  const { data: pr } = await api<{ base: { sha: string }; head: { sha: string }; title?: string; body?: string | null; user?: { login: string } | null }>(
-    `/pulls/${ctx.number}`,
-  );
+  const { data: pr } = await api<{
+    base: { sha: string; ref?: string };
+    head: { sha: string; ref?: string };
+    title?: string;
+    body?: string | null;
+    user?: { login: string } | null;
+  }>(`/pulls/${ctx.number}`);
 
   const files: GitHubFile[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -118,18 +85,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
   // Same-origin raw URLs work for public and private repositories alike: the browser session
   // authorises them and GitHub redirects to raw.githubusercontent.com.
   const raw = (sha: string, path: string) => `${repoUrl}/raw/${sha}/${encodePath(path)}`;
-  const readRaw = (sha: string, path: string) => {
-    const url = raw(sha, path);
-    return readWithRetry(async () => {
-      try {
-        return await getText(url, { cache: 'no-store' });
-      } catch (err) {
-        // A connection can also fail while consuming an otherwise successful response body.
-        if (err instanceof TypeError) throw new HttpError(0, url, null);
-        throw err;
-      }
-    });
-  };
+  const readRaw = (sha: string, path: string) => readRawFile(raw(sha, path));
 
   let mergeBase: Promise<string> | null = null;
   const getMergeBase = () =>
@@ -196,9 +152,25 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
           }
         };
 
+  const project: ReviewProject = {
+    base: { ref: pr.base.ref ?? pr.base.sha.slice(0, 7), commit: pr.base.sha },
+    head: { ref: pr.head.ref ?? headSha.slice(0, 7), commit: headSha },
+    open(revision) {
+      // A review's revisions never move; its repository is read at exactly that commit.
+      const source: RepositorySource = githubRepositoryAt(ctx, github, hasToken, {
+        ...project[revision],
+        pinned: true,
+        start: { path: '', folder: true },
+        refresh: async () => source,
+      });
+      return source;
+    },
+  };
+
   return {
     title: ctx.title,
     subtitle: `${ctx.owner}/${ctx.repo} · #${ctx.number}`,
+    project,
     overview: {
       kind: 'Pull request',
       title: pr.title ?? ctx.title,

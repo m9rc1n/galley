@@ -16,6 +16,7 @@ import { checkCodeComments, checkSpecs } from './specs.mjs';
 import { checkLargeReview } from './large.mjs';
 import { checkFilesLayout } from './files.mjs';
 import { checkChapters } from './chapters.mjs';
+import { checkRepository } from './repo.mjs';
 
 function contrast(first, second) {
   const luminance = (colour) =>
@@ -1042,8 +1043,9 @@ try {
   await checkLargeReview(browser, demoUrl, screenshots);
   await checkFilesLayout(browser, demoUrl, screenshots);
   await checkChapters(browser, demoUrl, screenshots);
+  await checkRepository(browser, demoUrl, screenshots);
   console.log(
-    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, nineteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description, editable review chapters, complete file maps, chapter keyboard focus and mobile layouts.',
+    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, nineteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description, editable review chapters, complete file maps, chapter keyboard focus, repository docs read at one commit with history, the documents outline and the project map, and mobile layouts.',
   );
 } finally {
   await browser.close();

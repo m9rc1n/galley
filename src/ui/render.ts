@@ -451,9 +451,12 @@ function decorate(doc: Document, root: HTMLElement, input: RenderInput): { repla
       held++;
     }
   }
-  for (const a of root.querySelectorAll('a[href]')) {
+  for (const a of root.querySelectorAll<HTMLAnchorElement>('a[href]')) {
     const r = resolveHref(path, a.getAttribute('href')!);
     if (r.type === 'anchor') continue;
+    // The repository path, for readers that follow links within the repository (repo-reader.ts). Set
+    // after sanitising, which removes every data attribute a document writes, so it cannot be forged.
+    if (r.type === 'repo') a.dataset.mrPath = r.path + r.suffix;
     a.setAttribute('href', r.type === 'repo' ? links.blob(r.path) + r.suffix : r.href);
     a.setAttribute('target', '_blank');
     a.setAttribute('rel', 'noopener noreferrer');

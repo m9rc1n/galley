@@ -927,6 +927,17 @@
   color: var(--del);
 }
 
+/* Not changes: the reader's own carries a hint of the accent, as their threads do; a guess Galley has
+   not checked has a hollow dot. */
+.mr-chip.is-own .mr-dot {
+  color: var(--accent);
+}
+
+.mr-chip.is-unverified .mr-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
 .mr-byline-note {
   color: var(--muted);
 }
@@ -2693,6 +2704,39 @@
   width: min(460px, calc(100vw - 24px));
 }
 
+/* Project docs: the repository's docs at one side of the review, opened over it. Phones keep the icon. */
+.mr-project-btn .mr-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.mr-project {
+  right: 12px;
+  width: min(360px, calc(100vw - 24px));
+}
+
+.mr-project-intro {
+  margin: 6px 10px 8px;
+  color: var(--muted);
+  font: 13px / 1.45 var(--sans);
+}
+
+.mr-files-project {
+  margin: 6px 0 2px;
+  padding: 10px 12px 4px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font: 600 12px / 1.4 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 380px) {
+  .mr-project-btn {
+    display: none;
+  }
+}
+
 .mr-files-head {
   margin: 0 0 4px;
   padding: 10px 12px 12px;
@@ -3007,8 +3051,13 @@
     min-height: 44px;
     box-sizing: border-box;
   }
-  .mr-chapters-toggle {
+  .mr-chapters-toggle,
+  .mr-project-btn {
     min-height: 44px;
+  }
+
+  .mr-project-label {
+    display: none;
   }
 }
 
@@ -4444,6 +4493,23 @@
   height: 16px;
   pointer-events: none;
   color: var(--muted);
+}
+/* A one-line text field, the same size and edge as the select beside it. */
+.mr-field {
+  box-sizing: border-box;
+  flex: 0 1 210px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--control-rule);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px / 1.4 var(--sans);
+}
+.mr-field::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 .mr-size-control {
   display: flex;

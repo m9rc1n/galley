@@ -10,11 +10,14 @@ How the reader's controls behave, so a new feature feels like the rest. Each pat
 | **Segmented control** | One of two to four values of a setting | `.mr-seg` with `role="group"`, `aria-label`, `data-setting="<key>"`, and `button[data-value]` children | `aria-pressed="true"` on the chosen one, set by `applySettings()` |
 | **Switch** | A setting that is on or off | `button.mr-switch` with `role="switch"`, `aria-checked`, `aria-labelledby` pointing at the row label | Toggle in `onClick()`, persist through `update()` |
 | **Choice cards** | Visual choices (palettes, layouts) | `.mr-theme-options` with `data-setting`, cards with a preview, name, check icon and caption | `aria-pressed`; only the chosen card shows its check |
-| **Select** | A long list of named values (typeface) | Native `select` inside `.mr-font-select` | `change` event calls `update()` |
+| **Select** | A long list of named values (typeface, a note's kind) | Native `select` inside `.mr-font-select`; `selectField(select)` builds it | `change` event calls `update()`, or the view's `onChange()` |
+| **Text field** | One line of the reader's own words (a name, a label) | `textField(name)` → `input.mr-field`, the same size and edge as the select | Inside a form; longer text is the composer's `textarea` |
 | **Disclosure** | Showing hidden content in place | A button that names what it reveals: **N unchanged blocks**, **Show changes**, **View source**, **Browse tests** | `aria-expanded` where it toggles; the same right/down arrow everywhere |
-| **Chip** | A fact about a file | `chip(kind, text)` → `.mr-chip.is-added` with a dot and a word | Never colour alone; links and buttons styled as chips still say what they do |
+| **Chip** | A fact about a file, a document or an item on the map | `chip(kind, text)` → `.mr-chip.is-added` with a dot and a word. Change kinds (`added`, `modified`, `removed`, `moved`) colour the dot; `own` (the reader's own: a type they set, a proposal) carries the accent; `unverified` (a guess Galley has not checked) has a hollow dot; no kind is a plain fact | Never colour alone; links and buttons styled as chips still say what they do. Change colours only for changes |
 
-Settings rows follow one shape: a label with an optional `small` explanation on the left, the control on the right (`.mr-set-row`).
+Settings rows follow one shape: a label with an optional `small` explanation on the left, the control on the right (`.mr-set-row`). `setRow(label, control, explain)` builds one and names the control by its label, so a row works the same in the settings sheet, the export sheet, a form or a card.
+
+Both readers build these controls with the helpers in `src/ui/dom.ts` (`chip`, `setRow`, `switchButton`, `selectField`, `textField`, `option`), and share the settings sheet from `src/ui/settings-sheet.ts`: its markup, its Reading tab, tab focus and the palette carousel.
 
 ## Actions and events
 
@@ -32,6 +35,7 @@ Layers, innermost first: the enlarged diagram, the settings sheet or chapter map
 - **Focus stays inside.** <kbd>Tab</kbd> cycles through the visible controls of the current layer (the diagram, the sheet, or the reader).
 - **Tabs use roving focus.** Settings tabs move with the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>.
 - **Menus close on an outside click** and when another opens (`closeMenus()`).
+- **One sheet shape.** A sheet is `.mr-settings` → backdrop and `.mr-settings-panel` (`role="dialog"`, `aria-modal`), with a heading, a close button and `.mr-settings-body` of sections and rows: the settings, and the repository reader's **Export notes**. It sits at the top right on wide screens and rises from the bottom on phones.
 
 ## Navigation
 
@@ -49,6 +53,7 @@ Moving never changes state: it does not mark files Viewed, open folded files, or
 
 - **Toasts** (`toast()`, `role="status"`) confirm what just happened in a few words, optionally with **View on platform**, and leave after six seconds. Use them for results of an action the reviewer took ("Comment posted", "Layout: Review"), not for errors that need action.
 - **Inline status** sits next to what it describes: an editor's status line, the Viewed feedback line under the top bar, a chapter map's feedback line.
+- **Offers to pick up** use the resume pill (`.mr-resume`): a sentence, one action, and **×**. The review reader offers to continue reading; the repository reader offers to **Recover** unsaved notes.
 - **Progress** shows as text ("1 of 3 viewed", "Change 3 of 12"), never only as a bar.
 - **Saving** is never claimed before it succeeded. A failed Viewed update restores the previous state and says so; storage failures are surfaced.
 
@@ -73,6 +78,8 @@ Moving never changes state: it does not mark files Viewed, open folded files, or
 3. **Drafts persist** while the reader is open. Choosing the same text again returns to its draft; an untouched editor closes when you go elsewhere.
 4. **Post** with **Comment** or ⌘/Ctrl Enter. Success shows a toast with **View on platform**; failure keeps the draft and explains.
 5. **Reply** under any comment; replies to replies join the thread with an @mention, because platform threads are flat.
+
+Writing that stays private uses the same shapes. In the repository reader a new note, an edited note and a proposal for the map are composer cards (`.mr-composer`, a `.mr-comment-target` naming what is written, fields in settings rows, then `.mr-compose-actions`), and each saved note is a thread card of the reader's own (`.mr-thread.is-own`) with its actions in `.mr-thread-foot`.
 
 ## Folding and context
 

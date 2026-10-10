@@ -34,7 +34,7 @@ flowchart LR
     UI["Shadow-root UI"]
   end
   subgraph Sandbox["Sandbox frames (opaque origin, no network)"]
-    E["Mermaid, highlight.js, Babel parser"]
+    E["Mermaid, highlight.js, Babel parser, YAML reader"]
   end
   subgraph Privileged["Extension context"]
     W["Background worker"]
@@ -55,10 +55,11 @@ flowchart LR
 | Content → links | Relative links decoded before resolving dot segments; thread and "View on" links limited to the review origin | `core/paths.test.ts`, `core/edges.test.ts` |
 | Content → reviewer's comment | Path and quote posted as code; quote capped at 1,000 characters | `platforms/comments.test.ts` |
 | Content → engines | Sandbox frames: opaque origin, CSP `default-src 'none'`, one request at a time, watchdog, input caps; replies validated | `sandbox.test.ts`, `*-frame.test.ts`, `e2e/reader.mjs` |
-| Content → execution | Test files and declarations are parsed, never run | `spec-frame.test.ts` |
+| Content → execution | Test files, declarations and configuration files are parsed, never run; YAML aliases are never expanded, includes never followed ([ADR 0027](../adr/0027-read-configuration-statically.md)) | `spec-frame.test.ts`, `config-frame.test.ts` |
 | Page → token | Tokens in extension IndexedDB; only the worker attaches them; the build fails if token code reaches `content.js` or a frame | `worker.test.ts`, `tokens.test.ts`, `scripts/build.mjs` |
-| Page → API proxy | Worker checks the sender is Galley's content script, takes the site from the browser, allows only listed calls for the pull request in that tab | `worker.test.ts`, `github-api.test.ts` |
-| Hostile size or complexity | Document size cap, bounded diffs (2,000 edits, 250 ms), frame input caps, thread bodies capped at 65,536 characters | `limits.test.ts`, `edges.test.ts` |
+| Page → API proxy | Worker checks the sender is Galley's content script, takes the site from the browser, allows only listed calls for the pull request or repository in that tab: on a repository page, resolving a ref and listing that repository's tree; on a pull request page, also listing its own repository's tree ([ADR 0025](../adr/0025-repository-reads-in-the-token-allowlist.md)) | `worker.test.ts`, `github-api.test.ts` |
+| Hostile size or complexity | Document size cap, bounded diffs (2,000 edits, 250 ms), frame input caps, thread bodies capped at 65,536 characters; repository listings capped at 2,000 documents and 60 configuration files, configuration at 256,000 characters and 400 declarations | `limits.test.ts`, `edges.test.ts`, `discovery.test.ts`, `config-frame.test.ts` |
+| Stored notes → reader | The reader's own notes are checked item by item when read; malformed entries are dropped, never trusted ([ADR 0028](../adr/0028-private-project-notes.md)) | `notes.test.ts`, `project-store.test.ts` |
 | Permissions | Only `github.com` and `gitlab.com` by default; other hosts optional, one site at a time | Review; a new permission needs an ADR |
 
 ## Rules for contributors
@@ -78,4 +79,4 @@ flowchart LR
 
 ## References
 
-[ADR 0002](../adr/0002-no-server-no-telemetry.md), [0006](../adr/0006-sanitise-all-rendered-html.md), [0009](../adr/0009-github-tokens-in-the-background-worker.md), [0010](../adr/0010-external-images-behind-consent.md), [0011](../adr/0011-sandbox-third-party-engines.md), [0020](../adr/0020-read-code-statically.md); commits `6b4a973`, `a20bac7`, `6316046`, `c255127`.
+[ADR 0002](../adr/0002-no-server-no-telemetry.md), [0006](../adr/0006-sanitise-all-rendered-html.md), [0009](../adr/0009-github-tokens-in-the-background-worker.md), [0010](../adr/0010-external-images-behind-consent.md), [0011](../adr/0011-sandbox-third-party-engines.md), [0020](../adr/0020-read-code-statically.md), [0025](../adr/0025-repository-reads-in-the-token-allowlist.md), [0027](../adr/0027-read-configuration-statically.md), [0028](../adr/0028-private-project-notes.md); commits `6b4a973`, `a20bac7`, `6316046`, `c255127`.

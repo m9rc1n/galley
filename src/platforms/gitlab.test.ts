@@ -216,3 +216,36 @@ it('GitLab loads diff discussions as threads with links to their notes, leaving 
   expect(threads[0]).toMatchObject({ side: 'head', line: 2, url: 'https://git.example.com/gitlab/a/b/-/merge_requests/7#note_5' });
   expect(threads[0].comments[0]).toMatchObject({ author: 'dana', body: 'On the diff' });
 });
+
+it('a merge request opens its project’s docs at its base or head commit, pinned there', async () => {
+  const requests: string[] = [];
+  mockFetch(async (url) => {
+    requests.push(String(url));
+    if (String(url).includes('/diffs?')) return response([]);
+    if (String(url).includes('/repository/tree?'))
+      return new Response(JSON.stringify([{ path: 'README.md', type: 'blob' }]), { headers: { 'x-next-page': '' } });
+    return response({
+      title: 'Docs',
+      source_branch: 'feature/x',
+      target_branch: 'main',
+      diff_refs: { base_sha: 'base-sha', head_sha: 'head-sha', start_sha: 's' },
+    });
+  });
+  const ctx = { platform: 'gitlab' as const, key: '', origin: 'https://gitlab.com', prefix: '', projectPath: 'a/b', projectId: '10', iid: 7 };
+  const source = await loadGitLab(ctx);
+  expect(source.project!.base).toStrictEqual({ ref: 'main', commit: 'base-sha' });
+  expect(source.project!.head).toStrictEqual({ ref: 'feature/x', commit: 'head-sha' });
+  const head = source.project!.open('head');
+  expect(head).toMatchObject({ ref: 'feature/x', commit: 'head-sha', pinned: true, start: { path: '', folder: true }, id: 'gitlab:https://gitlab.com/a/b' });
+  expect(await head.refresh()).toBe(head);
+  expect((await head.discover()).docs).toStrictEqual([{ path: 'README.md' }]);
+  expect(requests.at(-1)).toBe('https://gitlab.com/api/v4/projects/10/repository/tree?recursive=true&per_page=100&ref=head-sha&page=1');
+  expect(source.project!.open('base').commit).toBe('base-sha');
+  // Without branch names, revisions are named by their commit.
+  mockFetch(async (url) =>
+    String(url).includes('/diffs?') ? response([]) : response({ title: 'Docs', diff_refs: { base_sha: 'abcdef123', head_sha: '0123456789', start_sha: 's' } }),
+  );
+  const unnamed = await loadGitLab(ctx);
+  expect(unnamed.project!.base.ref).toBe('abcdef1');
+  expect(unnamed.project!.head.ref).toBe('0123456');
+});

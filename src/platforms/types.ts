@@ -1,3 +1,4 @@
+import type { RepoDiscovery } from '../core/discovery.ts';
 import type { RepoLinks } from '../core/paths.ts';
 
 export type DocStatus = 'added' | 'removed' | 'modified' | 'renamed';
@@ -90,6 +91,55 @@ export interface ReviewSource {
   loadThreads?(): Promise<Thread[]>;
   /** Its title and description, shown as the first document when the reader chooses (Review settings). */
   overview?: ReviewOverview;
+  /** The repository's own docs at the review's base or head, opened over the review (Project docs). */
+  project?: ReviewProject;
+}
+
+/**
+ * A repository read at one commit: its documents as they are, not a change. Review operations
+ * (diffs, comments, Viewed) do not exist here; everything is read-only and pinned to `commit`.
+ */
+export interface RepositorySource {
+  platform: 'GitHub' | 'GitLab';
+  /** The repository on its site, whichever commit is read: `github:https://github.com/owner/repo`. */
+  id: string;
+  /** owner/repo, or the GitLab project path. */
+  name: string;
+  /** The branch, tag or commit the page showed; null for the default branch. */
+  ref: string | null;
+  /** Every read in this session is at this commit, until the reader refreshes. */
+  commit: string;
+  /** A commit page, or a review's base or head: there is nothing newer to check. */
+  pinned: boolean;
+  /** Where the reader was opened: one document, or a folder ('' for the whole repository). */
+  start: { path: string; folder: boolean };
+  /** The repository on the platform, at this commit. */
+  url: string;
+  /** The Markdown documents at the commit, within the listing budget (core/discovery.ts). */
+  discover(): Promise<RepoDiscovery>;
+  /** One document at the commit. */
+  load(path: string): Promise<string>;
+  links: RepoLinks;
+  /** Resolve the same branch or tag again: a new snapshot when it has moved. */
+  refresh(): Promise<RepositorySource>;
+  /**
+   * The platform's own new-issue form, filled in with this text, for the reader to check and submit there.
+   * Opening it is a deliberate action; Galley never posts it.
+   */
+  newIssue(title: string, body: string): string;
+}
+
+/** A revision of the repository behind a review: the branch name and the commit the review uses. */
+export interface ReviewRevision {
+  ref: string;
+  commit: string;
+}
+
+/** The repository behind a pull or merge request, to read its docs at the review's base or head (RFC 0049). */
+export interface ReviewProject {
+  base: ReviewRevision;
+  head: ReviewRevision;
+  open(revision: 'base' | 'head'): RepositorySource;
 }
 
 /** An error with a human explanation of what to do about it. */
