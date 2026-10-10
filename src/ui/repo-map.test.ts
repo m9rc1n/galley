@@ -26,7 +26,9 @@ it('the map shows one document, what links to it and what it links to, each with
   expect(ui.text('.mr-map-title')).toBe('ADR 1: Use Markdown');
   expect(ui.text('.mr-map-crumbs')).toBe('In docs/adr/');
   expect(ui.text('.mr-map-facts')).toBe('Decision Accepted');
-  expect(ui.q('.mr-map-facts .mr-repo-kind').title).toBe('Decision, guessed from its path');
+  expect(ui.q('.mr-map-facts .mr-chip').title).toBe('Decision, guessed from its path');
+  // A type is a fact, not a change: a chip without a change colour.
+  expect(ui.q('.mr-map-facts .mr-chip').className).toBe('mr-chip');
   const [from, to] = ui.all('.mr-map-col');
   expect(from.querySelector('h3')!.textContent).toBe('Linked from (2)');
   expect([...from.querySelectorAll('.mr-repo-edge')].map(words)).toStrictEqual([
@@ -38,7 +40,7 @@ it('the map shows one document, what links to it and what it links to, each with
   ui.press('in “Goals”, line 10', '.mr-repo-proof');
   await ui.settled();
   expect(ui.text('.mr-lead')).toBe('Reading');
-  expect(ui.all('.mr-content p').find((p) => p.textContent === 'Read the decision.')!.classList).toContain('mr-repo-flash');
+  expect(ui.all('.mr-content p').find((p) => p.textContent === 'Read the decision.')!.classList).toContain('mr-flash');
   // Back in the map, a neighbour becomes the middle.
   ui.click('[data-view="map"]');
   expect(ui.text('.mr-map-title')).toBe('Reading');
@@ -149,26 +151,31 @@ it('the reader can correct a document’s type, or a folder’s, and keep it wit
   await ui.open(repository(handbook, { start: { path: decision, folder: false } }));
   await showMap();
   const select = () => ui.q<HTMLSelectElement>('[data-act="kind"]');
-  const folderWide = () => ui.q<HTMLInputElement>('[data-act="kind-folder"]');
-  expect(ui.text('.mr-map-kind small')).toBe('Decision, guessed from its path.');
+  const folderWide = () => ui.q('[data-act="kind-folder"]');
+  // A settings row: Type, with where it came from, and a switch for the whole folder.
+  expect(words(select().closest('.mr-set-row')!.firstElementChild!)).toBe('Type Decision, guessed from its path.');
+  expect(select().getAttribute('aria-labelledby')).toBe(select().closest('.mr-set-row')!.firstElementChild!.id);
+  expect(words(folderWide().closest('.mr-set-row')!)).toBe('Everything in docs/adr/ The same type for the whole folder');
+  expect(folderWide().getAttribute('role')).toBe('switch');
   select().value = 'runbook';
   select().dispatchEvent(new Event('change', { bubbles: true }));
+  expect(ui.shadow().activeElement).toBe(select());
   expect(ui.text('.mr-map-facts')).toBe('Runbook Accepted');
-  expect(ui.q('.mr-map-facts .mr-repo-kind').classList).toContain('is-reader');
+  // The reader's own type carries the accent, like everything else of theirs.
+  expect(ui.q('.mr-map-facts .mr-chip').classList).toContain('is-own');
   expect(ui.text('.mr-map-kind small')).toBe('Set by you. Kept with your notes when you save them.');
-  expect(folderWide().checked).toBe(false);
-  folderWide().checked = true;
-  folderWide().dispatchEvent(new Event('change', { bubbles: true }));
-  expect(folderWide().checked).toBe(true);
+  expect(folderWide().getAttribute('aria-checked')).toBe('false');
+  ui.click('[data-act="kind-folder"]');
+  expect(folderWide().getAttribute('aria-checked')).toBe('true');
+  expect(ui.shadow().activeElement).toBe(folderWide());
   expect(ui.text('.mr-map-facts')).toBe('Runbook Accepted');
   // Another type for the same folder replaces the first.
   select().value = 'guide';
   select().dispatchEvent(new Event('change', { bubbles: true }));
   expect(ui.text('.mr-map-facts')).toBe('Guide Accepted');
-  expect(folderWide().checked).toBe(true);
-  folderWide().checked = false;
-  folderWide().dispatchEvent(new Event('change', { bubbles: true }));
-  expect(folderWide().checked).toBe(false);
+  expect(folderWide().getAttribute('aria-checked')).toBe('true');
+  ui.click('[data-act="kind-folder"]');
+  expect(folderWide().getAttribute('aria-checked')).toBe('false');
   // The README sits at the top: there is no folder to apply a type to.
   ui.press('Handbook', '.mr-repo-map .mr-repo-edge-doc');
   expect(ui.text('.mr-map-crumbs')).toBe('In the top folder');
@@ -212,7 +219,7 @@ it('the documents list is an outline of folders that searches titles, paths and 
   ui.click('.mr-repo-results .mr-menu-item');
   await ui.settled();
   expect(ui.text('.mr-lead')).toBe('ADR 2');
-  expect(ui.q('#user-content-rollout-plan').classList).toContain('mr-repo-flash');
+  expect(ui.q('#user-content-rollout-plan').classList).toContain('mr-flash');
   expect(ui.q('.mr-repo-docs').hidden).toBe(true);
   // Kinds show beside titles once read; the current document is marked and choosing it again does nothing.
   ui.click('[data-act="docs"]');
@@ -445,7 +452,7 @@ it('evidence without link text or a section is still named, and opens where the 
   expect(ui.text('.mr-map-problems li')).toBe('gone.md line 1: gone.md is not among the listed documents.');
   ui.click('.mr-map-problems .mr-repo-proof');
   await ui.settled();
-  expect(ui.q('.mr-content p').classList).toContain('mr-repo-flash');
+  expect(ui.q('.mr-content p').classList).toContain('mr-flash');
 });
 
 it('the documents list names what the listing could not cover', async () => {

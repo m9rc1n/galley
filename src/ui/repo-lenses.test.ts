@@ -243,8 +243,12 @@ it('the reader proposes components and connections, marked as theirs; a type the
   lens('architecture');
   await readConfigs();
   const propose = ui.q<HTMLFormElement>('form[data-act="propose-entity"]');
-  expect(words(propose.querySelector('h3')!)).toBe('Propose something the files do not show');
-  expect(words(propose.querySelector('.mr-lens-about')!)).toBe('About Architecture');
+  // Proposing is writing: the comment editor's card, with its fields in settings rows.
+  expect(propose.classList).toContain('mr-composer');
+  expect(words(propose.querySelector('.mr-comment-target')!)).toBe('Propose something the files do not show');
+  expect(words(propose.querySelector('[data-act="propose-about"]')!.closest('.mr-set-row')!)).toBe(
+    'About Architecture Ties the proposal to the document you are reading',
+  );
   (propose.elements.namedItem('name') as HTMLInputElement).value = '   ';
   propose.requestSubmit();
   expect(entities()).not.toContain('Proposed by you');
@@ -319,7 +323,7 @@ it('a proposal is about the document being read only when the reader keeps it so
   await vi.waitFor(() => expect(ui.q('.mr-review-status .mr-map-status').textContent).toMatch(/^Built from all/));
   ui.click('[data-view="map"]');
   lens('architecture');
-  expect(ui.all('form[data-act="propose-entity"] [name="anchor"]')).toHaveLength(0);
+  expect(ui.all('form[data-act="propose-entity"] [data-act="propose-about"]')).toHaveLength(0);
   const name = () => ui.q<HTMLFormElement>('form[data-act="propose-entity"]').elements.namedItem('name') as HTMLInputElement;
   name().value = 'Queue';
   name().focus();
@@ -334,10 +338,14 @@ it('a proposal is about the document being read only when the reader keeps it so
   // Now a document is open: the form offers it, and keeps the name typed before.
   const form = ui.q<HTMLFormElement>('form[data-act="propose-entity"]');
   expect(name().value).toBe('Queue');
-  const about = form.elements.namedItem('anchor') as HTMLInputElement;
-  expect(about.checked).toBe(true);
-  about.checked = false;
-  form.requestSubmit();
+  const about = () => form.querySelector('[data-act="propose-about"]')!;
+  expect(about().getAttribute('aria-checked')).toBe('true');
+  ui.click('[data-act="propose-about"]');
+  expect(about().getAttribute('aria-checked')).toBe('false');
+  // A switch the reader turned off stays off when the view is drawn again.
+  ui.press('web', '.mr-lens-list .mr-lens-entity');
+  expect(ui.q('[data-act="propose-about"]').getAttribute('aria-checked')).toBe('false');
+  ui.q<HTMLFormElement>('form[data-act="propose-entity"]').requestSubmit();
   expect(ui.text('.mr-map-title')).toBe('Queue');
   expect(connections()).toStrictEqual([]);
   expect(ui.text('.mr-lens-relations + .mr-repo-quiet, .mr-map-col .mr-repo-quiet')).toBe('No connections found.');

@@ -927,6 +927,17 @@
   color: var(--del);
 }
 
+/* Not changes: the reader's own carries a hint of the accent, as their threads do; a guess Galley has
+   not checked has a hollow dot. */
+.mr-chip.is-own .mr-dot {
+  color: var(--accent);
+}
+
+.mr-chip.is-unverified .mr-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
 .mr-byline-note {
   color: var(--muted);
 }
@@ -4482,6 +4493,23 @@
   height: 16px;
   pointer-events: none;
   color: var(--muted);
+}
+/* A one-line text field, the same size and edge as the select beside it. */
+.mr-field {
+  box-sizing: border-box;
+  flex: 0 1 210px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--control-rule);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px / 1.4 var(--sans);
+}
+.mr-field::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 .mr-size-control {
   display: flex;

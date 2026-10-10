@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 import { MAX_DOCUMENT_CHARS } from '../core/limits.ts';
 import { ReaderError } from '../platforms/types.ts';
 import { deferred } from '../testing/reader.ts';
-import { handbook, repoHarness, repository } from '../testing/repo.ts';
+import { handbook, repoHarness, repository, words } from '../testing/repo.ts';
 import { openRepository } from './repo-reader.ts';
 
 // Diagrams and code are drawn in sandboxed frames; here drawing is instant.
@@ -166,7 +166,7 @@ it('a section link scrolls to the section; a missing section says so; other link
     return event.defaultPrevented;
   };
   expect(follow('Goals')).toBe(true);
-  expect(ui.q('#user-content-goals').classList).toContain('mr-repo-flash');
+  expect(ui.q('#user-content-goals').classList).toContain('mr-flash');
   expect(follow('Upper')).toBe(true);
   expect(follow('Nowhere')).toBe(true);
   expect(ui.text('.mr-toast')).toBe('“nowhere” is not a section of this document; showing its beginning.');
@@ -190,7 +190,7 @@ it('a section link scrolls to the section; a missing section says so; other link
   expect(follow('B goals')).toBe(true);
   await ui.settled();
   expect(ui.text('.mr-lead')).toBe('B');
-  expect(ui.q('#user-content-goals').classList).toContain('mr-repo-flash');
+  expect(ui.q('#user-content-goals').classList).toContain('mr-flash');
   ui.key('ArrowLeft', { altKey: true });
   await ui.settled();
   // Listed, a folder link opens the folder's README.
@@ -207,9 +207,9 @@ it('the highlight on a reached section fades', async () => {
   try {
     await ui.open(repository({ 'a.md': '# A\n\n## Goals\n\n[Goals](#goals)' }, { start: { path: 'a.md', folder: false } }));
     ui.press('Goals', '.mr-content a');
-    expect(ui.q('#user-content-goals').classList).toContain('mr-repo-flash');
+    expect(ui.q('#user-content-goals').classList).toContain('mr-flash');
     vi.advanceTimersByTime(1600);
-    expect(ui.q('#user-content-goals').classList).not.toContain('mr-repo-flash');
+    expect(ui.q('#user-content-goals').classList).not.toContain('mr-flash');
     expect(ui.q('.mr-toast').hidden).toBe(true);
     ui.press('Goals', '.mr-content a');
     ui.q<HTMLAnchorElement>('.mr-content p a').setAttribute('href', '#missing');
@@ -298,7 +298,7 @@ it('contents list the headings of longer documents and take the reader to them',
   await ui.open(repository({ 'g.md': doc, 'short.md': '# Short\n\n## Only' }, { start: { path: 'g.md', folder: false } }));
   expect(ui.all('.mr-toc a').map((a) => `${a.className}:${a.textContent}`)).toStrictEqual(['lvl-1:One', 'lvl-2:One a', 'lvl-1:Two']);
   ui.press('One a', '.mr-toc a');
-  expect(ui.q('#user-content-one-a').classList).toContain('mr-repo-flash');
+  expect(ui.q('#user-content-one-a').classList).toContain('mr-flash');
   ui.key('/');
   await vi.waitFor(() => expect(ui.all('.mr-repo-outline .mr-menu-item')).toHaveLength(2));
   ui.press('short.md', '.mr-menu-item');
@@ -338,7 +338,8 @@ it('reading settings: appearance, text size and the review palette, kept with th
   expect(ui.text('.mr-text-size')).toBe('24 px');
   expect(ui.q<HTMLButtonElement>('[data-act="larger"]').disabled).toBe(true);
   ui.click('[data-act="settings"]');
-  expect(ui.q('.mr-repo-settings').hidden).toBe(false);
+  const sheet = ui.q('.mr-settings:not(.mr-repo-export)');
+  expect(sheet.hidden).toBe(false);
   ui.click('[data-act="smaller"]');
   expect(ui.text('.mr-text-size')).toBe('22 px');
   ui.click('[data-act="larger"]');
@@ -356,8 +357,8 @@ it('reading settings: appearance, text size and the review palette, kept with th
   ui.click('[data-setting="appearance"] [data-value="light"]');
   expect(drawn.renderDiagrams.mock.lastCall![3]).toMatchObject({ bg: '#123456' });
   style.mockRestore();
-  ui.click('[data-act="settings"]');
-  expect(ui.q('.mr-repo-settings').hidden).toBe(true);
+  ui.click('.mr-settings-heading [data-act="close-settings"]');
+  expect(sheet.hidden).toBe(true);
   for (let i = 0; i < 5; i++) ui.click('[data-act="smaller"]');
   expect(ui.text('.mr-text-size')).toBe('17 px');
   expect(ui.q<HTMLButtonElement>('[data-act="smaller"]').disabled).toBe(true);
@@ -374,6 +375,91 @@ it('reading settings: appearance, text size and the review palette, kept with th
   zoom.click();
   ui.click('[data-act="close-zoom"]');
   expect(ui.q('.mr-repo-zoom').hidden).toBe(true);
+});
+
+it('settings are the review reader’s sheet: the same Reading tab, a Keys tab, and the reader behind it at rest', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ theme: 'nord' }));
+  const onClose = vi.fn();
+  await ui.open(repository(), { onClose });
+  await vi.waitFor(() => expect(ui.q('.mr-root').dataset.theme).toBe('nord'));
+  vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function (this: Element) {
+    return (this.closest('[hidden]') ? [] : [this.getBoundingClientRect()]) as unknown as DOMRectList;
+  });
+  const sheet = ui.q('.mr-settings:not(.mr-repo-export)');
+  const close = ui.q('.mr-settings-heading [data-act="close-settings"]');
+  ui.click('[data-act="settings"]');
+  expect(sheet.querySelector('[role="dialog"]')!.getAttribute('aria-labelledby')).toBe('mr-settings-title');
+  expect(ui.all('[data-settings-tab]').map(words)).toStrictEqual(['Reading', 'Keys']);
+  expect(ui.q('[data-act="settings"]').getAttribute('aria-expanded')).toBe('true');
+  expect(ui.all('.mr-topbar, .mr-main, .mr-toc').map((el) => el.inert)).toStrictEqual([true, true, true]);
+  expect(ui.shadow().activeElement).toBe(close);
+  // It opens on the page of palettes that holds the one chosen.
+  expect(ui.all('.mr-carousel-dot').map((dot) => dot.getAttribute('aria-current'))).toStrictEqual(['false', 'true', 'false', 'false']);
+
+  // Focus stays inside: Tab and Shift+Tab wrap around the sheet's controls.
+  ui.key('Tab');
+  expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="reading"]'));
+  ui.key('Tab', { shiftKey: true });
+  expect(ui.shadow().activeElement).toBe(close);
+  ui.key('Tab', { shiftKey: true });
+  const last = ui.shadow().activeElement;
+  expect(sheet.contains(last)).toBe(true);
+  ui.key('Tab');
+  expect(ui.shadow().activeElement).toBe(close);
+  // Other shortcuts wait until the sheet closes.
+  ui.key('m');
+  ui.key('/');
+  expect(ui.q('.mr-repo-map').hidden).toBe(true);
+  expect(ui.q('.mr-repo-docs').hidden).toBe(true);
+
+  // Palettes, typeface and the top glow apply at once.
+  ui.click('[data-act="palette-next"]');
+  expect(ui.all('.mr-carousel-dot').map((dot) => dot.getAttribute('aria-current'))).toStrictEqual(['false', 'true', 'false', 'false']);
+  ui.click('.mr-carousel-dot[data-page="3"]');
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
+  ui.click('[data-act="palette-prev"]');
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-prev"]').disabled).toBe(true);
+  ui.q('.mr-palette-track').dispatchEvent(new Event('scroll'));
+  expect(ui.q('.mr-carousel-dot').getAttribute('aria-current')).toBe('true');
+  ui.click('[data-setting="theme"] [data-value="sage"]');
+  expect(ui.q('.mr-root').dataset.theme).toBe('sage');
+  expect(ui.q('[data-setting="theme"] [data-value="sage"]').getAttribute('aria-pressed')).toBe('true');
+  const typeface = ui.q<HTMLSelectElement>('#mr-typeface');
+  typeface.value = 'serif';
+  typeface.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(ui.q('.mr-root').dataset.font).toBe('serif');
+  ui.click('[data-act="top-glow"]');
+  expect(ui.q('.mr-root').classList).toContain('no-top-glow');
+  expect(ui.q('[data-act="top-glow"]').getAttribute('aria-checked')).toBe('false');
+  expect(JSON.parse(localStorage.getItem('galley:settings')!)).toMatchObject({ theme: 'sage', font: 'serif', topGlow: false });
+
+  // Tabs: by click, and by arrows that wrap, Home and End.
+  ui.click('[data-settings-tab="keys"]');
+  expect(ui.q('#mr-keys-panel').hidden).toBe(false);
+  expect(ui.q('#mr-reading-panel').hidden).toBe(true);
+  expect(ui.all('#mr-keys-panel .mr-keys-title').map((title) => title.textContent)).toStrictEqual(['Move through the docs', 'Views', 'Settings']);
+  ui.q('[data-settings-tab="keys"]').focus();
+  ui.key('ArrowRight');
+  expect(ui.shadow().activeElement).toBe(ui.q('[data-settings-tab="reading"]'));
+  ui.key('End');
+  expect(ui.q('[data-settings-tab="keys"]').getAttribute('aria-selected')).toBe('true');
+  ui.key('Home');
+  expect(ui.q('#mr-reading-panel').hidden).toBe(false);
+
+  // Esc closes the sheet, not the reader, and focus goes back to the button that opened it.
+  ui.key('Escape');
+  expect(sheet.hidden).toBe(true);
+  expect(onClose).not.toHaveBeenCalled();
+  expect(ui.all('.mr-topbar, .mr-main, .mr-toc').map((el) => el.inert)).toStrictEqual([false, false, false]);
+  expect(ui.shadow().activeElement).toBe(ui.q('[data-act="settings"]'));
+  expect(ui.q('[data-act="settings"]').getAttribute('aria-expanded')).toBe('false');
+  // , opens it on Reading, ? on Keys; the backdrop closes it.
+  ui.key('?');
+  expect(ui.q('[data-settings-tab="keys"]').getAttribute('aria-selected')).toBe('true');
+  ui.click('.mr-settings-backdrop');
+  expect(sheet.hidden).toBe(true);
+  ui.key(',');
+  expect(ui.q('[data-settings-tab="reading"]').getAttribute('aria-selected')).toBe('true');
 });
 
 it('an out-of-range saved text size falls back to the default', async () => {

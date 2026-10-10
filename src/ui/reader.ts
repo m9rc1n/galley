@@ -22,6 +22,7 @@ import { enhanceSpecs } from './specs.ts';
 import { renderSourceComments, showCommentSource } from './source-comments.ts';
 import { isPalette, PALETTE_KEYS, type DiagramPalette } from './diagram-palette.ts';
 import { renderDiagrams } from './diagrams.ts';
+import { chip, h } from './dom.ts';
 import { openRepository, type RepoReaderHandle } from './repo-reader.ts';
 import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
 import { icons } from './icons.ts';
@@ -29,53 +30,13 @@ import css from './reader.css';
 import { loadReaderFonts } from './fonts.ts';
 import { loadImage, platformLink, renderDocument, renderSnippet, type RenderedBlock, type RenderedDoc } from './render.ts';
 import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
-import { DEFAULT_SETTINGS, LAYOUTS, TEXT_SIZES, loadSettings, saveSettings, type Layout, type Settings, type Theme } from './settings.ts';
+import { DEFAULT_SETTINGS, LAYOUTS, TEXT_SIZES, loadSettings, saveSettings, type Layout, type Settings } from './settings.ts';
+import { applyReadingControls, keyGroups, nextTab, PaletteCarousel, READING_SECTIONS, selectTab, settingsSheet, type Shortcuts } from './settings-sheet.ts';
 
 const STATUS_LABEL: Record<DocStatus, string> = { added: 'New', removed: 'Deleted', modified: 'Edited', renamed: 'Renamed' };
 const WORDS_PER_MINUTE = 230;
 /** Changes are brought to this fraction of the viewport height when navigating. */
 const FOCUS_LINE = 0.3;
-
-/** Palettes chosen for reading: neutral, warm, then cool. The settings show them six to a page. */
-const PALETTES: Array<[Theme, string, string]> = [
-  ['paper', 'Paper', 'Neutral'],
-  ['eink', 'E-ink', 'Paper grey'],
-  ['cream', 'Cream', 'Gentle cream'],
-  ['sepia', 'Sepia', 'Warm paper'],
-  ['night', 'Night', 'Evening amber'],
-  ['blush', 'Blush', 'Warm pastel'],
-  ['sage', 'Sage', 'Soft green'],
-  ['seafoam', 'Seafoam', 'Cool green'],
-  ['slate', 'Slate', 'Cool blue'],
-  ['nord', 'Nord', 'Arctic blue'],
-  ['dusk', 'Dusk', 'Soft violet'],
-  ['contrast', 'Contrast', 'Crisp ink'],
-  ['ocean', 'Ocean', 'Ink · sea glass'],
-  ['clay', 'Clay', 'Stone · terracotta'],
-  ['orchid', 'Orchid', 'Stone · lavender'],
-  ['graphite', 'Graphite', 'Charcoal · blue'],
-  ['hackerman', 'Hackerman', 'Terminal green'],
-  ['aurora', 'Aurora', 'Teal · violet glow'],
-  ['sunset', 'Sunset', 'Peach · rose glow'],
-];
-const PALETTES_PER_PAGE = 6;
-const paletteButton = ([value, name, caption]: [Theme, string, string]) => `
-  <button data-value="${value}" aria-label="${name}">
-    <span class="mr-theme-preview" aria-hidden="true"><span>Aa</span><span class="mr-theme-lines"><i></i><i></i><i></i></span></span>
-    <span class="mr-theme-label"><span class="mr-theme-name">${name}</span>${icons.check}</span>
-    <span class="mr-theme-caption">${caption}</span>
-  </button>`;
-const PALETTE_PAGES = Array.from(
-  { length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) },
-  (_, page) =>
-    `<div class="mr-palette-page">${PALETTES.slice(page * PALETTES_PER_PAGE, (page + 1) * PALETTES_PER_PAGE)
-      .map(paletteButton)
-      .join('')}</div>`,
-).join('');
-const PALETTE_DOTS = Array.from(
-  { length: Math.ceil(PALETTES.length / PALETTES_PER_PAGE) },
-  (_, page) => `<button class="mr-carousel-dot" data-act="palette-page" data-page="${page}" aria-label="Palettes, page ${page + 1}"></button>`,
-).join('');
 
 /**
  * Each layout is drawn as a page: a contents column (c), the text (t, with lines) and the comments
@@ -103,7 +64,7 @@ const LAYOUT_OPTIONS = LAYOUT_CHOICES.map(
 const SETTINGS_TABS = ['reading', 'layout', 'review', 'keys'] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 /** Every shortcut, grouped the way a review goes; the Keys tab lists them and onKey handles them. */
-const SHORTCUTS: Array<[string, Array<[string[], string]>]> = [
+const SHORTCUTS: Shortcuts = [
   [
     'Move through the review',
     [
@@ -143,15 +104,37 @@ const SHORTCUTS: Array<[string, Array<[string[], string]>]> = [
     ],
   ],
 ];
-const KEY_GROUPS = SHORTCUTS.map(
-  ([title, keys]) => `
-  <section class="mr-settings-section mr-keys-group" aria-label="${title}"><h3 class="mr-keys-title">${title}</h3><dl class="mr-keys">${keys
-    .map(([combo, description]) => `<dt>${combo.map((key) => `<kbd>${key}</kbd>`).join(' ')}</dt><dd>${description}</dd>`)
-    .join('')}</dl></section>`,
-).join('');
+const KEY_GROUPS = keyGroups(SHORTCUTS);
 
 /** Settings chosen from a group of buttons in the settings sheet (data-setting / data-value). */
 type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'tests' | 'codeComments' | 'layout' | 'density' | 'order';
+
+/** The Layout tab: how text and comments share a wide screen, and how dense the page is. */
+const LAYOUT_PANEL = `
+      <section class="mr-settings-section" aria-label="Layout">
+        <div class="mr-set-row mr-theme-row"><span>Layout<small>Arrange text and comments on wide screens. Narrow screens use one column.</small></span>
+          <div class="mr-theme-options mr-layout-options" data-setting="layout" role="group" aria-label="Layout">${LAYOUT_OPTIONS}</div>
+        </div>
+        <div class="mr-set-row"><span>Density<small>Compact fits more on the screen</small></span><div class="mr-seg" data-setting="density" role="group" aria-label="Density"><button data-value="comfortable">Comfortable</button><button data-value="compact">Compact</button></div></div>
+      </section>
+      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>`;
+/** The Review tab: how changes, files, tests and code comments are shown. */
+const REVIEW_PANEL = `
+      <section class="mr-settings-section" aria-label="Review">
+        <div class="mr-set-row"><span>Change marks<small>Highlight inserted and removed text</small></span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Marked</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
+        <div class="mr-set-row"><span>Context<small>Show changed sections or read the full files</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
+        <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Show the request’s title and description before the files</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
+        <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
+        <div class="mr-set-row"><span id="mr-signs-label">+ and − signs<small>Mark added and removed lines of code with + and −</small></span><button class="mr-switch" data-act="signs" role="switch" aria-checked="true" aria-labelledby="mr-signs-label"></button></div>
+        <div class="mr-set-row"><span id="mr-fold-label">Fold files you can skip<small>Lockfiles, generated code and whitespace-only edits start as one line</small></span><button class="mr-switch" data-act="fold" role="switch" aria-checked="true" aria-labelledby="mr-fold-label"></button></div>
+        <div class="mr-set-row"><span>File order<small>Suggested reads tests after their code, and skippable files last</small></span><div class="mr-seg" data-setting="order" role="group" aria-label="File order"><button data-value="suggested">Suggested</button><button data-value="listed">As listed</button></div></div>
+        <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
+        <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
+        <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
+      </section>
+      <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>`;
+const KEYS_PANEL = `${KEY_GROUPS}
+      <p class="mr-settings-note">Shortcuts work while the reader has focus and no text field is active. Press ? at any time to come back here.</p>`;
 
 const TEMPLATE = `
 <div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley reader">
@@ -176,69 +159,18 @@ const TEMPLATE = `
   <p class="mr-viewed-feedback" role="status" hidden></p>
   <div class="mr-menu mr-files" role="menu" aria-label="Changed files" hidden></div>
   <div class="mr-menu mr-project" role="menu" aria-label="Project docs" hidden></div>
-  <div class="mr-settings" hidden>
-    <div class="mr-settings-backdrop" data-act="close-settings"></div>
-    <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
-      <header class="mr-settings-heading"><div><h2 id="mr-settings-title">Reading settings</h2><p>Choose a view that helps you follow the changes.</p></div><button class="mr-btn mr-icon-btn" data-act="close-settings" aria-label="Close settings (Esc)" title="Close settings (Esc)">${icons.close}</button></header>
-      <div class="mr-settings-tabs" role="tablist" aria-label="Settings category">
-        <button id="mr-reading-tab" role="tab" data-settings-tab="reading" aria-selected="true" aria-controls="mr-reading-panel" tabindex="0">${icons.book}Reading</button>
-        <button id="mr-layout-tab" role="tab" data-settings-tab="layout" aria-selected="false" aria-controls="mr-layout-panel" tabindex="-1">${icons.layout}Layout</button>
-        <button id="mr-review-tab" role="tab" data-settings-tab="review" aria-selected="false" aria-controls="mr-review-panel" tabindex="-1">${icons.check}Review</button>
-        <button id="mr-keys-tab" role="tab" data-settings-tab="keys" aria-selected="false" aria-controls="mr-keys-panel" tabindex="-1">${icons.keyboard}Keys</button>
-      </div>
-      <div class="mr-settings-body">
-      <div id="mr-reading-panel" role="tabpanel" aria-labelledby="mr-reading-tab">
-      <section class="mr-settings-section" aria-label="Page appearance">
-        <div class="mr-set-row"><span>Appearance</span><div class="mr-seg mr-appearance" data-setting="appearance" role="group" aria-label="Appearance"><button data-value="auto">System</button><button data-value="light">Light</button><button data-value="dark">Dark</button></div></div>
-        <div class="mr-set-row mr-theme-row"><span>Palette<small>Previewed in your current appearance</small></span>
-          <div class="mr-palette-carousel">
-            <div class="mr-theme-options mr-palette-track" data-setting="theme" role="group" aria-label="Palette">${PALETTE_PAGES}</div>
-            <div class="mr-carousel-nav">
-              <button class="mr-btn mr-icon-btn" data-act="palette-prev" aria-label="Previous palettes">${icons.chevronLeft}</button>
-              <span class="mr-carousel-dots">${PALETTE_DOTS}</span>
-              <button class="mr-btn mr-icon-btn" data-act="palette-next" aria-label="More palettes">${icons.chevronRight}</button>
-            </div>
-          </div>
-        </div>
-        <div class="mr-set-row"><span id="mr-top-glow-label">Top glow<small>A soft wash of color to ease into a review</small></span><button class="mr-switch" data-act="top-glow" role="switch" aria-checked="true" aria-labelledby="mr-top-glow-label"></button></div>
-      </section>
-      <section class="mr-settings-section" aria-label="Typography">
-        <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="galley">Galley</option><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
-        <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite">20 px</output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
-        <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>Understand changes. Review in peace.</p><span>Read the context. See the edits. Ask a question.</span></div>
-      </section>
-      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>
-      </div>
-      <div id="mr-layout-panel" role="tabpanel" aria-labelledby="mr-layout-tab" hidden>
-      <section class="mr-settings-section" aria-label="Layout">
-        <div class="mr-set-row mr-theme-row"><span>Layout<small>Arrange text and comments on wide screens. Narrow screens use one column.</small></span>
-          <div class="mr-theme-options mr-layout-options" data-setting="layout" role="group" aria-label="Layout">${LAYOUT_OPTIONS}</div>
-        </div>
-        <div class="mr-set-row"><span>Density<small>Compact fits more on the screen</small></span><div class="mr-seg" data-setting="density" role="group" aria-label="Density"><button data-value="comfortable">Comfortable</button><button data-value="compact">Compact</button></div></div>
-      </section>
-      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>
-      </div>
-      <div id="mr-review-panel" role="tabpanel" aria-labelledby="mr-review-tab" hidden>
-      <section class="mr-settings-section" aria-label="Review">
-        <div class="mr-set-row"><span>Change marks<small>Highlight inserted and removed text</small></span><div class="mr-seg" role="group" aria-label="Show changes"><button data-mode="changes" aria-pressed="true">Marked</button><button data-mode="clean" aria-pressed="false">Clean</button></div></div>
-        <div class="mr-set-row"><span>Context<small>Show changed sections or read the full files</small></span><div class="mr-seg" role="group" aria-label="Paragraph filter"><button data-scope="changed" aria-pressed="true">Changed parts</button><button data-scope="all" aria-pressed="false">Whole files</button></div></div>
-        <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Show the request’s title and description before the files</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
-        <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
-        <div class="mr-set-row"><span id="mr-signs-label">+ and − signs<small>Mark added and removed lines of code with + and −</small></span><button class="mr-switch" data-act="signs" role="switch" aria-checked="true" aria-labelledby="mr-signs-label"></button></div>
-        <div class="mr-set-row"><span id="mr-fold-label">Fold files you can skip<small>Lockfiles, generated code and whitespace-only edits start as one line</small></span><button class="mr-switch" data-act="fold" role="switch" aria-checked="true" aria-labelledby="mr-fold-label"></button></div>
-        <div class="mr-set-row"><span>File order<small>Suggested reads tests after their code, and skippable files last</small></span><div class="mr-seg" data-setting="order" role="group" aria-label="File order"><button data-value="suggested">Suggested</button><button data-value="listed">As listed</button></div></div>
-        <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
-        <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
-        <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-      </section>
-      <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>
-      </div>
-      <div id="mr-keys-panel" role="tabpanel" aria-labelledby="mr-keys-tab" hidden>${KEY_GROUPS}
-      <p class="mr-settings-note">Shortcuts work while the reader has focus and no text field is active. Press ? at any time to come back here.</p>
-      </div>
-      </div>
-    </aside>
-  </div>
+${settingsSheet('Choose a view that helps you follow the changes.', [
+  {
+    id: 'reading',
+    label: 'Reading',
+    icon: icons.book,
+    panel: `${READING_SECTIONS}
+      <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>`,
+  },
+  { id: 'layout', label: 'Layout', icon: icons.layout, panel: LAYOUT_PANEL },
+  { id: 'review', label: 'Review', icon: icons.check, panel: REVIEW_PANEL },
+  { id: 'keys', label: 'Keys', icon: icons.keyboard, panel: KEYS_PANEL },
+])}
   <nav class="mr-toc" aria-label="Contents"></nav>
   <main class="mr-main">
     <article class="mr-article">
@@ -267,21 +199,8 @@ const TEMPLATE = `
   </div>
 </div>`;
 
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag);
-  if (className) el.className = className;
-  if (text !== undefined) el.textContent = text;
-  return el;
-}
-
 function baseName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
-}
-
-function chip(kind: 'added' | 'modified' | 'removed' | 'moved', text: string): HTMLElement {
-  const el = h('span', `mr-chip is-${kind}`);
-  el.append(h('span', 'mr-dot'), text);
-  return el;
 }
 
 function actionButton(label: string, act: string, className: string): HTMLButtonElement {
@@ -451,6 +370,7 @@ class Reader {
   private readonly shadow = this.host.attachShadow({ mode: 'open' });
   private readonly root: HTMLElement;
   private readonly chapters: ChapterMap;
+  private readonly palettes = new PaletteCarousel(this.shadow);
   private chapterOrder: DocRef[] | null = null;
   private readonly el: Record<
     | 'progress'
@@ -625,7 +545,7 @@ class Reader {
       const box = stage.getBoundingClientRect();
       this.zoomDiagram(2, e.clientX - box.left, e.clientY - box.top);
     });
-    this.paletteTrack().addEventListener('scroll', () => this.updatePaletteNav(), { passive: true });
+    this.shadow.querySelector('.mr-palette-track')!.addEventListener('scroll', () => this.palettes.update(), { passive: true });
     this.shadow.querySelector<HTMLSelectElement>('#mr-typeface')!.addEventListener('change', (e) => {
       this.update({ font: (e.target as HTMLSelectElement).value as Settings['font'] });
     });
@@ -1363,14 +1283,7 @@ class Reader {
   }
 
   private selectSettingsTab(name: SettingsTab, focus = false): void {
-    for (const tab of this.el.settings.querySelectorAll<HTMLElement>('[data-settings-tab]')) {
-      const active = tab.dataset.settingsTab === name;
-      tab.setAttribute('aria-selected', String(active));
-      tab.tabIndex = active ? 0 : -1;
-      this.shadow.querySelector<HTMLElement>(`#${tab.getAttribute('aria-controls')}`)!.hidden = !active;
-      if (active && focus) tab.focus({ preventScroll: true });
-    }
-    this.el.settings.querySelector<HTMLElement>('.mr-settings-body')!.scrollTop = 0;
+    selectTab(this.el.settings, name, focus);
   }
 
   // Viewed status is optional; failures never remove the document or imply a successful save.
@@ -1518,7 +1431,6 @@ class Reader {
     overviewToggle.closest<HTMLElement>('.mr-set-row')!.hidden = Boolean(this.source) && !this.source?.overview;
     if (this.overview) this.overview.hidden = !s.overview;
     this.shadow.querySelector('[data-act="signs"]')!.setAttribute('aria-checked', String(s.signs));
-    this.shadow.querySelector('[data-act="top-glow"]')!.setAttribute('aria-checked', String(s.topGlow));
     r.classList.toggle('no-top-glow', !s.topGlow);
     this.shadow.querySelector('[data-act="fold"]')!.setAttribute('aria-checked', String(s.fold));
     // Turning folding off opens every folded file; turned on, it folds files as they load.
@@ -1551,15 +1463,8 @@ class Reader {
     r.dataset.density = s.density;
     r.classList.toggle('is-dark', s.appearance === 'dark' || (s.appearance === 'auto' && this.dark.matches));
     this.applyFit();
-    this.shadow.querySelector<HTMLSelectElement>('#mr-typeface')!.value = s.font;
-    this.shadow.querySelector<HTMLOutputElement>('.mr-text-size')!.textContent = `${TEXT_SIZES[s.size] ?? 20} px`;
-    (this.shadow.querySelector('[data-act="smaller"]') as HTMLButtonElement).disabled = s.size <= 0;
-    (this.shadow.querySelector('[data-act="larger"]') as HTMLButtonElement).disabled = s.size >= TEXT_SIZES.length - 1;
+    applyReadingControls(this.shadow, s);
     for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === s.mode));
-    for (const group of this.shadow.querySelectorAll<HTMLElement>('[data-setting]')) {
-      const value = s[group.dataset.setting as SettingKey];
-      for (const b of group.querySelectorAll<HTMLElement>('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === value));
-    }
     for (const view of this.views) if (view.rendered?.isCode) this.applyCodeView(view);
     const palette = this.palette();
     for (const view of this.views)
@@ -1806,7 +1711,7 @@ class Reader {
     this.selectSettingsTab(tab);
     // Shortcuts are ignored while the sheet is open, so it is always closed here.
     this.toggleMenu(this.el.settings, this.shadow.querySelector<HTMLElement>('[data-act="settings"]'));
-    this.revealPalette();
+    this.palettes.reveal(this.settings.theme);
   }
 
   /** A first document of the request's own title, author and description, folded under its title on demand. */
@@ -1832,37 +1737,6 @@ class Reader {
     body.append(h('summary', '', 'Description'), content);
     section.append(h('p', 'mr-overview-kind', overview.kind), h('h1', 'mr-title', overview.title), byline, body);
     return section;
-  }
-
-  private paletteTrack(): HTMLElement {
-    return this.shadow.querySelector<HTMLElement>('.mr-palette-track')!;
-  }
-
-  /** The palette page in view; pages are as wide as the track. */
-  private paletteAt(): number {
-    const track = this.paletteTrack();
-    return track.clientWidth ? Math.round(track.scrollLeft / track.clientWidth) : 0;
-  }
-
-  private turnPalettes(page: number, smooth = true): void {
-    const track = this.paletteTrack();
-    const target = Math.max(0, Math.min(track.children.length - 1, page));
-    track.scrollTo({ left: target * track.clientWidth, behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto' });
-    this.updatePaletteNav(target);
-  }
-
-  private updatePaletteNav(page = this.paletteAt()): void {
-    const last = this.paletteTrack().children.length - 1;
-    this.shadow.querySelector<HTMLButtonElement>('[data-act="palette-prev"]')!.disabled = page <= 0;
-    this.shadow.querySelector<HTMLButtonElement>('[data-act="palette-next"]')!.disabled = page >= last;
-    for (const [i, dot] of this.shadow.querySelectorAll<HTMLElement>('.mr-carousel-dot').entries()) dot.setAttribute('aria-current', String(i === page));
-  }
-
-  /** The settings open on the page that holds the chosen palette. */
-  private revealPalette(): void {
-    const track = this.paletteTrack();
-    const page = track.querySelector(`[data-value="${this.settings.theme}"]`)?.closest('.mr-palette-page');
-    this.turnPalettes([...track.children].indexOf(page!), false);
   }
 
   private stepDoc(direction: 1 | -1): void {
@@ -1929,12 +1803,10 @@ class Reader {
     }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const target = e.composedPath()[0];
-    if (target instanceof HTMLElement && target.matches('[data-settings-tab]') && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+    const tab = target instanceof HTMLElement && target.matches('[data-settings-tab]') ? nextTab(SETTINGS_TABS, target.dataset.settingsTab!, e.key) : null;
+    if (tab) {
       e.preventDefault();
-      const at = SETTINGS_TABS.indexOf(target.dataset.settingsTab as SettingsTab);
-      const step = e.key === 'ArrowRight' ? 1 : -1;
-      const next = e.key === 'Home' ? 0 : e.key === 'End' ? SETTINGS_TABS.length - 1 : (at + step + SETTINGS_TABS.length) % SETTINGS_TABS.length;
-      this.selectSettingsTab(SETTINGS_TABS[next], true);
+      this.selectSettingsTab(tab as SettingsTab, true);
       return;
     }
     if (e.key === 'Tab') {
@@ -2098,16 +1970,12 @@ class Reader {
       case 'settings':
         if (this.source && !this.views.some((view) => !view.section.hidden)) this.selectSettingsTab('review');
         this.toggleMenu(this.el.settings, action);
-        if (!this.el.settings.hidden) this.revealPalette();
+        if (!this.el.settings.hidden) this.palettes.reveal(this.settings.theme);
         return;
       case 'palette-prev':
-        this.turnPalettes(this.paletteAt() - 1);
-        return;
       case 'palette-next':
-        this.turnPalettes(this.paletteAt() + 1);
-        return;
       case 'palette-page':
-        this.turnPalettes(Number(action.dataset.page));
+        this.palettes.onClick(action.dataset.act, action);
         return;
       case 'overview':
         if (!this.source?.overview) return;

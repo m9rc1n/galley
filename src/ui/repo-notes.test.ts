@@ -16,19 +16,26 @@ const stored = async () => JSON.parse(localStorage.getItem(await projectKey(id))
 const form = () => ui.q<HTMLFormElement>('form[data-act="add-note"]');
 const field = <T>(name: string, from = form()) => from.elements.namedItem(name) as unknown as T;
 async function addNote(text: string, options: { kind?: Note['kind']; anchor?: string; group?: string } = {}) {
-  const radios = field<RadioNodeList>('kind');
-  radios.value = options.kind ?? 'idea';
+  field<HTMLSelectElement>('kind').value = options.kind ?? 'idea';
   field<HTMLTextAreaElement>('text').value = text;
   field<HTMLInputElement>('group').value = options.group ?? '';
   const select = field<HTMLSelectElement>('anchor');
   select.value = options.anchor === undefined ? '' : [...select.options].find((o) => o.textContent === options.anchor)!.value;
   const count = ui.all('.mr-note').length;
   form().requestSubmit();
-  await vi.waitFor(() => expect(ui.all('article.mr-note').length).toBeGreaterThan(count));
+  await vi.waitFor(() => expect(ui.all('aside.mr-note').length).toBeGreaterThan(count));
 }
-const notes = () => ui.all('article.mr-note').map(words);
-const card = (text: string) => ui.all('article.mr-note').find((note) => note.querySelector('.mr-note-text')!.textContent === text)!;
+const notes = () => ui.all('aside.mr-note').map(words);
+const card = (text: string) => ui.all('aside.mr-note').find((note) => note.querySelector('.mr-note-text')!.textContent === text)!;
 const showNotes = () => ui.click('[data-view="notes"]');
+/** Includes a note in the open export, or leaves it out again, by its text. */
+const include = (text: string) =>
+  ui
+    .all('.mr-repo-export .mr-set-row')
+    .find((row) => row.querySelector('span')!.firstChild!.textContent === text)!
+    .querySelector<HTMLElement>('[data-act="choose-note"]')!
+    .click();
+const share = '.mr-repo-export section[aria-label="Share it as an issue"]';
 
 it('notes are private and start empty; a note from a document is about it, or one of its sections', async () => {
   await ui.open(repository(handbook, { start: { path: spec, folder: false } }));
@@ -41,6 +48,23 @@ it('notes are private and start empty; a note from a document is about it, or on
   );
   expect(ui.q<HTMLButtonElement>('[data-act="save-notes"]').disabled).toBe(true);
   expect(ui.text('.mr-notes > .mr-repo-quiet')).toBe('No notes yet. Ideas, questions, assumptions, next experiments and alternatives you add appear here.');
+  // Only alternatives are asked which question they answer, and the choice survives the notes being drawn again.
+  const question = () => form().querySelector<HTMLElement>('.mr-note-group')!;
+  const kind = () => field<HTMLSelectElement>('kind');
+  expect(question().hidden).toBe(true);
+  kind().value = 'alternative';
+  kind().dispatchEvent(new Event('change', { bubbles: true }));
+  expect(question().hidden).toBe(false);
+  ui.press('Delete all notes…');
+  expect([kind().value, question().hidden]).toStrictEqual(['alternative', false]);
+  ui.press('Keep them');
+  kind().value = 'idea';
+  kind().dispatchEvent(new Event('change', { bubbles: true }));
+  expect(question().hidden).toBe(true);
+  // An export with no notes says so.
+  ui.press('Export…');
+  expect(ui.text('.mr-repo-export .mr-settings-note')).toBe('You have no notes for this repository yet.');
+  ui.key('Escape');
   expect([...field<HTMLSelectElement>('anchor').options].map((o) => [o.textContent, o.selected])).toStrictEqual([
     ['No document', false],
     ['Reading', true],
@@ -53,7 +77,10 @@ it('notes are private and start empty; a note from a document is about it, or on
   form().requestSubmit();
   expect(notes()).toStrictEqual([]);
   await addNote('Why read twice?', { kind: 'question', anchor: 'Reading § Goals', group: 'ignored for questions' });
-  expect(notes()).toStrictEqual(['Question Your note Include in export Why read twice? About Reading § Goals · Written at this commit Connect… Edit Delete']);
+  expect(notes()).toStrictEqual(['Question Why read twice? About Reading § Goals · Written at this commit Connect… Edit Delete']);
+  // A note is the reader's own, like their own threads in a review.
+  expect(ui.q('aside.mr-note').classList).toContain('is-own');
+  expect(ui.q('aside.mr-note').getAttribute('aria-label')).toBe('Question: Why read twice?');
   expect(ui.text('.mr-notes-kind h2')).toBe('Questions (1)');
   expect(ui.text('.mr-notes-state')).toBe('Unsaved changes');
   expect(ui.q<HTMLButtonElement>('[data-act="save-notes"]').disabled).toBe(false);
@@ -64,7 +91,7 @@ it('notes are private and start empty; a note from a document is about it, or on
   ui.press('Reading § Goals', '.mr-note-about button');
   await ui.settled();
   expect(ui.q('.mr-repo-read').hidden).toBe(false);
-  expect(ui.q('#user-content-goals').classList).toContain('mr-repo-flash');
+  expect(ui.q('#user-content-goals').classList).toContain('mr-flash');
   // Focus left in the notes went back to the reader. N opens the notes, and N again goes back to reading.
   expect(ui.shadow().activeElement).toBe(ui.q('.mr-root'));
   ui.key('n');
@@ -91,8 +118,10 @@ it('Save keeps notes in this browser; until then they are a draft, offered again
   await ui.open(repository());
   showNotes();
   await vi.waitFor(() => expect(ui.q('.mr-notes-recover')).toBeTruthy());
-  expect(words(ui.q('.mr-notes-recover'))).toMatch(/^You have unsaved notes from [A-Z][a-z]{2} \d+, \d{4}, .+\. Recover Discard$/);
-  expect(notes().map((n) => n.split(' Your note')[0])).toStrictEqual(['Idea']);
+  expect(words(ui.q('.mr-notes-recover'))).toMatch(/^You have unsaved notes from [A-Z][a-z]{2} \d+, \d{4}, .+\. Recover ×$/);
+  expect(ui.q('.mr-notes-recover').classList).toContain('mr-resume');
+  expect(ui.q('[data-act="discard-draft"]').getAttribute('aria-label')).toBe('Discard unsaved notes');
+  expect(ui.all('aside.mr-note .mr-thread-author').map((author) => author.textContent)).toStrictEqual(['Idea']);
   ui.press('Recover');
   expect(ui.text('.mr-toast')).toBe('Your unsaved notes are back. Save to keep them.');
   expect(ui.text('.mr-notes-kind:last-of-type h2')).toBe('Next experiments (1)');
@@ -111,7 +140,7 @@ it('an offered draft can be discarded, and what the reader types survives the no
   await vi.waitFor(() => expect(ui.q('.mr-notes-recover')).toBeTruthy());
   field<HTMLTextAreaElement>('text').value = 'half a thought';
   field<HTMLTextAreaElement>('text').focus();
-  ui.press('Discard', '.mr-notes-recover button');
+  ui.click('[data-act="discard-draft"]');
   await vi.waitFor(() => expect(ui.text('.mr-toast')).toBe('Unsaved notes discarded.'));
   expect(ui.all('.mr-notes-recover')).toHaveLength(0);
   expect(localStorage.getItem(key)).toBe(null);
@@ -139,7 +168,7 @@ it('notes can be edited, deleted and tentatively connected; alternatives to the 
   open('Who reads it?');
   expect(ui.shadow().activeElement).toBe(choices('Who reads it?'));
   expect(ui.all('[data-act="connect-note"]')).toHaveLength(1);
-  ui.press('Cancel', '.mr-note footer button');
+  ui.press('Cancel', '.mr-note button');
   expect(ui.all('[data-act="connect-note"]')).toHaveLength(0);
   expect(ui.shadow().activeElement).toBe(card('Who reads it?').querySelector('[data-act="connect"]'));
   open('Who reads it?');
@@ -155,7 +184,7 @@ it('notes can be edited, deleted and tentatively connected; alternatives to the 
   expect(ui.shadow().activeElement).toBe(card('Who reads it?').querySelector('[data-act="connect"]'));
   open('Who reads it?');
   expect([...choices('Who reads it?').options].map((o) => o.textContent)).not.toContain('Alternative: Keep the queue');
-  ui.press('Cancel', '.mr-note footer button');
+  ui.press('Cancel', '.mr-note button');
   (card('Who reads it?').querySelector('[data-act="disconnect"]') as HTMLElement).click();
   expect(card('Who reads it?').querySelector('.mr-note-links')).toBe(null);
 
@@ -169,16 +198,16 @@ it('notes can be edited, deleted and tentatively connected; alternatives to the 
   field<HTMLTextAreaElement>('text', edit()).value = ' ';
   edit().requestSubmit();
   expect(ui.all('form[data-act="save-note"]')).toHaveLength(1);
-  field<RadioNodeList>('kind', edit()).value = 'alternative';
+  field<HTMLSelectElement>('kind', edit()).value = 'alternative';
   field<HTMLTextAreaElement>('text', edit()).value = 'Read it twice';
   field<HTMLInputElement>('group', edit()).value = 'Queue or stream?';
   edit().requestSubmit();
   expect(ui.all('.mr-notes-compare')[0].querySelectorAll('.mr-note')).toHaveLength(3);
   expect(ui.shadow().activeElement).toBe(card('Read it twice').querySelector('[data-act="edit-note"]'));
   (card('Read it twice').querySelector('[data-act="edit-note"]') as HTMLElement).click();
-  field<RadioNodeList>('kind', edit()).value = 'assumption';
+  field<HTMLSelectElement>('kind', edit()).value = 'assumption';
   edit().requestSubmit();
-  expect(card('Read it twice').querySelector('.mr-note-kind')!.textContent).toBe('Assumption');
+  expect(card('Read it twice').querySelector('.mr-thread-author')!.textContent).toBe('Assumption');
 
   // Deleting a note also removes connections to it.
   open('Keep the queue');
@@ -261,7 +290,7 @@ it('deleting every note asks first, and removes them here and from storage', asy
   await vi.waitFor(async () => expect(await stored()).not.toBe(null));
   ui.press('Delete all notes…');
   expect(words(ui.q('.mr-notes-confirm'))).toBe(
-    'Delete every note, proposal and type you set for this repository, here and in storage? Delete all notes Keep them',
+    'Delete every note, proposal and type you set for this repository, here and in storage? Keep them Delete all notes',
   );
   expect(ui.shadow().activeElement).toBe(ui.q('[data-act="confirm-delete-notes"]'));
   ui.press('Keep them');
@@ -319,8 +348,8 @@ it('types the reader sets, and the components they propose, are kept with their 
 
   await ui.open(repository(handbook, { start: { path: 'docs/adr/0001-use-markdown.md', folder: false } }));
   ui.click('[data-view="map"]');
-  await vi.waitFor(() => expect(ui.q('.mr-map-facts .mr-repo-kind')?.textContent).toBe('Runbook'));
-  expect(ui.q('.mr-map-facts .mr-repo-kind').classList).toContain('is-reader');
+  await vi.waitFor(() => expect(ui.q('.mr-map-facts .mr-chip')?.textContent).toBe('Runbook'));
+  expect(ui.q('.mr-map-facts .mr-chip').classList).toContain('is-own');
   // A note can be connected to the reader's own component, by name.
   showNotes();
   await vi.waitFor(() => expect(ui.all('.mr-note')).toHaveLength(0));
@@ -387,27 +416,37 @@ it('export shows exactly what leaves: only chosen notes, as Markdown or Mermaid,
   await addNote('Not for sharing');
 
   ui.press('Export…');
+  // A sheet like the settings: the reader behind it rests until it closes.
   expect(ui.q('.mr-repo-export').hidden).toBe(false);
-  expect(ui.shadow().activeElement).toBe(ui.q('[data-act="close-export"]'));
-  expect(ui.text('.mr-export-panel > .mr-repo-quiet')).toBe('Choose notes with Include in export first. Nothing else is ever included.');
+  expect(ui.q('.mr-repo-export .mr-settings-panel').getAttribute('aria-labelledby')).toBe('mr-export-title');
+  expect(ui.q('[data-act="export"]').getAttribute('aria-expanded')).toBe('true');
+  expect(ui.q('.mr-main').inert).toBe(true);
+  const close = '.mr-repo-export .mr-settings-heading [data-act="close-export"]';
+  expect(ui.shadow().activeElement).toBe(ui.q(close));
+  expect(ui.text('.mr-repo-export .mr-settings-heading p')).toBe('Include the notes to export. Nothing else is ever included.');
+  expect(
+    ui.all('.mr-repo-export [data-act="choose-note"]').map((toggle) => [words(toggle.parentElement!.firstElementChild!), toggle.getAttribute('aria-checked')]),
+  ).toStrictEqual([
+    ['Why read twice? Question about Reading § Goals', 'false'],
+    ['Not for sharing Idea', 'false'],
+  ]);
   expect(ui.q('.mr-export-preview').textContent).toBe('');
   expect(ui.q<HTMLButtonElement>('[data-act="copy-export"]').disabled).toBe(true);
   expect(ui.q<HTMLButtonElement>('[data-act="download-export"]').disabled).toBe(true);
-  expect(ui.text('.mr-export-share')).toBe('Share it as an issue Choose notes to share first.');
-  ui.click('[data-act="close-export"]');
+  expect(ui.text(share)).toBe('Share it as an issue Include notes to share first.');
+  ui.click(close);
   expect(ui.q('.mr-repo-export').hidden).toBe(true);
+  expect(ui.q('.mr-main').inert).toBe(false);
   expect(ui.shadow().activeElement).toBe(ui.q('[data-act="export"]'));
+  expect(ui.q('[data-act="export"]').getAttribute('aria-expanded')).toBe('false');
 
-  const choose = (text: string, on: boolean) => {
-    const box = card(text).querySelector<HTMLInputElement>('[data-act="choose-note"]')!;
-    box.checked = on;
-    box.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  choose('Not for sharing', true);
-  choose('Why read twice?', true);
-  choose('Not for sharing', false);
   ui.press('Export…');
-  expect(ui.text('.mr-export-panel > .mr-repo-quiet')).toBe('1 of 2 notes chosen. Only chosen notes are included: read the text before you share it.');
+  include('Not for sharing');
+  include('Why read twice?');
+  include('Not for sharing');
+  // Each switch keeps the focus as the sheet is drawn again.
+  expect(ui.shadow().activeElement).toBe(ui.all('.mr-repo-export [data-act="choose-note"]')[1]);
+  expect(ui.text('.mr-repo-export .mr-settings-heading p')).toBe('1 of 2 notes included. Read the text before you share it.');
   const markdown = ui.q('.mr-export-preview').textContent!;
   expect(markdown).toContain('# Notes on acme/handbook');
   expect(markdown).toContain('read at main @ c0ffee1.');
@@ -415,7 +454,7 @@ it('export shows exactly what leaves: only chosen notes, as Markdown or Mermaid,
     '- **Question** (proposal): Why read twice?\n  - About: [Reading § Goals](https://github.com/acme/handbook/blob/c0ffee1/docs/specs/reading.md#goals) (documented; the note was written at c0ffee1)',
   );
   expect(markdown).not.toContain('Not for sharing');
-  const issue = ui.q<HTMLAnchorElement>('.mr-export-share a');
+  const issue = ui.q<HTMLAnchorElement>(`${share} a`);
   expect([issue.textContent, issue.target, issue.rel]).toStrictEqual(['Open a new issue…', '_blank', 'noopener noreferrer']);
   const url = new URL(issue.href);
   expect([url.origin + url.pathname, url.searchParams.get('title'), url.searchParams.get('body')]).toStrictEqual([
@@ -423,9 +462,7 @@ it('export shows exactly what leaves: only chosen notes, as Markdown or Mermaid,
     'Notes on acme/handbook',
     markdown,
   ]);
-  expect(ui.text('.mr-export-share .mr-repo-quiet')).toBe(
-    'Opens the new-issue form on GitHub in a new tab, with this text. Nothing is posted until you submit it there.',
-  );
+  expect(ui.text(`${share} small`)).toBe('Opens the new-issue form on GitHub in a new tab, with this text. Nothing is posted until you submit it there.');
 
   ui.click('[data-act="copy-export"]');
   await vi.waitFor(() => expect(ui.text('.mr-toast')).toBe('Copied. Paste it where you choose.'));
@@ -446,7 +483,10 @@ it('export shows exactly what leaves: only chosen notes, as Markdown or Mermaid,
   );
   ui.click('[data-act="download-export"]');
   expect(downloads[1].download).toBe('acme-handbook-notes.mmd');
-  // Esc closes the export before anything else.
+  // The backdrop closes the export, and so does Esc, before anything else.
+  ui.click('.mr-repo-export .mr-settings-backdrop');
+  expect(ui.q('.mr-repo-export').hidden).toBe(true);
+  ui.press('Export…');
   ui.key('Escape');
   expect(ui.q('.mr-repo-export').hidden).toBe(true);
   expect(ui.q('.mr-repo-thinking').hidden).toBe(false);
@@ -457,11 +497,10 @@ it('text too long for an issue form is offered to copy instead', async () => {
   await ui.open(repository(handbook, { newIssue: () => `https://github.com/acme/handbook/issues/new?body=${'x'.repeat(9000)}` }));
   showNotes();
   await addNote('Long');
-  const box = card('Long').querySelector<HTMLInputElement>('[data-act="choose-note"]')!;
-  box.checked = true;
-  box.dispatchEvent(new Event('change', { bubbles: true }));
   ui.press('Export…');
-  expect(ui.text('.mr-export-share .mr-repo-quiet')).toBe('This text is too long to open in an issue form. Copy it instead.');
+  include('Long');
+  expect(ui.text(`${share} small`)).toBe('This text is too long to open in an issue form. Copy it instead.');
+  expect(ui.all(`${share} a`)).toHaveLength(0);
 });
 
 it('answers that arrive after the reader closed, or after the commit moved, change nothing', async () => {
@@ -516,10 +555,8 @@ it('export links a note about a whole document to it, and names what a note is c
   expect(option.textContent).toBe(`Question: ${long.slice(0, 59)}…`);
   choices.value = option.value;
   choices.dispatchEvent(new Event('change', { bubbles: true }));
-  const box = card('About the whole spec').querySelector<HTMLInputElement>('[data-act="choose-note"]')!;
-  box.checked = true;
-  box.dispatchEvent(new Event('change', { bubbles: true }));
   ui.press('Export…');
+  include('About the whole spec');
   expect(ui.q('.mr-export-preview').textContent).toContain(
     `- **Idea** (proposal): About the whole spec\n  - About: [Reading](https://github.com/acme/handbook/blob/c0ffee1/docs/specs/reading.md) (documented; the note was written at c0ffee1)\n  - Tentatively connected to: Question: ${long.slice(0, 59)}…`,
   );
@@ -535,10 +572,8 @@ it('a connection to something not read in this session is left out of the export
   showNotes();
   await vi.waitFor(() => expect(notes()).toHaveLength(1));
   expect(card('Scale the web service').querySelector('.mr-note-links')).toBe(null);
-  const box = card('Scale the web service').querySelector<HTMLInputElement>('[data-act="choose-note"]')!;
-  box.checked = true;
-  box.dispatchEvent(new Event('change', { bubbles: true }));
   ui.press('Export…');
+  include('Scale the web service');
   expect(ui.q('.mr-export-preview').textContent).toContain('- **Idea** (proposal): Scale the web service\n');
   expect(ui.q('.mr-export-preview').textContent).not.toContain('Tentatively connected');
 });

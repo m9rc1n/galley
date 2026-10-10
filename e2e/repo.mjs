@@ -141,7 +141,7 @@ export async function checkRepository(browser, demoUrl, screenshots) {
   assert.equal(await title(), 'Architecture overview');
   const flashed = await inspect(() =>
     [...document.querySelector('#galley-repo-reader').shadowRoot.querySelectorAll('.mr-content p')].some(
-      (p) => p.classList.contains('mr-repo-flash') && p.textContent.includes('deploy runbook'),
+      (p) => p.classList.contains('mr-flash') && p.textContent.includes('deploy runbook'),
     ),
   );
   assert.ok(flashed, 'Evidence opens the paragraph that holds the link');
@@ -194,8 +194,8 @@ export async function checkRepository(browser, demoUrl, screenshots) {
     const s = document.querySelector('#galley-repo-reader').shadowRoot;
     return {
       services: [...s.querySelectorAll('.mr-lens-list .mr-lens-entity')]
-        .filter((b) => b.querySelector('.mr-origin').textContent === 'Declared in configuration')
-        .map((b) => b.querySelector('.mr-lens-name').textContent),
+        .filter((b) => b.querySelector('.mr-chip').textContent === 'Declared in configuration')
+        .map((b) => b.querySelector('.mr-path-name').textContent),
       caveat: s.querySelector('.mr-lens-caveat').textContent,
       frame: s.querySelector('iframe[src*="config-frame"]')?.getAttribute('sandbox'),
     };
@@ -212,7 +212,7 @@ export async function checkRepository(browser, demoUrl, screenshots) {
   await inspect(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelector('form[data-act="add-note"] textarea').focus());
   await page.keyboard.type('Why a queue and not direct calls?');
   await click('form[data-act="add-note"] button[type="submit"]');
-  await page.waitForFunction(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelectorAll('article.mr-note').length === 1);
+  await page.waitForFunction(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelectorAll('aside.mr-note').length === 1);
   await click('[data-act="save-notes"]');
   await page.waitForFunction(() =>
     /^Saved /.test(document.querySelector('#galley-repo-reader').shadowRoot.querySelector('.mr-notes-state')?.textContent ?? ''),
@@ -232,6 +232,24 @@ export async function checkRepository(browser, demoUrl, screenshots) {
   assert.deepEqual(notesPhone.wide, []);
   assert.ok(notesPhone.name > 60, `The document name needs room on a phone, had ${notesPhone.name}px`);
   await page.screenshot({ path: join(screenshots, 'repo-notes-mobile.png') });
+
+  // Export is a sheet like the settings: a switch for each note, and it fits a phone.
+  await click('[data-act="export"]');
+  await click('[data-act="choose-note"]');
+  const exportPhone = await inspect(() => {
+    const s = document.querySelector('#galley-repo-reader').shadowRoot;
+    const panel = s.querySelector('.mr-repo-export .mr-settings-panel').getBoundingClientRect();
+    return {
+      open: !s.querySelector('.mr-repo-export').hidden,
+      fits: panel.left >= 0 && panel.right <= innerWidth,
+      included: s.querySelector('[data-act="choose-note"]').getAttribute('aria-checked'),
+      preview: s.querySelector('.mr-export-preview').textContent.includes('Why a queue and not direct calls?'),
+    };
+  });
+  assert.deepEqual(exportPhone, { open: true, fits: true, included: 'true', preview: true });
+  await page.screenshot({ path: join(screenshots, 'repo-export-mobile.png') });
+  await page.keyboard.press('Escape');
+  assert.equal(await inspect(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelector('.mr-repo-export').hidden), true);
 
   await page.keyboard.press('Escape');
   assert.equal(await inspect(() => document.querySelector('#galley-repo-reader')), null);

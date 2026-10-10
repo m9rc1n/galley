@@ -53,6 +53,16 @@ it('opened from a review, the reader starts at what it changes: each file with t
     'src/render.ts Field notes Worth checking: it links to a file this review changes render.ts line 3 src/render.ts line 5 Rendering Architecture Worth checking: it links to a file this review changes renderer line 3',
     'docker-compose.yml No document read so far links here.',
   ]);
+  // Changed is a change, in the change colour; worth checking is a plain fact, without one.
+  const chips = (start: string) =>
+    new Set(
+      ui
+        .all('.mr-review-file .mr-chip')
+        .filter((c) => c.textContent!.startsWith(start))
+        .map((c) => c.className),
+    );
+  expect(chips('Changed')).toStrictEqual(new Set(['mr-chip is-modified']));
+  expect(chips('Worth checking')).toStrictEqual(new Set(['mr-chip']));
   // A changed configuration file says what it declares once configuration is read.
   ui.press('Read configuration', '.mr-review-status button');
   await vi.waitFor(() => expect(words(ui.all('.mr-review-file')[3])).toBe('docker-compose.yml Declares web. No document read so far links here.'));
@@ -66,7 +76,7 @@ it('opened from a review, the reader starts at what it changes: each file with t
   await ui.settled();
   expect(ui.text('.mr-file-meta')).toContain('Changed in this review');
   ui.click('[data-act="docs"]');
-  expect(ui.all('.mr-repo-outline [data-path] .mr-review-flag').map((f) => f.closest('button')!.dataset.path)).toStrictEqual([decision, spec]);
+  expect(ui.all('.mr-repo-outline [data-path] .mr-chip.is-modified').map((f) => f.closest('button')!.dataset.path)).toStrictEqual([decision, spec]);
   ui.click('[data-view="map"]');
   expect(ui.text('.mr-map-facts')).toBe('Spec Changed in this review');
 

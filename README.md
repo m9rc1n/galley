@@ -98,7 +98,7 @@ The [user guide](docs/GUIDE.md) covers every setting, token and platform detail.
 | <kbd>,</kbd> · <kbd>?</kbd> | Settings · these shortcuts |
 | <kbd>Esc</kbd> | Close the innermost thing, and finally the reader. Drafts are kept. |
 
-Reading repository docs: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>M</kbd> map, <kbd>N</kbd> notes.
+Reading repository docs: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>M</kbd> map, <kbd>N</kbd> notes, <kbd>,</kbd> settings, <kbd>?</kbd> these keys.
 
 ## FAQ
 

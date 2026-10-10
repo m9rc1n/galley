@@ -34,6 +34,7 @@ import { readConfiguration } from './configs.ts';
 import { isPalette, PALETTE_KEYS, type DiagramPalette } from './diagram-palette.ts';
 import { renderDiagrams } from './diagrams.ts';
 import { loadReaderFonts } from './fonts.ts';
+import { chip, option, selectField, setRow, switchButton } from './dom.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
 import { digestText, ProjectNotes, when } from './project-store.ts';
@@ -41,7 +42,7 @@ import { loadImage, renderDocument, type RenderedDoc } from './render.ts';
 import {
   button,
   configStatus,
-  exportDialog,
+  exportSheet,
   external,
   h,
   lensSwitch,
@@ -53,6 +54,7 @@ import {
 } from './repo-views.ts';
 import repoCss from './repo.css';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, TEXT_SIZES, type Settings } from './settings.ts';
+import { applyReadingControls, keyGroups, nextTab, PaletteCarousel, READING_SECTIONS, selectTab, settingsSheet, type Shortcuts } from './settings-sheet.ts';
 
 /**
  * The repository reader: a project's docs read at one commit, with the same typography, sanitiser and
@@ -74,6 +76,34 @@ const TOP = 72;
 const CONFIG_CONCURRENCY = 4;
 /** Longest address a new-issue link may have: browsers and platforms refuse longer ones. */
 const MAX_ISSUE_URL = 8_000;
+
+/** Every shortcut of the repository reader; the Keys tab lists them and onKey() handles them. */
+const SHORTCUTS: Shortcuts = [
+  [
+    'Move through the docs',
+    [
+      [['/'], 'Find a document or heading'],
+      [['Alt', '←'], 'Back to where you were'],
+      [['Alt', '→'], 'Forward again'],
+    ],
+  ],
+  [
+    'Views',
+    [
+      [['M'], 'Open the map, or go back to reading'],
+      [['N'], 'Open your notes, or go back to reading'],
+    ],
+  ],
+  [
+    'Settings',
+    [
+      [[','], 'Open settings'],
+      [['?'], 'Show these shortcuts'],
+      [['Esc'], 'Close what is open, then the reader'],
+    ],
+  ],
+];
+const SETTINGS_TABS = ['reading', 'keys'];
 
 const TEMPLATE = `
 <div class="mr-root mr-repo" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley: repository docs">
@@ -102,12 +132,25 @@ const TEMPLATE = `
     <div class="mr-repo-notes"></div>
     <nav class="mr-repo-outline" aria-label="Documents in this repository"></nav>
   </div>
-  <div class="mr-menu mr-repo-settings" role="dialog" aria-label="Reading settings" hidden>
-    <div class="mr-set-row"><span>Appearance</span><div class="mr-seg" data-setting="appearance" role="group" aria-label="Appearance"><button data-value="auto">System</button><button data-value="light">Light</button><button data-value="dark">Dark</button></div></div>
-    <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite"></output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
-    <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-    <p class="mr-settings-note">Palette, typeface and layout follow your review settings.</p>
-  </div>
+${settingsSheet('The same settings as the review reader, so documents read the same way in both.', [
+  {
+    id: 'reading',
+    label: 'Reading',
+    icon: icons.book,
+    panel: `${READING_SECTIONS}
+      <section class="mr-settings-section" aria-label="Images">
+        <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
+      </section>
+      <p class="mr-settings-note">Changes to your settings appear in both readers right away.</p>`,
+  },
+  {
+    id: 'keys',
+    label: 'Keys',
+    icon: icons.keyboard,
+    panel: `${keyGroups(SHORTCUTS)}
+      <p class="mr-settings-note">Shortcuts work while the reader has focus and no text field is active. Press ? at any time to come back here.</p>`,
+  },
+])}
   <nav class="mr-toc" aria-label="Contents"></nav>
   <main class="mr-main">
     <article class="mr-article mr-repo-read"><div class="mr-doc"></div></article>
@@ -115,7 +158,10 @@ const TEMPLATE = `
     <div class="mr-repo-thinking" hidden></div>
     <div class="mr-repo-review" hidden></div>
   </main>
-  <div class="mr-repo-export" role="dialog" aria-modal="true" aria-label="Export notes" hidden></div>
+  <div class="mr-settings mr-repo-export" hidden>
+    <div class="mr-settings-backdrop" data-act="close-export"></div>
+    <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-export-title" tabindex="-1"></aside>
+  </div>
   <div class="mr-repo-zoom" role="dialog" aria-modal="true" aria-label="Enlarged diagram" hidden><button class="mr-btn mr-icon-btn" data-act="close-zoom" aria-label="Close diagram (Esc)" title="Close (Esc)">${icons.close}</button><img alt=""></div>
   <p class="mr-toast" role="status" aria-live="polite" hidden></p>
 </div>`;
@@ -137,13 +183,14 @@ const safeDecode = (value: string) => {
 /** What the reader typed or chose in a view's forms, put back after the view is drawn again, with the focus. */
 function typed(root: HTMLElement): () => void {
   const key = (form: HTMLFormElement) => `${form.dataset.act}:${form.dataset.id ?? form.dataset.from ?? form.dataset.lens ?? ''}`;
-  const fields = (form: HTMLFormElement) => [...form.querySelectorAll<HTMLInputElement>('input, textarea, select')];
-  const field = (el: HTMLInputElement) => (el.type === 'radio' ? `${el.name}=${el.value}` : el.name);
+  const fields = (form: HTMLFormElement) => [...form.querySelectorAll<HTMLInputElement>('input, textarea, select, [role="switch"]')];
+  const isSwitch = (el: HTMLElement) => el.getAttribute('role') === 'switch';
+  const name = (el: HTMLInputElement) => el.name || el.dataset.act!;
   const active = (root.getRootNode() as ShadowRoot).activeElement;
   const before = new Map(
     [...root.querySelectorAll('form')].map((form) => [
       key(form),
-      new Map(fields(form).map((el) => [field(el), { value: el.value, checked: el.checked, focused: el === active }])),
+      new Map(fields(form).map((el) => [name(el), { value: isSwitch(el) ? el.getAttribute('aria-checked')! : el.value, focused: el === active }])),
     ]),
   );
   return () => {
@@ -151,12 +198,15 @@ function typed(root: HTMLElement): () => void {
       const saved = before.get(key(form));
       if (!saved) continue;
       for (const el of fields(form)) {
-        const was = saved.get(field(el));
+        const was = saved.get(name(el));
         if (!was) continue;
-        if (el.type === 'checkbox' || el.type === 'radio') el.checked = was.checked;
+        if (isSwitch(el)) el.setAttribute('aria-checked', was.value);
         else el.value = was.value;
         if (was.focused) el.focus();
       }
+      // Only alternatives answer a question.
+      const group = form.querySelector<HTMLElement>('.mr-note-group');
+      if (group) group.hidden = form.querySelector<HTMLSelectElement>('[data-act="note-kind"]')!.value !== 'alternative';
     }
   };
 }
@@ -257,6 +307,9 @@ class RepoReader {
   /** The map reads its first batch by itself once; after that, only when the reader asks. */
   private indexedOnce = false;
   private toastTimer = 0;
+  private readonly palettes = new PaletteCarousel(this.shadow);
+  /** The control that opened the sheet that is open, to give focus back to: found again, as a view may be drawn anew. */
+  private sheetOpener = '';
   private closed = false;
   private readonly dark = matchMedia('(prefers-color-scheme: dark)');
   private readonly prevOverflow: string;
@@ -289,6 +342,7 @@ class RepoReader {
       this.q('[data-view="review"]').hidden = false;
     }
     this.root.addEventListener('scroll', () => this.onScroll(), { passive: true });
+    this.q('.mr-palette-track').addEventListener('scroll', () => this.palettes.update(), { passive: true });
     this.q('.mr-repo-search').addEventListener('input', (e) => {
       this.search = (e.target as HTMLInputElement).value;
       this.buildOutline();
@@ -566,7 +620,7 @@ class RepoReader {
       if (kind !== 'other') facts.append(this.kindChip(kind, from));
       if (indexed.status) facts.append(h('span', 'mr-repo-status', indexed.status));
     }
-    if (this.changed.has(path)) facts.append(h('span', 'mr-review-flag is-changed', 'Changed in this review'));
+    if (this.changed.has(path)) facts.append(chip('modified', 'Changed in this review'));
     const at = h('span', 'mr-repo-at', `${path} · ${source.ref ?? 'default branch'} @ ${shortSha(source.commit)}`);
     at.title = `Read at commit ${source.commit}`;
     facts.append(at);
@@ -585,10 +639,11 @@ class RepoReader {
     return frag;
   }
 
+  /** A document's type as a chip; one the reader set carries the accent, like everything else of theirs. */
   private kindChip(kind: DocKind, from: KindSource): HTMLElement {
-    const chip = h('span', `mr-repo-kind is-${kind}${from === 'reader' ? ' is-reader' : ''}`, KIND_NAMES[kind]);
-    chip.title = `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}`;
-    return chip;
+    const el = chip(from === 'reader' ? 'own' : null, KIND_NAMES[kind]);
+    el.title = `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}`;
+    return el;
   }
 
   /** The documents that link here, from the documents read so far, each with the links as evidence. */
@@ -684,8 +739,8 @@ class RepoReader {
 
   private reveal(el: Element): void {
     this.root.scrollTo({ top: this.root.scrollTop + el.getBoundingClientRect().top - TOP });
-    el.classList.add('mr-repo-flash');
-    setTimeout(() => el.classList.remove('mr-repo-flash'), 1600);
+    el.classList.add('mr-flash');
+    setTimeout(() => el.classList.remove('mr-flash'), 1600);
   }
 
   /**
@@ -814,7 +869,7 @@ class RepoReader {
       const { kind, from } = classify(doc, this.corrections);
       if (kind !== 'other') item.append(this.kindChip(kind, from));
     }
-    if (this.changed.has(path)) item.append(h('span', 'mr-review-flag is-changed', 'Changed'));
+    if (this.changed.has(path)) item.append(chip('modified', 'Changed'));
     if (path === this.path) item.setAttribute('aria-current', 'true');
     return item;
   }
@@ -987,7 +1042,7 @@ class RepoReader {
       const facts = h('p', 'mr-map-facts');
       facts.append(this.kindChip(kind, from));
       if (doc.status) facts.append(h('span', 'mr-repo-status', doc.status));
-      if (this.changed.has(focus)) facts.append(h('span', 'mr-review-flag is-changed', 'Changed in this review'));
+      if (this.changed.has(focus)) facts.append(chip('modified', 'Changed in this review'));
       if (doc.unread) facts.append(h('span', 'mr-repo-limit', doc.unread === 'failed' ? 'Could not be read' : 'Too large to read'));
       center.append(facts, this.kindEditor(focus, kind, from));
     } else center.append(h('p', 'mr-repo-quiet', 'Not read yet: its own links are not shown.'));
@@ -1034,32 +1089,29 @@ class RepoReader {
     map.replaceChildren(...parts);
   }
 
-  /** The reader can correct a kind for this session; Galley says where every kind came from. */
+  /** The reader can correct a type, as a settings row; Galley says where every type came from. */
   private kindEditor(path: string, kind: DocKind, from: KindSource): HTMLElement {
     const box = h('div', 'mr-map-kind');
-    const label = h('label', '', 'Type ');
     const select = h('select');
     select.dataset.act = 'kind';
     select.dataset.path = path;
-    for (const value of DOC_KINDS) {
-      const option = h('option', '', KIND_NAMES[value]);
-      option.value = value;
-      option.selected = value === kind;
-      select.append(option);
-    }
-    label.append(select);
-    box.append(label);
+    for (const value of DOC_KINDS) select.append(option(value, KIND_NAMES[value], value === kind));
+    box.append(
+      setRow(
+        'Type',
+        selectField(select),
+        from === 'reader' ? 'Set by you. Kept with your notes when you save them.' : `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}.`,
+      ),
+    );
     const folder = folderOf(path);
-    if (folder) {
-      const all = h('label', 'mr-map-kind-all');
-      const check = h('input');
-      check.type = 'checkbox';
-      check.dataset.act = 'kind-folder';
-      check.checked = this.corrections.folders.has(folder) && !this.corrections.docs.has(path);
-      all.append(check, ` Everything in ${folder}/`);
-      box.append(all);
-    }
-    box.append(h('small', '', from === 'reader' ? 'Set by you. Kept with your notes when you save them.' : `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}.`));
+    if (folder)
+      box.append(
+        setRow(
+          `Everything in ${folder}/`,
+          switchButton('kind-folder', this.corrections.folders.has(folder) && !this.corrections.docs.has(path)),
+          'The same type for the whole folder',
+        ),
+      );
     return box;
   }
 
@@ -1221,7 +1273,9 @@ class RepoReader {
     const data = new FormData(form);
     const name = String(data.get('name')).trim();
     if (!name) return;
-    const reading = data.get('anchor') && this.path ? { path: this.path, label: this.titleOf(this.path).slice(0, 200) } : null;
+    // The switch is there only while a document is open: on, the proposal is about that document.
+    const about = form.querySelector('[data-act="propose-about"]')?.getAttribute('aria-checked') === 'true';
+    const reading = about ? { path: this.path!, label: this.titleOf(this.path!).slice(0, 200) } : null;
     const entity = { id: newId('reader'), name, kind: String(data.get('kind')), lens: form.dataset.lens as 'architecture' | 'infrastructure', anchor: reading };
     this.notes!.change((thinking) => thinking.entities.push(entity));
     this.entityFocus = entity.id;
@@ -1286,7 +1340,6 @@ class RepoReader {
     pane.replaceChildren(
       notesView({
         notes: notes.thinking.notes,
-        chosen: this.chosen,
         state: notes.state,
         dirty: notes.dirty,
         error: notes.error,
@@ -1454,15 +1507,18 @@ class RepoReader {
   private drawExport(): void {
     const source = this.source!;
     const notes = this.notes!.thinking.notes;
-    const chosen = notes.filter((note) => this.chosen.has(note.id)).length;
-    const text = chosen ? this.exportText() : '';
-    const issue = chosen ? source.newIssue(`Notes on ${source.name}`, text) : '';
-    this.q('.mr-repo-export').replaceChildren(
-      exportDialog({
+    const text = notes.some((note) => this.chosen.has(note.id)) ? this.exportText() : '';
+    const issue = text ? source.newIssue(`Notes on ${source.name}`, text) : '';
+    this.q('.mr-repo-export .mr-settings-panel').replaceChildren(
+      ...exportSheet({
         format: this.exportFormat,
         text,
-        chosen,
-        total: notes.length,
+        notes: notes.map((note) => ({
+          id: note.id,
+          label: note.text.split('\n')[0],
+          about: note.anchor ? `${NOTE_NAMES[note.kind]} about ${note.anchor.label}` : NOTE_NAMES[note.kind],
+          chosen: this.chosen.has(note.id),
+        })),
         issue: issue.length <= MAX_ISSUE_URL ? issue : null,
         platform: source.platform,
       }),
@@ -1470,17 +1526,8 @@ class RepoReader {
   }
 
   private openExport(): void {
-    this.q('.mr-repo-export').hidden = false;
     this.drawExport();
-    this.q('[data-act="close-export"]').focus();
-  }
-
-  private closeExport(): boolean {
-    const panel = this.q('.mr-repo-export');
-    if (panel.hidden) return false;
-    panel.hidden = true;
-    this.shadow.querySelector<HTMLElement>('[data-act="export"]')?.focus();
-    return true;
+    this.openSheet(this.q('.mr-repo-export'), '[data-act="export"]');
   }
 
   private downloadExport(): void {
@@ -1585,12 +1632,44 @@ class RepoReader {
     }, 4000);
   }
 
+  private get settingsSheet(): HTMLElement {
+    return this.q('.mr-settings:not(.mr-repo-export)');
+  }
+
+  private openSheetEl(): HTMLElement | null {
+    return this.shadow.querySelector<HTMLElement>('.mr-settings:not([hidden])');
+  }
+
+  private openSettings(tab: string): void {
+    selectTab(this.settingsSheet, tab, false);
+    this.openSheet(this.settingsSheet, '[data-act="settings"]');
+    this.palettes.reveal(this.settings.theme);
+  }
+
+  /** Settings and export open as sheets: the reader behind goes inert, and focus comes back to what opened them. */
+  private openSheet(sheet: HTMLElement, opener: string): void {
+    this.closeMenus();
+    sheet.hidden = false;
+    this.sheetOpener = opener;
+    this.q(opener).setAttribute('aria-expanded', 'true');
+    for (const el of this.root.querySelectorAll<HTMLElement>('.mr-topbar, .mr-main, .mr-toc')) el.inert = true;
+    sheet.querySelector<HTMLElement>('.mr-settings-heading .mr-icon-btn')!.focus();
+  }
+
+  private closeSheet(): boolean {
+    const sheet = this.openSheetEl();
+    if (!sheet) return false;
+    sheet.hidden = true;
+    for (const el of this.root.querySelectorAll<HTMLElement>('.mr-topbar, .mr-main, .mr-toc')) el.inert = false;
+    const opener = this.q(this.sheetOpener);
+    opener.setAttribute('aria-expanded', 'false');
+    opener.focus({ preventScroll: true });
+    return true;
+  }
+
   private closeMenus(): boolean {
     let closed = false;
-    for (const [menu, control] of [
-      ['.mr-repo-docs', '[data-act="docs"]'],
-      ['.mr-repo-settings', '[data-act="settings"]'],
-    ]) {
+    for (const [menu, control] of [['.mr-repo-docs', '[data-act="docs"]']]) {
       if (!this.q(menu).hidden) closed = true;
       this.q(menu).hidden = true;
       this.q(control).setAttribute('aria-expanded', 'false');
@@ -1637,8 +1716,13 @@ class RepoReader {
     const el = target.closest<HTMLElement>('[data-act]');
     const value = target.closest<HTMLElement>('[data-setting] [data-value]');
     if (value) {
-      const key = value.closest<HTMLElement>('[data-setting]')!.dataset.setting as 'appearance' | 'images';
+      const key = value.closest<HTMLElement>('[data-setting]')!.dataset.setting!;
       this.update({ [key]: value.dataset.value });
+      return;
+    }
+    const tab = target.closest<HTMLElement>('[data-settings-tab]');
+    if (tab) {
+      selectTab(this.settingsSheet, tab.dataset.settingsTab!);
       return;
     }
     if (!el) {
@@ -1661,13 +1745,21 @@ class RepoReader {
       case 'docs':
         this.toggleDocs();
         return;
-      case 'settings': {
-        const open = this.q('.mr-repo-settings').hidden;
-        this.closeMenus();
-        this.q('.mr-repo-settings').hidden = !open;
-        el.setAttribute('aria-expanded', String(open));
+      case 'settings':
+        this.openSettings('reading');
         return;
-      }
+      case 'close-settings':
+      case 'close-export':
+        this.closeSheet();
+        return;
+      case 'palette-prev':
+      case 'palette-next':
+      case 'palette-page':
+        this.palettes.onClick(el.dataset.act, el);
+        return;
+      case 'top-glow':
+        this.update({ topGlow: !this.settings.topGlow });
+        return;
       case 'refresh':
         return void this.refresh();
       case 'open':
@@ -1743,6 +1835,15 @@ class RepoReader {
         return;
       case 'read-configs':
         return void this.readConfigs();
+      case 'kind-folder': {
+        const select = el.closest('.mr-map-kind')!.querySelector<HTMLSelectElement>('[data-act="kind"]')!;
+        this.setKind(select.dataset.path!, select.value as DocKind, el.getAttribute('aria-checked') !== 'true');
+        this.q('[data-act="kind-folder"]').focus();
+        return;
+      }
+      case 'propose-about':
+        el.setAttribute('aria-checked', String(el.getAttribute('aria-checked') !== 'true'));
+        return;
       case 'remove-entity':
         notes.change((thinking) => {
           thinking.entities = thinking.entities.filter((entity) => entity.id !== id);
@@ -1842,8 +1943,11 @@ class RepoReader {
       case 'export':
         this.openExport();
         return;
-      case 'close-export':
-        this.closeExport();
+      case 'choose-note':
+        if (this.chosen.has(id)) this.chosen.delete(id);
+        else this.chosen.add(id);
+        this.drawExport();
+        this.q(`[data-act="choose-note"][data-id="${CSS.escape(id)}"]`).focus();
         return;
       case 'export-format':
         this.exportFormat = el.dataset.format as 'markdown' | 'mermaid';
@@ -1872,15 +1976,21 @@ class RepoReader {
   private onChange(e: Event): void {
     const el = e.target as HTMLInputElement;
     const id = el.dataset.id!;
+    if (el.id === 'mr-typeface') {
+      this.update({ font: el.value as Settings['font'] });
+      return;
+    }
     switch (el.dataset.act) {
-      case 'kind':
-      case 'kind-folder': {
-        const box = el.closest('.mr-map-kind')!;
-        const select = box.querySelector<HTMLSelectElement>('[data-act="kind"]')!;
-        const all = box.querySelector<HTMLInputElement>('[data-act="kind-folder"]');
-        this.setKind(select.dataset.path!, select.value as DocKind, Boolean(all?.checked));
+      case 'kind': {
+        const folderWide = el.closest('.mr-map-kind')!.querySelector('[data-act="kind-folder"]')?.getAttribute('aria-checked') === 'true';
+        this.setKind(el.dataset.path!, el.value as DocKind, folderWide);
+        this.q('[data-act="kind"]').focus();
         return;
       }
+      case 'note-kind':
+        // Only alternatives answer a question.
+        el.closest('form')!.querySelector<HTMLElement>('.mr-note-group')!.hidden = el.value !== 'alternative';
+        return;
       case 'entity-kind': {
         // The reader's own proposal changes; a declared or documented type stays visible beside theirs.
         const kind = el.value;
@@ -1897,10 +2007,6 @@ class RepoReader {
         this.q('[data-act="entity-kind"]').focus();
         return;
       }
-      case 'choose-note':
-        if (el.checked) this.chosen.add(id);
-        else this.chosen.delete(id);
-        return;
       case 'connect-note': {
         const to = el.value;
         this.connecting = null;
@@ -1943,11 +2049,30 @@ class RepoReader {
   private onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       e.preventDefault();
-      if (this.closeExport() || this.closeZoom() || this.closeMenus()) {
+      if (this.closeSheet()) return;
+      if (this.closeZoom() || this.closeMenus()) {
         this.root.focus({ preventScroll: true });
         return;
       }
       this.close();
+      return;
+    }
+    const sheet = this.openSheetEl();
+    if (sheet && e.key === 'Tab') {
+      // Focus stays inside an open sheet.
+      const controls = [...sheet.querySelectorAll<HTMLElement>('button, a[href], input, textarea, select, [tabindex="0"]')].filter(
+        (el) => el.getClientRects().length && !el.matches(':disabled'),
+      );
+      const at = controls.indexOf(this.shadow.activeElement as HTMLElement);
+      controls[e.shiftKey ? (at <= 0 ? controls.length - 1 : at - 1) : (at + 1) % controls.length].focus();
+      e.preventDefault();
+      return;
+    }
+    const target = e.composedPath()[0];
+    const tab = target instanceof HTMLElement && target.matches('[data-settings-tab]') ? nextTab(SETTINGS_TABS, target.dataset.settingsTab!, e.key) : null;
+    if (tab) {
+      e.preventDefault();
+      selectTab(this.settingsSheet, tab, true);
       return;
     }
     // In the search box, Alt/Option + arrows move the caret by word, and letters are typed.
@@ -1958,9 +2083,13 @@ class RepoReader {
       return;
     }
     if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (sheet) return;
     if (e.key === '/') {
       e.preventDefault();
       this.toggleDocs(true);
+    } else if (e.key === ',' || e.key === '?') {
+      e.preventDefault();
+      this.openSettings(e.key === '?' ? 'keys' : 'reading');
     } else if (e.key === 'm' || e.key === 'M') {
       e.preventDefault();
       if (this.view === 'map') this.q<HTMLElement>('[data-view="read"]').click();
@@ -1993,13 +2122,7 @@ class RepoReader {
     const text = TEXT_SIZES[s.size] ?? TEXT_SIZES[DEFAULT_SETTINGS.size];
     r.style.setProperty('--text-scale', String(Math.round((text / TEXT_SIZES[DEFAULT_SETTINGS.size]) * 1000) / 1000));
     r.style.setProperty('--body-size', `${text}px`);
-    this.q('.mr-text-size').textContent = `${text} px`;
-    this.q<HTMLButtonElement>('[data-act="smaller"]').disabled = s.size <= 0;
-    this.q<HTMLButtonElement>('[data-act="larger"]').disabled = s.size >= TEXT_SIZES.length - 1;
-    for (const group of this.shadow.querySelectorAll<HTMLElement>('[data-setting]')) {
-      const value = s[group.dataset.setting as 'appearance' | 'images'];
-      for (const b of group.querySelectorAll<HTMLElement>('[data-value]')) b.setAttribute('aria-pressed', String(b.dataset.value === value));
-    }
+    applyReadingControls(this.shadow, s);
     this.drawDiagrams();
   }
 
