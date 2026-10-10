@@ -27,6 +27,7 @@
     "test:docs": "node --test scripts/docs.test.mjs",
     "docs:check": "node scripts/docs.mjs",
     "docs:index": "node scripts/docs.mjs --write",
+    "repo:report": "node scripts/repo-report.mjs",
     "icons": "node scripts/icons.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

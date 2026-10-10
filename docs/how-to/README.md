@@ -9,6 +9,7 @@ Step-by-step recipes for changes that touch several files. Each lists the files,
 | [Add a keyboard shortcut](add-a-shortcut.md) | A new key in the reader |
 | [Add a GitHub API call](add-a-github-api-call.md) | The reader needs data GitHub's API has and Galley does not fetch yet |
 | [Verify a UI change](verify-a-ui-change.md) | Anything that changes what the reader looks like or how it behaves |
+| [Validate repository reading](validate-repository-reading.md) | Research sessions for RFC 0049: the repository reader, the project map and notes |
 
 Also in the repository:
 
