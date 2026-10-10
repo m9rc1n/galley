@@ -14,6 +14,7 @@ import puppeteer from 'puppeteer-core';
 import { startDemoServer } from '../scripts/serve.mjs';
 import { checkCodeComments, checkSpecs } from './specs.mjs';
 import { checkLargeReview } from './large.mjs';
+import { checkFilesLayout } from './files.mjs';
 
 function contrast(first, second) {
   const luminance = (colour) =>
@@ -708,7 +709,7 @@ try {
     const bar = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar');
     return ['::before', '::after'].every((pseudo) => {
       const opacity = Number(getComputedStyle(bar, pseudo).opacity);
-      return opacity > 0 && opacity <= 0.25;
+      return opacity > 0 && opacity <= 0.6;
     });
   });
   const scrolledGlow = await inspect(() => {
@@ -722,8 +723,8 @@ try {
     };
   });
   assert.ok(
-    scrolledGlow.layers.every((layer) => layer.opacity > 0 && layer.opacity <= 0.25 && layer.animation === 'running'),
-    'The top glow stays as a faint hint while scrolling',
+    scrolledGlow.layers.every((layer) => layer.opacity > 0 && layer.opacity <= 0.6 && layer.animation === 'running'),
+    'The top glow stays visible but gentler while scrolling',
   );
   assert.equal(scrolledGlow.border, 'rgba(0, 0, 0, 0)');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').dataset.doc), '1');
@@ -1038,6 +1039,7 @@ try {
   await checkSpecs(browser, demoUrl, screenshots);
   await checkCodeComments(browser, demoUrl, screenshots);
   await checkLargeReview(browser, demoUrl, screenshots);
+  await checkFilesLayout(browser, demoUrl, screenshots);
   console.log(
     'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, nineteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description.',
   );

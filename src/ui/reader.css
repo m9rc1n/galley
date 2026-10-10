@@ -2403,7 +2403,7 @@
 }
 
 /* Light washes down from the whole top edge: teal, violet and rose blend with the palette's accent.
-   The broad glow stays anchored to the screen, becoming a faint hint once reading moves down the page. */
+   The broad glow stays anchored to the screen, becoming softer once reading moves down the page. */
 .mr-topbar {
   --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
   --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
@@ -2439,10 +2439,10 @@
   animation: none;
 }
 .mr-topbar.is-scrolled::before {
-  opacity: 0.22;
+  opacity: 0.55;
 }
 .mr-topbar.is-scrolled::after {
-  opacity: 0.04;
+  opacity: 0.1;
 }
 @keyframes mr-aurora-glow {
   from {
@@ -4558,6 +4558,7 @@
   .mr-root[data-layout="files"] {
     --code-span: min(var(--code-width), calc(var(--rail-end) - var(--text-left) - var(--rail-gap) - 300px));
     --code-left: var(--text-left);
+    --code-md-span: var(--measure);
   }
 }
 .mr-file-list .mr-toc-title {

@@ -245,11 +245,12 @@ describe('picking up where the reader left off', () => {
 
   it('does nothing if the reader closes before the position is read', async () => {
     const position = deferred<{ path: string; offset: number } | null>();
-    vi.spyOn(positions, 'loadPosition').mockReturnValue(position.promise);
+    const loaded = vi.spyOn(positions, 'loadPosition').mockReturnValue(position.promise);
     await ui.open(source());
+    await vi.waitFor(() => expect(loaded).toHaveBeenCalledOnce());
     ui.close();
     position.resolve({ path: 'docs/later.md', offset: 900 });
-    await ui.tick();
+    await position.promise;
     expect(document.querySelector('#galley-reader')).toBeNull();
   });
 });
