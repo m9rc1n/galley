@@ -1,0 +1,14 @@
+services:
+  webhook:
+    image: acme/reviews-webhook:1.4
+    depends_on:
+      - queue
+  queue:
+    image: redis:7
+  renderer:
+    image: acme/reviews-renderer:1.4
+    depends_on:
+      - queue
+      - store
+  store:
+    image: postgres:16
