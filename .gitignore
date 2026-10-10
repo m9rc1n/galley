@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Demo samples imitate a repository, build output included.
+!demo/samples/*/dist/
 demo/build/
 .claude/
 .DS_Store

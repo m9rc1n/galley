@@ -55,7 +55,11 @@ await mkdir(screenshots, { recursive: true });
 
 const server = process.env.DEMO_URL ? null : await startDemoServer(0);
 const demoUrl = process.env.DEMO_URL ?? `http://127.0.0.1:${server.address().port}`;
-const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox'] });
+// Headless Chrome on Linux reports no pointing device, so pages see a touch screen ((hover: none)) and the
+// mouse-only controls, such as Add a comment…, stay hidden. These checks are for a desktop with a mouse;
+// narrow and touch layouts are checked by viewport size.
+const MOUSE = '--blink-settings=primaryPointerType=4,availablePointerTypes=4,primaryHoverType=2,availableHoverTypes=2';
+const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox', MOUSE] });
 try {
   const page = await browser.newPage();
   const errors = [];
