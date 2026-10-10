@@ -6,8 +6,8 @@ discussion: https://github.com/m9rc1n/galley/issues/49
 theme: Read the project, understand the change
 phase: Exploratory plan; separate from the three proposed core review RFCs
 delivery: Phased experiments and implementation gates; owners, effort and dates remain to be estimated
-progress: Phase 0 engineering spike done; Phases 1–2 in progress (see the discussion)
-adrs: [1, 9, 11, 19]
+progress: Phases 1–5 implemented on the extension's branch for issue 49 (repository reader, project map with architecture, infrastructure and decision lenses, private notes, Project docs from reviews); reader validation sessions, self-hosted GitLab version checks and pilot targets remain (see the discussion)
+adrs: [1, 9, 11, 19, 24, 25, 26, 27, 28]
 ---
 
 # RFC 0049: Repository docs reading, project maps and architecture exploration
@@ -48,22 +48,22 @@ This diagram describes the proposed product, not the architecture of an inspecte
 
 - [ ] Prototype finding a spec, following its ADR, opening related implementation/deployment evidence and recording a question.
 - [ ] Use Galley's own docs and representative small/large repositories, including one with incomplete or contradictory documentation.
-- [ ] Spike repository-page detection, selected-ref resolution, commit-pinned tree/file reads and the token-worker allowlist.
+- [x] Spike repository-page detection, selected-ref resolution, commit-pinned tree/file reads and the token-worker allowlist.
 - [ ] Verify both supported providers' basic read paths; identify self-hosted/version differences before promising parity.
-- [ ] Select an initial file/request/index budget and define what “partially indexed” looks like.
+- [x] Select an initial file/request/index budget and define what “partially indexed” looks like.
 
 **Exit gate:** readers can complete the prototype tasks and the engineering spike establishes a bounded, authenticated read path. Set estimates and acceptance targets from these findings before committing delivery dates.
 
 ## Phase 1 — Read repository docs without opening an MR
 
-- [ ] Add a “Read docs” entry point on supported repository and Markdown file/folder pages.
-- [ ] Resolve the selected branch/tag/commit to a stable commit for the session, display it and refresh explicitly.
-- [ ] Discover Markdown from README files and selectable documentation roots such as `docs/`, `specs/` and ADR directories. These are useful starting hints, not a mandatory folder convention.
-- [ ] List candidates first and fetch content lazily; support a single-document entry without requiring a repository scan.
-- [ ] Reuse sanitization, typography, headings, tables, image controls and sandboxed diagram rendering.
-- [ ] Follow in-repository relative links and anchors at the same commit; preserve back/forward position.
-- [ ] Show unsupported formats, unavailable files and discovery limits clearly, with provider/source fallbacks.
-- [ ] Keep this mode independent of diff marks, MR comments and provider Viewed/approval state.
+- [x] Add a “Read docs” entry point on supported repository and Markdown file/folder pages.
+- [x] Resolve the selected branch/tag/commit to a stable commit for the session, display it and refresh explicitly.
+- [x] Discover Markdown from README files and selectable documentation roots such as `docs/`, `specs/` and ADR directories. These are useful starting hints, not a mandatory folder convention.
+- [x] List candidates first and fetch content lazily; support a single-document entry without requiring a repository scan.
+- [x] Reuse sanitization, typography, headings, tables, image controls and sandboxed diagram rendering.
+- [x] Follow in-repository relative links and anchors at the same commit; preserve back/forward position.
+- [x] Show unsupported formats, unavailable files and discovery limits clearly, with provider/source fallbacks.
+- [x] Keep this mode independent of diff marks, MR comments and provider Viewed/approval state.
 
 **Exit gate:** a user can open a repo spec, follow a linked ADR and return to the same paragraph on desktop and mobile. Private/authentication failures, changing refs and repositories with few or no docs have clear behavior.
 
@@ -71,14 +71,14 @@ This diagram describes the proposed product, not the architecture of an inspecte
 
 ## Phase 2 — A map of the documentation
 
-- [ ] Build an index from document metadata, headings and explicit relative links.
-- [ ] Offer an outline/tree, backlinks and an optional mindmap view over the same index.
-- [ ] Identify linked specs, decisions, architecture notes and runbooks using explicit metadata or editable path-based hints.
-- [ ] Keep folder containment, document references and user-authored semantic relationships distinguishable.
-- [ ] A node opens its document/heading and identifies the source commit.
-- [ ] Unresolved references, missing anchors and partial indexing remain visible.
-- [ ] Support focused neighborhoods, collapse/expand, search and a keyboard-accessible list equivalent.
-- [ ] Keep deterministic placement where possible so revisiting does not rearrange the reader's mental map.
+- [x] Build an index from document metadata, headings and explicit relative links.
+- [x] Offer an outline/tree, backlinks and an optional mindmap view over the same index.
+- [x] Identify linked specs, decisions, architecture notes and runbooks using explicit metadata or editable path-based hints.
+- [x] Keep folder containment, document references and user-authored semantic relationships distinguishable.
+- [x] A node opens its document/heading and identifies the source commit.
+- [x] Unresolved references, missing anchors and partial indexing remain visible.
+- [x] Support focused neighborhoods, collapse/expand, search and a keyboard-accessible list equivalent.
+- [x] Keep deterministic placement where possible so revisiting does not rearrange the reader's mental map.
 
 **Exit gate:** a reader can trace a spec to its linked decision and explain why the map connects them. Every source-derived edge exposes evidence. A folder hierarchy is not presented as a service dependency graph.
 
@@ -94,26 +94,26 @@ Add typed, source-backed entities where the repository provides evidence:
 
 Start with reader-curated entities and relations anchored to docs. Later, add bounded inspection of selected configuration formats, such as Compose files, Kubernetes manifests, Terraform declarations or workflow files, after choosing supported syntax and limits. Existing diagram documents remain readable; translating diagrams into editable structured entities is a separate spike.
 
-- [ ] Every entity/relation identifies its origin: documented, declared in config, reader-proposed or unverified suggestion.
-- [ ] Source-backed items link to a file, heading/range and commit.
-- [ ] Readers can correct classifications and keep conflicting sources visible.
-- [ ] Environment and architecture views preserve access to the underlying document map.
-- [ ] Config inspection is static and on demand; no infrastructure commands or repository code run.
-- [ ] Declared configuration is not presented as observed live infrastructure.
-- [ ] Omitted files, unsupported formats and incomplete relationships are stated.
+- [x] Every entity/relation identifies its origin: documented, declared in config, reader-proposed or unverified suggestion.
+- [x] Source-backed items link to a file, heading/range and commit.
+- [x] Readers can correct classifications and keep conflicting sources visible.
+- [x] Environment and architecture views preserve access to the underlying document map.
+- [x] Config inspection is static and on demand; no infrastructure commands or repository code run.
+- [x] Declared configuration is not presented as observed live infrastructure.
+- [x] Omitted files, unsupported formats and incomplete relationships are stated.
 
 **Exit gate:** readers can explain a representative service boundary and deployment path using traceable evidence. Incorrect relationships, unsupported assumptions and conflicting documentation are recorded in validation, not hidden behind a polished diagram.
 
 ## Phase 4 — Private brainstorming anchored to the project
 
-- [ ] Add idea/question nodes, notes, alternative groups and tentative connections.
-- [ ] Mark proposals clearly and keep the source-backed project map recognizable underneath.
-- [ ] Let readers compare alternatives and record assumptions, open questions and next experiments.
-- [ ] Preserve anchors when source documents change, marking affected notes for reconfirmation.
-- [ ] Provide explicit local saving, recovery, deletion and export.
-- [ ] Export a selected discussion outline or Markdown/Mermaid representation with source links and provenance labels.
-- [ ] Preview exported content so private notes are not included accidentally.
-- [ ] Treat sharing, creating an RFC or proposing a repository edit as separate deliberate actions.
+- [x] Add idea/question nodes, notes, alternative groups and tentative connections.
+- [x] Mark proposals clearly and keep the source-backed project map recognizable underneath.
+- [x] Let readers compare alternatives and record assumptions, open questions and next experiments.
+- [x] Preserve anchors when source documents change, marking affected notes for reconfirmation.
+- [x] Provide explicit local saving, recovery, deletion and export.
+- [x] Export a selected discussion outline or Markdown/Mermaid representation with source links and provenance labels.
+- [x] Preview exported content so private notes are not included accidentally.
+- [x] Treat sharing, creating an RFC or proposing a repository edit as separate deliberate actions.
 
 **Exit gate:** a reader can explore a proposed design, pause, reopen and recover their reasoning without confusing ideas with the project's documented state.
 
@@ -121,11 +121,11 @@ Begin with manual notes and connections. Optional automated suggestions need the
 
 ## Phase 5 — Connect project understanding to reviews
 
-- [ ] From an MR, open relevant project docs/map context pinned to a clearly selected base or head revision.
-- [ ] Return to the original review position, draft and question.
-- [ ] Link changed paths to explicitly related specs, ADRs, components and runbooks.
-- [ ] Flag “related evidence changed” or “worth checking” without automatically claiming that a document is wrong.
-- [ ] Show which map relationships and private notes need reconfirmation after a refresh.
+- [x] From an MR, open relevant project docs/map context pinned to a clearly selected base or head revision.
+- [x] Return to the original review position, draft and question.
+- [x] Link changed paths to explicitly related specs, ADRs, components and runbooks.
+- [x] Flag “related evidence changed” or “worth checking” without automatically claiming that a document is wrong.
+- [x] Show which map relationships and private notes need reconfirmation after a refresh.
 - [ ] Reuse review chapters, follow-ups, context previews and revision comparison where those RFCs are accepted.
 
 **Exit gate:** a reviewer can explain where a change fits and revisit the supporting evidence without losing the review session.

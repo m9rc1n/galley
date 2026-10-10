@@ -28,6 +28,15 @@ The words Galley uses, what they mean, and what they are called in the code. Use
 | **Fingerprint** | A SHA-256 hash standing in for an address, path or contents, so nothing readable is stored | `viewedKey()`, `positions.ts` |
 | **Comment target** | Where a comment lands: file, side, lines, quote | `CommentTarget` |
 | **Comment plan** | How a comment will be posted: inline, file comment or discussion | `CommentPlan` |
+| **Repository reader** | A project's own docs read outside any review, at one commit | `RepositorySource`, `src/ui/repo-reader.ts` |
+| **Snapshot** | Everything read at one resolved commit; a refresh to a newer commit starts a new one | `RepositorySource.commit`, `refresh()` |
+| **Project map** | The documents and their links, one document in the middle; also the architecture, infrastructure and decision views | `ProjectIndex` (`src/core/docindex.ts`), `buildLens()` (`src/core/architecture.ts`) |
+| **Lens** | One view of the map: Documents, Architecture, Infrastructure or Decisions | `LensName` |
+| **Origin** | Where an item on the map comes from: Documented, Declared in configuration, Proposed by you, Unverified suggestion | `Origin`, `ORIGIN_NAMES` |
+| **Declared** | What a configuration file asks for at the commit read; never what is running | `DeclaredItem`, `config-frame` |
+| **Note** | The reader's own idea, question, assumption, next experiment or alternative about a repository | `Note`, `Thinking` (`src/core/notes.ts`) |
+| **Anchor** | The document section a note is about, with the commit and a fingerprint of the section, to say when it changes | `Anchor`, `anchorState()` |
+| **Project docs** | A review's repository read at its base or head, over the review | `ReviewSource.project`, `ReviewProject` |
 | **Thread** | An existing platform conversation anchored to a line | `Thread` |
 | **Draft** | An unsent comment or reply; kept while the reader is open | `Draft`, `Editor`, `ReplyEditor` in `reader.ts` |
 | **Comments column** | The right margin on wide screens where cards sit level with their text | `.mr-threads` ("the rail" in code comments) |

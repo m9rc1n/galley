@@ -32,7 +32,7 @@ Press **Read** on a GitHub pull request or GitLab merge request. Documents open 
 
 Your team gets more context for its feedback, using the GitHub or GitLab workflow it already knows.
 
-Between reviews, press **Read docs** on a repository, folder or Markdown file to read the project's own documentation at one commit. Follow links between specs, decisions and guides without losing your place, and open the **Map** to see which documents link to the one you are reading, with each link as evidence.
+Between reviews, press **Read docs** on a repository, folder or Markdown file to read the project's own documentation at one commit. Follow links between specs, decisions and guides without losing your place, and open the **Map** to see which documents link to the one you are reading, with each link as evidence. Switch the map to **Architecture**, **Infrastructure** or **Decisions** for what the configuration declares and what the decision records state, keep private **Notes** you save only when you choose, and from a review open **Project docs** at its base or head.
 
 ## Before / after
 
@@ -49,7 +49,7 @@ The same merge request, files and comments, shown in a more readable view. Teamm
 3. **Focus on what changed.** Changes to paragraph wrapping are not marked as text edits. Unchanged sections fold away; open them whenever you need more context. Lockfiles, generated files and whitespace-only edits fold to one line each, code that moved says where it went, tests follow the code they test, and JavaScript and TypeScript files start with a short list of the functions, classes and types that changed. Come back tomorrow and Galley offers to continue where you stopped. Your scrollbar gets a breather.
 4. **Discuss it beside the text.** Read threads beside their paragraph or code line. Select text to add a comment, reply in the thread, and keep drafts while you read on. Comments and replies go to the original GitHub or GitLab review.
 5. **Find your reading comfort.** Choose from nineteen palettes, six typefaces, five text sizes and six layouts, with light and dark modes, compact spacing and keyboard shortcuts.
-6. **Read the project, not just the change.** Read a repository's docs at one commit, follow their links and come back to the same paragraph. The project map shows what links to a document and what it links to, the exact link behind each connection, and links that lead nowhere.
+6. **Read the project, not just the change.** Read a repository's docs at one commit, follow their links and come back to the same paragraph. The project map shows what links to a document and what it links to, the exact link behind each connection, and links that lead nowhere; its architecture, infrastructure and decision views say where every item comes from, and never call declared configuration running. Your own notes and proposals stay on your device, are saved only when you choose, and leave it only through an export you preview.
 7. **Keep your work on your code host.** Files render in your browser. Galley has no server, account or analytics. External images load only when you choose.
 
 Source changes that do not appear in the rendered document, such as HTML comments and link definitions, are counted and linked to the platform diff.
@@ -98,7 +98,7 @@ The [user guide](docs/GUIDE.md) covers every setting, token and platform detail.
 | <kbd>,</kbd> · <kbd>?</kbd> | Settings · these shortcuts |
 | <kbd>Esc</kbd> | Close the innermost thing, and finally the reader. Drafts are kept. |
 
-Reading repository docs: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>M</kbd> map.
+Reading repository docs: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>M</kbd> map, <kbd>N</kbd> notes.
 
 ## FAQ
 
@@ -137,7 +137,7 @@ The [privacy policy](PRIVACY.md) has the details. Security reports go through [S
 - The whole pull or merge request is shown; a commit range picked in the platform is not.
 - A paragraph rewritten by more than 60% shows as old removed and new added, not as word edits.
 - Large requests are listed up to 1,000 files on GitHub and 2,000 on GitLab.
-- Repository docs: Markdown only, up to 2,000 documents per repository. The map reads 150 documents at a time and keeps nothing after the reader closes; types and connections come from what the documents say.
+- Repository docs: Markdown only, up to 2,000 documents per repository. The map reads 150 documents at a time; types and connections come from what the documents say. Configuration (Compose, GitHub Actions, GitLab CI, Kubernetes, Terraform) is read statically, on request, up to 60 files; templated or included configuration is not followed. Notes are per browser and do not sync.
 
 ## Roadmap
 
