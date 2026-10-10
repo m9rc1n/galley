@@ -796,6 +796,34 @@
     return [...chapters.values()];
   }
 
+  // src/ui/image.ts
+  function withImageFallback(img) {
+    let runtime = globalThis.chrome?.runtime;
+    if (!runtime?.getURL) return;
+    let page = runtime.getURL("image-frame.html");
+    img.addEventListener(
+      "error",
+      () => {
+        let src = img.src;
+        if (!img.isConnected || src.length > 8192 || !/^https?:\/\//i.test(src) || img.getRootNode().querySelectorAll(".mr-image-frame").length >= 32) return;
+        let frame = img.ownerDocument.createElement("iframe");
+        frame.className = "mr-image-frame", frame.title = img.alt || "Document image", frame.setAttribute("sandbox", "allow-scripts"), frame.setAttribute("role", "img"), frame.setAttribute("aria-label", frame.title), frame.tabIndex = -1, frame.referrerPolicy = "no-referrer", frame.style.cssText = "border:0;max-width:100%;width:160px;height:24px;vertical-align:middle;pointer-events:none";
+        let channel = new MessageChannel(), done = (loaded) => {
+          clearTimeout(timer), channel.port1.close(), loaded || frame.replaceWith(img);
+        }, timer = setTimeout(() => done(!1), 15e3);
+        channel.port1.onmessage = ({ data }) => {
+          let reply = data, width = reply?.width, height = reply?.height;
+          if (typeof width != "number" || typeof height != "number" || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 || width > 1e4 || height > 1e4) {
+            done(!1);
+            return;
+          }
+          frame.style.width = `${img.getAttribute("width") ? Math.min(img.width, 1e4) : width}px`, frame.style.height = "auto", frame.style.aspectRatio = `${width} / ${height}`, frame.dataset.loaded = "true", done(!0);
+        }, frame.addEventListener("load", () => frame.contentWindow.postMessage({ type: "galley-image", src }, "*", [channel.port2]), { once: !0 }), frame.src = page, img.replaceWith(frame);
+      },
+      { once: !0 }
+    );
+  }
+
   // node_modules/dompurify/dist/purify.es.mjs
   function _OverloadYield(e, d) {
     this.v = e, this.k = d;
@@ -8965,7 +8993,7 @@ ${body}</details>
   function decorate(doc, root, input) {
     let { path, links } = input, replacements = /* @__PURE__ */ new Map(), held = 0;
     for (let img of root.querySelectorAll("img")) {
-      img.loading = "lazy", img.decoding = "async", img.referrerPolicy = "no-referrer";
+      withImageFallback(img), img.loading = "lazy", img.decoding = "async", img.referrerPolicy = "no-referrer";
       let src = img.getAttribute("src");
       if (src) {
         let r = resolveHref(path, src);
@@ -9010,7 +9038,7 @@ ${body}</details>
       a.setAttribute("target", "_blank"), a.setAttribute("rel", "noopener noreferrer");
     }
     for (let img of frag.querySelectorAll("img")) {
-      img.loading = "lazy", img.referrerPolicy = "no-referrer";
+      withImageFallback(img), img.loading = "lazy", img.referrerPolicy = "no-referrer";
       let remote = img.dataset.mrSrc;
       remote && (images === "load" || isPlatformUrl(remote, origin) ? loadImage(img) : holdImage(doc, img, remote));
     }
@@ -11804,7 +11832,8 @@ ${body}</details>
   text-align: center;
 }
 
-.mr-content figure img {
+.mr-content figure img,
+.mr-content figure .mr-image-frame {
   display: block;
   margin: 0 auto;
 }
