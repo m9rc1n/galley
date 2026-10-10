@@ -64,15 +64,17 @@ npm run release       # checks, store-ready zips, privacy page
 4. A block diff matches the two documents. Prose is compared by whitespace-normalised text plus its resolved link and image destinations; code and raw HTML are compared exactly. Edited blocks are paired by word similarity, and inside a pair a word diff marks what changed, using `Intl.Segmenter` tokens and a clean-up pass so rewrites read as phrases rather than confetti. Every diff has a work limit, so hostile input degrades to "replaced" instead of freezing the tab.
 5. The result is sanitised with DOMPurify and shown in a shadow-DOM overlay, so the page's styles and the reader's never mix. Mermaid and highlight.js run in sandboxed extension frames.
 
+Repository pages (a repository, a folder or a Markdown file) offer **Read docs** instead, and nothing is fetched until it is chosen. A `RepositorySource` (`src/platforms/github-repo.ts`, `gitlab-repo.ts`) resolves the page's branch or tag to one commit, lists Markdown within the budget in `src/core/discovery.ts`, and reads documents at that commit. `src/ui/repo-reader.ts` renders them with the same pipeline as a single version, and `src/core/docindex.ts` builds the project map from front matter, headings and links. Review operations are not part of a repository source, and nothing about a repository is stored.
+
 | Path | What it is |
 | --- | --- |
 | `src/content/main.ts` | Content script: page detection, the Read button, single-page navigation |
 | `src/platforms/` | GitHub and GitLab adapters, page detection, fetch helpers, token storage |
-| `src/core/` | Markdown parsing into blocks, block diff, word diff, DOM highlighting, patch reversal |
-| `src/ui/` | The reader overlay, its stylesheet, rendering pipeline, settings, sandboxed renderers |
+| `src/core/` | Markdown parsing into blocks, block diff, word diff, DOM highlighting, patch reversal, repository discovery and the document index |
+| `src/ui/` | The review and repository readers, their stylesheets, rendering pipeline, settings, sandboxed renderers |
 | `src/popup/` | Toolbar popup: enable self-hosted sites, GitHub token |
 | `src/background/` | Background worker: holds the GitHub token and makes the token-bearing API calls |
-| `demo/` | Sample merge request for trying the reader without the extension |
+| `demo/` | Sample merge request for trying the reader without the extension; `?repo` reads a sample repository's docs |
 | `site/` | The website ([site/README.md](site/README.md)) |
 | `store/` | Store listing copy, artwork templates and generated assets ([store/ARTWORK.md](store/ARTWORK.md)) |
 | `src/testing/` | Helpers shared by the unit tests (never shipped) |

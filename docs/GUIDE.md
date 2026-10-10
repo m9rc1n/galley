@@ -10,6 +10,7 @@ Learn how to read changes in context, discuss them with your team and adjust Gal
 - [Diagrams](#diagrams)
 - [Comments and replies](#comments-and-replies)
 - [Viewed progress](#viewed-progress)
+- [Repository docs and the project map](#repository-docs-and-the-project-map)
 - [GitLab](#gitlab-gitlabcom-and-self-managed)
 - [GitHub](#github-githubcom-and-enterprise-server)
 - [The demo](#the-demo)
@@ -154,6 +155,28 @@ Any file folds the same way: choose **Fold** in its byline, and **Show changes**
 
 With a GitHub token, Galley reads and updates GitHub's native [Viewed status](https://docs.github.com/en/graphql/reference/pulls#markfileasviewed), including unmarking; these requests check that the review revision is still current, and a failure leaves the previous state and shows an error. Without a token, and on GitLab, progress stays in this browser, keyed to a fingerprint of the file's old and new contents: it resets when that file changes, and unrelated updates keep it. The button's tooltip says where progress is saved.
 
+## Repository docs and the project map
+
+Galley also reads a project's own documentation, outside any review: its README, specs, decision records and guides, with the same typography, diagrams and settings.
+
+**Opening.** On a repository's main page, one of its folders or one of its Markdown files on GitHub or GitLab, press **Read docs** in the bottom-right corner. Nothing is fetched until you do. From a Markdown file the reader opens that document at once; from a folder it opens the folder's README, or its first document. Hiding the button with × hides it for that repository.
+
+**One commit.** Galley resolves the branch, tag or commit the page shows to one commit, and reads every document at that commit while the reader is open. The commit is shown in the top bar and under each title. Choose it to check for a newer commit: if the branch has moved, Galley says so and starts over at the new one. A page for a specific commit has nothing newer to check.
+
+**Reading.** Documents are read as they are: no change marks, comments or Viewed. Relative links to other Markdown documents open in the reader at the same commit, and a link to a folder opens its README. Links to source files and other formats open on the platform in a new tab, as does any link you open with ⌘/Ctrl or Shift. Section links scroll to the section and say when it does not exist. **Back** and **Forward** (or <kbd>Alt</kbd> <kbd>←</kbd> / <kbd>Alt</kbd> <kbd>→</kbd>) return to the paragraph you left, at any window width. Longer documents list their headings in the left margin on wide screens.
+
+**Documents.** Choose the document name in the top bar, or press <kbd>/</kbd>, for every Markdown document at that commit as an outline of folders, README first. Type to find a document by its path or title; once Galley has read documents for the map, their headings are found too and open at that section. Anything the listing could not cover is named at the top, such as a repository too large to list in one go.
+
+**Map.** Press **Map** (or <kbd>M</kbd>) to see the document you are reading in the middle, the documents that link to it on one side and the ones it links to on the other. Every connection lists the links that make it, with their text, section and line; choose one to read that paragraph. Choose a document to move it to the middle, and **Read** to open it. Folders appear as where a document lives, never as a connection: only links someone wrote connect documents. Links to documents that are not listed, or to sections that do not exist, are listed under **Links the map cannot follow**.
+
+The map is built from what documents say. Galley reads up to 150 documents at a time, four at once, and says how many it has read; **Stop reading** stops a pass and **Index more** continues. Documents that cannot be read or are too large are counted, never guessed at. **Linked from**, under every document, uses the same documents.
+
+**Types.** Each document gets a type (Overview, Spec, Decision, Architecture, Runbook, Guide or Document), and Galley says where it came from: the document's front matter (`type`, `kind` or `category`), a guess from its path (a README, `adr/`, `rfcs/`, `ADR-0001-…`), or you. In the map, change a document's type, or apply it to everything in its folder. A decision's or spec's **status** comes from its front matter or its Status section.
+
+**Nothing is kept.** Your history, the map and any types you set last while the reader is open; closing it forgets them. Only the reading settings you change (appearance, text size, external images) are saved, the same ones the review reader uses.
+
+**Requests.** On GitHub, opening uses one small API request to resolve the commit, and the documents list one more for the whole tree. A tree too large for one listing is listed again by documentation folder (`docs/`, `specs/`, `adr/` and the like), in at most seven more. Documents are read with your GitHub session, like pull request files, and use no API quota. On GitLab, everything uses your signed-in session. Markdown is supported; MDX is read as Markdown and its components are never run, and other formats open on the platform.
+
 ## GitLab (gitlab.com and self-managed)
 
 Nothing to configure: Galley reads the merge request with your signed-in session, and comments use the page's CSRF token. On a self-managed instance, click the Galley icon in the browser toolbar and choose **Enable on git.example.com**; the extension then gets access to that one domain. Nested groups and instances under a sub-path work.
@@ -164,10 +187,12 @@ Public repositories work without setup. GitHub allows 60 API requests an hour wi
 
 Private repositories need a token, because GitHub's API does not accept the browser session. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with read-only **Contents** and **Pull requests** access to the repositories you review, then paste it into the Galley popup. To comment, give it **Pull requests: read and write**; **Contents** can stay read-only.
 
-The token is kept in Galley's own extension storage, which web pages (GitHub's included) cannot read. Requests that need it are made by Galley's background worker, never from the page, and only for the few API calls the reader uses on the pull request open in that tab. Tokens are saved and sent only for https sites. For GitHub Enterprise Server, enable the site in the popup and save a token for it there; Galley first checks that the site answers like a GitHub Enterprise Server.
+The token is kept in Galley's own extension storage, which web pages (GitHub's included) cannot read. Requests that need it are made by Galley's background worker, never from the page, and only for the few API calls the reader uses on the pull request or repository open in that tab. A repository page can only resolve a commit and list the files of that repository. Tokens are saved and sent only for https sites. For GitHub Enterprise Server, enable the site in the popup and save a token for it there; Galley first checks that the site answers like a GitHub Enterprise Server.
 
 ## The demo
 
 The [live demo](https://m9rc1n.github.io/galley/demo/) runs the real reader on a sample merge request. It saves comments in session storage and Viewed progress locally, and never sends anything to GitHub or GitLab. To run it from a checkout: `npm install && npm run demo`, then open http://localhost:4173.
+
+Add `?repo` to the demo URL to read a sample handbook as from a repository page: decision records, an RFC, an architecture note and a runbook that link to each other, with a missing document and a missing section for the map to find. `?repo=docs/adr/0003-queue-for-reviews.md` starts at one document.
 
 Add `?spec` to the demo URL to try a test-file review with nested suites, renamed cases, added and removed behaviors, and a comment on a changed assertion.

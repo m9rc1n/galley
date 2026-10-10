@@ -1,8 +1,8 @@
 # Galley privacy policy
 
-_Last updated: 6 October 2026_
+_Last updated: 10 October 2026_
 
-Galley is a browser extension that shows the markdown documents changed in GitHub pull requests and GitLab merge requests as readable, typeset articles. It is open-source software published by Marcin Urbanski and contributors ("we"); the source code is at <https://github.com/m9rc1n/galley>.
+Galley is a browser extension that shows the markdown documents changed in GitHub pull requests and GitLab merge requests as readable, typeset articles, and lets you read a repository's own Markdown documentation the same way. It is open-source software published by Marcin Urbanski and contributors ("we"); the source code is at <https://github.com/m9rc1n/galley>.
 
 ## In short
 
@@ -14,7 +14,9 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 **Pull and merge request content.** On GitHub and GitLab pages, Galley reads the page address to recognise pull and merge requests. When you open the reader, it requests the list of changed files and the contents of the changed markdown files from that same GitHub or GitLab site (on GitHub.com, through GitHub's API at api.github.com), using your existing session there or your GitHub token (see below). If you enable code files, it also requests supported source and configuration files from the same review. It also reads the review's existing comment threads, to show them beside the paragraphs they discuss. The content is rendered on your device, kept in memory only while the page is open, and not sent anywhere else.
 
-**GitHub access token (optional).** If you add a GitHub token so Galley can read private repositories or post review comments, the token is stored on your device in Galley's own extension storage, which websites (including GitHub's pages) cannot read. Only Galley's background worker uses it, and only to send the reader's own requests to the GitHub API of the site you saved it for, over https. You can remove it in the Galley popup at any time, and it is deleted when you uninstall Galley.
+**Repository documents.** On GitHub and GitLab repository pages (a repository, one of its folders or one of its Markdown files), Galley reads the page address to offer **Read docs**, and requests nothing more until you press it. When you do, it asks the same GitHub or GitLab site which commit the branch or tag on the page points to, lists the files of that repository at that commit (on GitHub.com, through GitHub's API at api.github.com, using your token if you saved one), and reads the Markdown documents you open, and those the project map reads, from that same site with your existing session. The documents, the map built from them, your reading history and any document types you set are kept in memory only while the reader is open, and are not stored or sent anywhere else.
+
+**GitHub access token (optional).** If you add a GitHub token so Galley can read private repositories or post review comments, the token is stored on your device in Galley's own extension storage, which websites (including GitHub's pages) cannot read. Only Galley's background worker uses it, and only to send the reader's own requests to the GitHub API of the site you saved it for, over https. On a repository page, those requests are limited to finding the commit and listing the files of that repository. You can remove it in the Galley popup at any time, and it is deleted when you uninstall Galley.
 
 **Review comments.** When you press Comment in the reader, Galley sends your comment, the quoted selection or paragraph, and its file/source-line context to the GitHub or GitLab review you are reading. The platform stores it as a normal review comment or discussion, visible according to that repository's access rules. Drafts stay in memory while the reader is open and are not sent until you post. The demo stores its simulated comments in that tab's session storage only.
 
