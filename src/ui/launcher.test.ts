@@ -54,6 +54,8 @@ it('offers repository pages a Read docs button with no count, since nothing is f
   expect(button('.label').textContent).toBe('Read docs');
   expect(button('.count').textContent).toBe('');
   expect(button().title).toBe('Read this repository’s documents in Galley');
+  expect(button('.dismiss').getAttribute('aria-label')).toBe('Hide for this repository');
+  expect(button('.dismiss').title).toBe('Hide for this repository');
   button().click();
   expect(open).toHaveBeenCalledOnce();
 });

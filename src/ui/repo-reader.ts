@@ -1113,13 +1113,14 @@ class RepoReader {
       this.close();
       return;
     }
+    // In the search box, Alt/Option + arrows move the caret by word, and letters are typed.
+    if (this.shadow.activeElement?.matches('input, select, textarea')) return;
     if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault();
       this.go(e.key === 'ArrowLeft' ? -1 : 1);
       return;
     }
-    const typing = this.shadow.activeElement?.matches('input, select, textarea');
-    if (typing || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.key === '/') {
       e.preventDefault();
       this.toggleDocs(true);

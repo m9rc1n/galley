@@ -68,7 +68,12 @@ export class Launcher {
         ? 'Read this repository’s documents in Galley'
         : `Open ${count} changed file${count === 1 ? '' : 's'} in Galley`;
     launch.addEventListener('click', onOpen);
-    shadow.querySelector('.dismiss')!.addEventListener('click', () => {
+    const dismiss = shadow.querySelector<HTMLButtonElement>('.dismiss')!;
+    if (count === null) {
+      dismiss.title = 'Hide for this repository';
+      dismiss.setAttribute('aria-label', dismiss.title);
+    }
+    dismiss.addEventListener('click', () => {
       this.dismissed.add(key);
       this.hide();
     });

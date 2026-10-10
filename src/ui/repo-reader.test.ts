@@ -391,6 +391,8 @@ it('keys: Esc closes menus then the reader, / finds a document, M switches to th
   expect(ui.q('.mr-repo-docs').hidden).toBe(false);
   ui.key('m');
   expect(ui.q('.mr-repo-map').hidden).toBe(true);
+  ui.key('ArrowLeft', { altKey: true });
+  expect(ui.shadow().activeElement).toBe(ui.q('.mr-repo-search'));
   ui.key('Escape');
   expect(ui.q('.mr-repo-docs').hidden).toBe(true);
   ui.key('M');
