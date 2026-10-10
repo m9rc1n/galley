@@ -106,6 +106,16 @@ Choose **Show changes** to read one. The document menu tags folded files and cou
 
 With **Settings → Review → File order → Suggested**, the default, a review reads in the order you would explain it: documents first, then the code, each file followed by its tests, and last the files most reviewers skip. Tests are matched to their code by name and folder: `quota.test.ts`, `quota_test.go`, `test_quota.py` and `QuotaTest.java` follow `quota`, and so does a `quota` file in `__tests__`. **As listed** keeps the platform's order.
 
+### Review chapters
+
+Choose **Chapters** in the top bar, or press <kbd>M</kbd>, for a suggested path through the review. Chapters use the first two folder levels, keep documents separate from code, and put tests beside their source using the same name and nearest-folder matches as suggested reading order. Each chapter explains its grouping; these are folder names, not guesses about the author's intent. Supporting files have their own chapter.
+
+**Start here** goes to the first unviewed readable file. After you mark files Viewed, it becomes **Continue here**. Reviews with six or more files also show a quiet chapter route and **Next chapter**. Choosing a folded file keeps it folded; choosing code while Code files is off turns that setting on. Progress counts explicit Viewed actions, never scrolling.
+
+The chapter map includes folded files, failed loads and code currently turned off. Unsupported formats appear under **Other changed files**, with a link to the platform diff. **All files** always gives a flat list, and the original file menu remains available. A single-file review needs no chapter setup.
+
+Choose **Edit chapters** to rename a chapter, add an optional introduction, move it earlier or later, or move a file to another chapter. **New chapter** creates a place for your own concern. These changes stay in the open session. Reordering keeps your reading position, Viewed state, folds and comment drafts. **Reset chapters** restores suggestions; choosing **Suggested** or **As listed** in File order restores that reading order.
+
 ### Moved code
 
 When code is removed in one place and added in another, in the same file or a different one, both ends get a tint of their own instead of red and green, and a note: **Moved to src/quota.ts, line 3** at the old place and **Moved from src/limits.ts, old line 18** at the new one. Choose a note to go to the other end. Indentation is ignored, so code moved into a block or out of one still matches, and lines edited on the way stay ordinary changes inside the move. A comment that moved with its code says **Moved** too. The byline counts moved lines.

@@ -164,12 +164,17 @@ it('GitLab offers source-only reviews and sends old-side source comments with na
       return response([
         { new_path: 'src/main.py', old_path: 'src/main.py', diff: codePatch },
         { new_path: 'photo.jpg', old_path: 'photo.jpg' },
+        { new_path: 'assets/new.bin', old_path: 'assets/old.bin', renamed_file: true },
       ]);
     return response({ title: 'Code only', diff_refs: { base_sha: 'b', head_sha: 'h', start_sha: 's' } });
   });
   const source = await loadGitLab({ platform: 'gitlab', key: '', origin: 'https://git.example.com', prefix: '', projectPath: 'a/b', projectId: null, iid: 7 });
   expect(source.docs).toHaveLength(0);
   expect(source.codeDocs!).toHaveLength(1);
+  expect(source.otherFiles).toEqual([
+    { path: 'photo.jpg', oldPath: 'photo.jpg', status: 'modified' },
+    { path: 'assets/new.bin', oldPath: 'assets/old.bin', status: 'renamed' },
+  ]);
   expect(rawReads).toBe(0);
   expect(await source.load(source.codeDocs![0])).toStrictEqual({ base: 'old value\n', head: 'new value\n' });
   expect(rawReads).toBe(2);

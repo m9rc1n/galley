@@ -13,6 +13,7 @@ import { highlightCode, languageName, languageOf } from './code.ts';
 import { renderCodeFile } from './code-files.ts';
 import { quietFile, type QuietFile } from '../core/quiet.ts';
 import { readingOrder } from '../core/order.ts';
+import { ChapterMap, type ChapterFileState } from './chapters.ts';
 import { loadPosition, savePosition } from './positions.ts';
 import { MoveFinder, showMove } from './moves.ts';
 import { enhanceSymbols, refreshSymbols } from './symbols.ts';
@@ -108,6 +109,7 @@ const SHORTCUTS: Array<[string, Array<[string[], string]>]> = [
       [['N', 'P'], 'Next / previous conversation'],
       [[']', '['], 'Next / previous file'],
       [['F'], 'Go to a file'],
+      [['M'], 'Open the chapter map'],
     ],
   ],
   [
@@ -163,6 +165,7 @@ const TEMPLATE = `
       </button>
     </div>
     <div class="mr-tb-right">
+      <button type="button" class="mr-btn mr-chapters-toggle" hidden aria-haspopup="dialog" aria-expanded="false">Chapters</button>
       <button class="mr-btn mr-icon-btn mr-viewed" data-act="viewed" aria-pressed="false" disabled hidden>${icons.viewed}</button>
       <button class="mr-btn mr-icon-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
     </div>
@@ -379,6 +382,7 @@ interface View {
   doc: DocRef;
   section: HTMLElement;
   rendered: RenderedDoc | null;
+  failed?: boolean;
   /** Folded as noise (a lockfile, generated code, a whitespace-only edit) until the reviewer opens it. */
   quiet?: QuietFile;
   open?: boolean;
@@ -442,6 +446,8 @@ class Reader {
   private readonly host = document.createElement('div');
   private readonly shadow = this.host.attachShadow({ mode: 'open' });
   private readonly root: HTMLElement;
+  private readonly chapters: ChapterMap;
+  private chapterOrder: DocRef[] | null = null;
   private readonly el: Record<
     | 'progress'
     | 'topbar'
@@ -478,6 +484,7 @@ class Reader {
   private overview: HTMLElement | null = null;
   private lastStep: { el: HTMLElement; at: number } | null = null;
   private views: View[] = [];
+  private readonly viewByDoc = new Map<DocRef, View>();
   private readonly viewed = new Map<DocRef, { value: boolean; ready: boolean; busy: boolean; key?: string; error?: string }>();
   private drawerFocus: HTMLElement | null = null;
   private zoomFrom: HTMLElement | null = null;
@@ -551,6 +558,16 @@ class Reader {
       empty: q('.mr-empty-reader'),
       lightbox: q('.mr-lightbox'),
     };
+    this.chapters = new ChapterMap({
+      root: this.root,
+      toggle: q('.mr-chapters-toggle') as HTMLButtonElement,
+      mount: this.el.doc,
+      beforeOpen: () => this.closeMenus(),
+      navigate: (doc) => this.showChapterFile(doc),
+      reorder: (docs) => this.reorderChapters(docs),
+      state: (doc) => this.chapterState(doc),
+      diffUrl: () => this.source!.diffUrl,
+    });
     this.commentBtn.type = 'button';
     this.commentBtn.dataset.act = 'comment-block';
     // biome-ignore lint/plugin: a bundled icon constant.
@@ -645,6 +662,7 @@ class Reader {
     this.shadow.querySelector<HTMLElement>('[data-act="code-files"]')!.title = `${source.codeDocs?.length ?? 0} supported code files`;
     const all = [...source.docs, ...(source.codeDocs ?? [])];
     if (!all.length) {
+      this.chapters.setSource([], source.otherFiles ?? []);
       this.showMessage('No readable changes here', 'This change set does not touch any supported document or text source files.');
       return;
     }
@@ -660,6 +678,7 @@ class Reader {
       section.append(this.skeleton());
       return { doc, section, rendered: null };
     });
+    for (const view of this.views) this.viewByDoc.set(view.doc, view);
     for (const doc of all) this.viewed.set(doc, { value: false, ready: false, busy: false });
     if (source.viewed) void this.initNativeViewed();
     this.overview = source.overview ? this.renderOverview(source.overview) : null;
@@ -668,6 +687,7 @@ class Reader {
     this.orderViews();
     // Opened at its start, a review starts at the first file in reading order.
     if (!start) this.index = 0;
+    this.chapters.setSource(all, source.otherFiles ?? []);
     this.updateFileButton();
     // A review opened at its start, and read over several sittings, offers to continue where the reader was.
     void this.loadAll(this.index).then(() => {
@@ -684,6 +704,7 @@ class Reader {
       this.rememberPosition();
     }
     this.closed = true;
+    this.chapters.close();
     cancelAnimationFrame(this.frame);
     this.resize.disconnect();
     for (const type of ['keydown', 'keyup', 'keypress']) window.removeEventListener(type, this.shield, true);
@@ -744,6 +765,7 @@ class Reader {
     const view = this.views[index];
     if (this.loading.has(view.doc)) return;
     this.loading.add(view.doc);
+    view.failed = false;
     try {
       const contents = await this.load(view.doc);
       if (this.closed) return;
@@ -829,6 +851,8 @@ class Reader {
       box.append(platform);
       box.append(actionButton('Try again', 'retry-doc', 'mr-outline'));
       view.section.replaceChildren(box);
+      view.failed = true;
+      this.chapters.update();
       this.schedule(true);
     } finally {
       this.loading.delete(view.doc);
@@ -884,7 +908,7 @@ class Reader {
 
   /** Put the files in the order the File order setting asks for, keeping the current file current. */
   private orderViews(): void {
-    const order = this.settings.order === 'suggested' ? readingOrder(this.listed) : this.listed;
+    const order = this.chapterOrder ?? (this.settings.order === 'suggested' ? readingOrder(this.listed) : this.listed);
     const rank = new Map(order.map((doc, i) => [doc, i]));
     const current = this.views[this.index];
     this.views.sort((a, b) => rank.get(a.doc)! - rank.get(b.doc)!);
@@ -894,6 +918,37 @@ class Reader {
     this.el.doc.append(...this.views.map((view) => view.section));
     this.index = this.views.indexOf(current);
     this.orderedBy = this.settings.order;
+  }
+
+  private chapterState(doc: DocRef): ChapterFileState {
+    const view = this.viewByDoc.get(doc);
+    return {
+      viewed: this.viewed.get(doc)?.value ?? false,
+      folded: Boolean(view?.folded || (view?.quiet && !view.open)),
+      hidden: Boolean(view?.section.hidden),
+      unavailable: Boolean(view?.failed),
+      current: Boolean(view && this.views[this.index] === view),
+      unsupported: !view,
+    };
+  }
+
+  private showChapterFile(doc: DocRef): void {
+    const view = this.viewByDoc.get(doc)!;
+    if (view.section.hidden) this.update({ codeFiles: true });
+    this.show(this.views.indexOf(view));
+    this.root.focus({ preventScroll: true });
+  }
+
+  /** Move existing sections, retaining their editors, folded state and the current reading position. */
+  private reorderChapters(order: DocRef[] | null): void {
+    if (!this.views.length) return;
+    const current = this.views[this.index];
+    const top = current.section.getBoundingClientRect().top;
+    this.chapterOrder = order;
+    this.orderViews();
+    this.updateFileButton();
+    this.root.scrollTop += current.section.getBoundingClientRect().top - top;
+    this.schedule(true);
   }
 
   private async offerResume(): Promise<void> {
@@ -1135,11 +1190,13 @@ class Reader {
     this.el.doc.dataset.files = String(visible.length);
     this.el.empty.hidden = visible.length > 0;
     if (!visible.length) {
+      this.chapters.update();
       this.el.fileBtn.hidden = this.el.viewed.hidden = true;
       this.el.viewedFeedback.hidden = true;
       return;
     }
     if (this.views[this.index].section.hidden) this.index = this.views.indexOf(visible[0]);
+    this.chapters.update();
     this.rendered = this.views[this.index].rendered;
     this.el.fileBtn.hidden = false;
     const doc = this.views[this.index].doc;
@@ -1374,6 +1431,10 @@ class Reader {
   }
 
   private update(patch: Partial<Settings>): void {
+    if (patch.order) {
+      this.chapterOrder = null;
+      this.orderedBy = null;
+    }
     this.settings = { ...this.settings, ...patch };
     this.applySettings();
     if (patch.images === 'load') this.loadImages(this.root);
@@ -1772,6 +1833,7 @@ class Reader {
 
   private onKey(e: KeyboardEvent): void {
     if (e.defaultPrevented) return;
+    if (this.chapters.onKey(e)) return;
     if (e.key === 'Escape') {
       e.preventDefault();
       if (this.closeLightbox() || this.closeMenus()) return;
@@ -1851,6 +1913,9 @@ class Reader {
     if (!this.el.settings.hidden) return;
     if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable]')) return;
     switch (e.key) {
+      case 'm':
+        this.chapters.open();
+        break;
       case 'j':
         this.step(1);
         break;
