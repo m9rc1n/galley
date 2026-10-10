@@ -370,6 +370,77 @@ export function parseDocument(src: string): ParsedDoc {
   };
 }
 
+/** A heading as the reader renders it: its anchor id is the one links point at. */
+export interface OutlineHeading {
+  level: number;
+  text: string;
+  id: string;
+  /** One-based source line. */
+  line: number;
+}
+
+/** A Markdown link and where it is: the evidence for a connection between two documents. */
+export interface OutlineLink {
+  href: string;
+  /** The link text as read, or the image's alt text. */
+  text: string;
+  line: number;
+  /** The heading the link sits under, if any. */
+  section: string | null;
+}
+
+export interface Outline {
+  frontmatter: FrontMatter | null;
+  headings: OutlineHeading[];
+  links: OutlineLink[];
+  /** The first paragraph after a heading, by heading id, for short fields such as an ADR's Status. */
+  firstParagraph: Map<string, string>;
+}
+
+/**
+ * Headings and links of a document, without rendering it: what the project map is built from.
+ * Raw HTML links are not followed; only Markdown links are taken as connections.
+ */
+export function outlineDocument(src: string): Outline {
+  const { body, frontmatter } = splitFrontMatter(src.replace(/\r\n?/g, '\n'));
+  const env: RenderEnv = { nonce: '', units: [], lines: body.split('\n'), slugs: new Map(), listDepth: 0 };
+  const tokens = md.parse(body, env);
+  const headings: OutlineHeading[] = [];
+  const links: OutlineLink[] = [];
+  const firstParagraph = new Map<string, string>();
+  let section: OutlineHeading | null = null;
+  /** A heading whose first paragraph is still to come. */
+  let waiting: OutlineHeading | null = null;
+  let line = 1;
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.map) line = token.map[0] + 1;
+    if (token.type === 'heading_open') {
+      section = { level: Number(token.tag.slice(1)), text: normalize(inlineText(tokens[i + 1])), id: String(token.attrGet('id')), line };
+      headings.push(section);
+      waiting = section;
+    } else if (token.type === 'paragraph_open' && waiting) {
+      firstParagraph.set(waiting.id, normalize(inlineText(tokens[i + 1])));
+      waiting = null;
+    } else if (waiting && !/^(?:inline|heading_close|bullet_list_open|ordered_list_open|list_item_open)$/.test(token.type)) {
+      // Only the paragraph right under the heading (or its list's first item) belongs to it.
+      waiting = null;
+    }
+    if (token.type === 'inline') {
+      let open: OutlineLink | null = null;
+      for (const child of token.children!) {
+        if (child.type === 'link_open') {
+          open = { href: String(child.attrGet('href')), text: '', line, section: section?.text ?? null };
+          links.push(open);
+        } else if (child.type === 'link_close') open = null;
+        else if (open && (child.type === 'text' || child.type === 'code_inline' || child.type === 'image')) open.text += child.content;
+      }
+    }
+  }
+  for (const link of links) link.text = normalize(link.text);
+  return { frontmatter, headings, links, firstParagraph };
+}
+
 /** HTML for a single unit rendered on its own (no `data-mr-u` attributes). */
 export function renderUnit(unit: Unit, doc: ParsedDoc): string {
   if (unit.kind === 'frontmatter') return doc.frontmatter ? renderFrontMatter(doc.frontmatter, null) : '';
