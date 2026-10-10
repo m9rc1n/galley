@@ -2405,13 +2405,13 @@
 /* Light washes down from the whole top edge: teal, violet and rose blend with the palette's accent.
    The broad glow stays anchored to the screen, gently brightening and fading until reading begins. */
 .mr-topbar {
-  --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 20%), transparent);
-  --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 20%), transparent);
-  --aurora-c: color-mix(in srgb, color-mix(in srgb, #f472b6 55%, var(--accent)) var(--aurora-strength, 20%), transparent);
+  --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
+  --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
+  --aurora-c: color-mix(in srgb, color-mix(in srgb, #f472b6 55%, var(--accent)) var(--aurora-strength, 10%), transparent);
   overflow-x: clip;
 }
 .mr-root.is-dark .mr-topbar {
-  --aurora-strength: 26%;
+  --aurora-strength: 14%;
 }
 .mr-topbar::before,
 .mr-topbar::after {
@@ -2421,17 +2421,17 @@
   z-index: -1;
   background: linear-gradient(100deg, var(--aurora-a), var(--aurora-b) 48%, var(--aurora-c));
   pointer-events: none;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.75s ease;
 }
 .mr-topbar::before {
-  height: 280px;
-  mask-image: linear-gradient(#000, rgba(0, 0, 0, 0.55) 28%, rgba(0, 0, 0, 0.12) 65%, transparent);
-  animation: mr-aurora-glow 24s ease-in-out infinite alternate;
+  height: 320px;
+  mask-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.35) 30%, rgba(0, 0, 0, 0.07) 68%, transparent);
+  animation: mr-aurora-glow 32s ease-in-out infinite alternate;
 }
 .mr-topbar::after {
-  height: 64px;
-  opacity: 0.45;
-  mask-image: linear-gradient(#000, transparent);
+  height: 96px;
+  opacity: 0.18;
+  mask-image: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
 }
 .no-top-glow .mr-topbar::before,
 .no-top-glow .mr-topbar::after {
@@ -2445,7 +2445,7 @@
 }
 @keyframes mr-aurora-glow {
   from {
-    filter: opacity(0.85);
+    filter: opacity(0.92);
   }
   to {
     filter: opacity(1);
