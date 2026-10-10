@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/m9rc1n/galley/compare/v0.9.0...v0.10.0) (2026-10-10)
+
+
+### Features
+
+* add editable review chapters ([55e7fb1](https://github.com/m9rc1n/galley/commit/55e7fb149ecb282271559ee0834d9aa6b83f29e6))
+* add editable review chapters ([a1dba18](https://github.com/m9rc1n/galley/commit/a1dba189fa76a22e85d2c375dc0622c708a90f2f))
+
 ## [0.9.0](https://github.com/m9rc1n/galley/compare/v0.8.0...v0.9.0) (2026-10-10)
 
 
