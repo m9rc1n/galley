@@ -122,6 +122,7 @@ const TEMPLATE = `
 
 const shortSha = (sha: string) => sha.slice(0, 7);
 const edgeKey = (from: string, to: string) => `${from}\u0000${to}`;
+const sectionKey = (anchor: Anchor) => `${anchor.path}\u0000${anchor.heading ?? ''}`;
 const newId = (prefix: string) => `${prefix}:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString('en')} ${n === 1 ? one : many}`;
 const folderOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')));
@@ -1305,23 +1306,28 @@ class RepoReader {
   private async checkAnchors(): Promise<void> {
     const source = this.source!;
     const listing = await this.discover().catch(() => null);
-    const states: Array<[Note, Anchor, AnchorState]> = [];
+    // Fingerprints of the sections notes are about, at this commit; null for a section or document that is gone.
+    const sections = new Map<string, string | null>();
     for (const note of this.notes!.thinking.notes) {
       const anchor = note.anchor;
-      if (!anchor) continue;
+      if (!anchor || anchor.commit === source.commit) continue;
       let digest: string | null = null;
-      if (anchor.commit !== source.commit && (!listing || this.index?.documentAt(anchor.path) === anchor.path)) {
+      if (!listing || listing.docs.some((doc) => doc.path === anchor.path)) {
         // A document that cannot be read now says nothing about its sections.
         const text = await this.load(anchor.path).catch(() => null);
         if (text === null) continue;
         const section = sectionText(text, anchor.heading);
         digest = section === null ? null : await digestText(section);
       }
-      states.push([note, anchor, anchorState(anchor, source.commit, digest)]);
+      sections.set(sectionKey(anchor), digest);
     }
     if (this.closed || this.source !== source) return;
-    // A note reconfirmed or detached meanwhile keeps the state it has now.
-    for (const [note, anchor, state] of states) if (note.anchor === anchor) this.anchorStates.set(note.id, state);
+    // States come from each note's anchor as it is now: one reconfirmed or detached meanwhile is not undone.
+    for (const note of this.notes!.thinking.notes) {
+      const anchor = note.anchor;
+      if (anchor && (anchor.commit === source.commit || sections.has(sectionKey(anchor))))
+        this.anchorStates.set(note.id, anchorState(anchor, source.commit, sections.get(sectionKey(anchor)) ?? null));
+    }
     if (this.view === 'notes') this.drawNotes();
     else if (this.view === 'map' && this.previous) this.drawMap();
   }
