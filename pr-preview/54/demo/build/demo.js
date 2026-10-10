@@ -17817,7 +17817,7 @@ ${body}</details>
   <div class="mr-repo-export" role="dialog" aria-modal="true" aria-label="Export notes" hidden></div>
   <div class="mr-repo-zoom" role="dialog" aria-modal="true" aria-label="Enlarged diagram" hidden><button class="mr-btn mr-icon-btn" data-act="close-zoom" aria-label="Close diagram (Esc)" title="Close (Esc)">${icons.close}</button><img alt=""></div>
   <p class="mr-toast" role="status" aria-live="polite" hidden></p>
-</div>`, shortSha = (sha) => sha.slice(0, 7), edgeKey = (from, to) => `${from}\0${to}`, newId = (prefix) => `${prefix}:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, plural = (n, one, many = `${one}s`) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`, folderOf = (path) => path.slice(0, Math.max(0, path.lastIndexOf("/"))), safeDecode3 = (value) => {
+</div>`, shortSha = (sha) => sha.slice(0, 7), edgeKey = (from, to) => `${from}\0${to}`, sectionKey = (anchor) => `${anchor.path}\0${anchor.heading ?? ""}`, newId = (prefix) => `${prefix}:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, plural = (n, one, many = `${one}s`) => `${n.toLocaleString("en")} ${n === 1 ? one : many}`, folderOf = (path) => path.slice(0, Math.max(0, path.lastIndexOf("/"))), safeDecode3 = (value) => {
     try {
       return decodeURIComponent(value);
     } catch {
@@ -18544,21 +18544,24 @@ ${body}</details>
     }
     /** Whether each note's section is still as it was when the note was written, at the commit read. */
     async checkAnchors() {
-      let source2 = this.source, listing = await this.discover().catch(() => null), states = [];
+      let source2 = this.source, listing = await this.discover().catch(() => null), sections = /* @__PURE__ */ new Map();
       for (let note of this.notes.thinking.notes) {
         let anchor = note.anchor;
-        if (!anchor) continue;
+        if (!anchor || anchor.commit === source2.commit) continue;
         let digest = null;
-        if (anchor.commit !== source2.commit && (!listing || this.index?.documentAt(anchor.path) === anchor.path)) {
+        if (!listing || listing.docs.some((doc) => doc.path === anchor.path)) {
           let text4 = await this.load(anchor.path).catch(() => null);
           if (text4 === null) continue;
           let section = sectionText(text4, anchor.heading);
           digest = section === null ? null : await digestText(section);
         }
-        states.push([note, anchor, anchorState(anchor, source2.commit, digest)]);
+        sections.set(sectionKey(anchor), digest);
       }
       if (!(this.closed || this.source !== source2)) {
-        for (let [note, anchor, state] of states) note.anchor === anchor && this.anchorStates.set(note.id, state);
+        for (let note of this.notes.thinking.notes) {
+          let anchor = note.anchor;
+          anchor && (anchor.commit === source2.commit || sections.has(sectionKey(anchor))) && this.anchorStates.set(note.id, anchorState(anchor, source2.commit, sections.get(sectionKey(anchor)) ?? null));
+        }
         this.view === "notes" ? this.drawNotes() : this.view === "map" && this.previous && this.drawMap();
       }
     }
