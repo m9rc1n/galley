@@ -23,12 +23,7 @@ async function present(base: string, head: string) {
   return { r, refreshSymbols };
 }
 const outline = (root: ParentNode) =>
-  [...root.querySelectorAll<HTMLElement>('.mr-symbol-plan .mr-spec-link')].map((link) => [
-    link.querySelector('.mr-symbol-kind')!.textContent,
-    link.querySelector('.mr-spec-name')!.textContent,
-    link.dataset.status,
-    link.style.getPropertyValue('--spec-depth'),
-  ]);
+  [...root.querySelectorAll<HTMLElement>('.mr-symbol-plan .mr-symbol-link')].map((link) => [link.textContent, link.dataset.status]);
 
 const base = [
   "import { clock } from './clock';",
@@ -61,22 +56,21 @@ it('maps what changed in a source file, declaration by declaration, each a way t
   const plan = r.content.firstElementChild!;
   expect(plan.classList.contains('mr-symbol-plan')).toBe(true);
   expect(plan.getAttribute('aria-label')).toBe('Changes in this file');
-  // The class changed only through a method: it heads the method instead of counting on its own.
-  expect(plan.querySelector('.mr-spec-summary')!.textContent).toBe('5 declarations changed');
-  expect([...plan.querySelectorAll('.mr-spec-count')].map((el) => el.textContent)).toEqual(['1 added', '3 edited', '1 removed']);
+  expect(plan.querySelector('.mr-symbol-title')!.textContent).toBe('In this file');
+  // The class changed only through a method, so the method names it: Limiter.check.
   expect(outline(r.content)).toEqual([
-    ['function', 'request', 'edited', '0'],
-    ['function', 'reset', 'removed', '0'],
-    ['class', 'Limiter', 'edited', '0'],
-    ['method', 'check', 'edited', '1'],
-    ['type', 'Window', 'edited', '0'],
-    ['function', 'quota', 'added', '0'],
-    ['other', 'Outside declarations', 'edited', '0'],
+    ['request', 'edited'],
+    ['reset', 'removed'],
+    ['Limiter.check', 'edited'],
+    ['Window', 'edited'],
+    ['quota', 'added'],
+    ['other changes', 'edited'],
   ]);
   expect(plan.querySelector('[data-status="removed"]')!.classList.contains('is-removed')).toBe(true);
+  expect(plan.querySelector('[data-status="added"]')!.getAttribute('aria-label')).toBe('function quota, added: go to its first changed line');
   const scroll = vi.fn();
   Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll });
-  const check = [...plan.querySelectorAll<HTMLButtonElement>('.mr-spec-link')][3];
+  const check = [...plan.querySelectorAll<HTMLButtonElement>('.mr-symbol-link')][2];
   check.click();
   const first = r.blocks.find((block) => block.kind !== 'same' && block.base?.text === '    return id.length > 0;')!;
   expect(scroll.mock.contexts[0]).toBe(first.el);
@@ -90,13 +84,13 @@ it('shows a rename as an edit of the name, and code that only moved as moved', a
   const before = `function spare(client) {\n${body}}\nfunction other() {\n  return 1;\n}\n${'step();\n'.repeat(12)}function move() {\n  audit.record(client, used);\n  audit.flush(client);\n}\n`;
   const after = `function remaining(client) {\n${body}}\nfunction other() {\n  return 2;\n}\nfunction move() {\n  audit.record(client, used);\n  audit.flush(client);\n}\n${'step();\n'.repeat(12)}`;
   const { r, refreshSymbols } = await present(before, after);
-  const rename = r.content.querySelector('.mr-symbol-plan .mr-spec-name')!;
+  const rename = r.content.querySelector('.mr-symbol-plan .mr-symbol-name')!;
   expect([rename.querySelector('del')!.textContent, rename.querySelector('ins')!.textContent]).toEqual(['spare', 'remaining']);
-  expect(outline(r.content).map((entry) => entry[2])).toEqual(['edited', 'edited', 'edited']);
+  expect(outline(r.content).map((entry) => entry[1])).toEqual(['edited', 'edited', 'edited']);
   // A move found later, perhaps with a file shown after this one, updates the map.
   for (const move of new MoveFinder().add(ref, r)) showMove(move);
   refreshSymbols(r);
-  expect(outline(r.content).map((entry) => [entry[1], entry[2]])).toEqual([
+  expect(outline(r.content)).toEqual([
     ['spareremaining', 'edited'],
     ['other', 'edited'],
     ['move', 'moved'],
@@ -112,11 +106,14 @@ it('leaves files with a single change alone, and sends a link inside a formatted
   // In a new or a deleted file, the code outside declarations was simply added or removed.
   const file = "import x from 'a';\nfunction a() {}\nfunction b() {}\n";
   const added = await present('', file);
-  expect(outline(added.r.content).map((entry) => entry[2])).toEqual(['added', 'added', 'added']);
+  expect(outline(added.r.content).map((entry) => entry[1])).toEqual(['added', 'added', 'added']);
   const removed = await present(file, '');
-  expect(outline(removed.r.content).map((entry) => entry[2])).toEqual(['removed', 'removed', 'removed']);
+  expect(outline(removed.r.content).map((entry) => entry[1])).toEqual(['removed', 'removed', 'removed']);
   const one = await present("import x from 'a';\nfunction a() {\n  return 1;\n}\n", "import x from 'b';\nfunction a() {\n  return 2;\n}\n");
-  expect(one.r.content.querySelector('.mr-spec-summary')!.textContent).toBe('1 declaration changed');
+  expect(outline(one.r.content)).toEqual([
+    ['a', 'edited'],
+    ['other changes', 'edited'],
+  ]);
   // Declarations the parser reads differently in each version, with no changed line, are no change at all.
   const phantom = rendered('x();\ny();\n', 'x();\nz();\n');
   presentSymbols(phantom, [{ kind: 'type', name: 'Gone', start: 0, end: 0, parent: '' }], [{ kind: 'type', name: 'Here', start: 0, end: 0, parent: '' }]);
@@ -129,7 +126,7 @@ it('leaves files with a single change alone, and sends a link inside a formatted
   card.append(row.el);
   const scroll = vi.fn();
   Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll });
-  comment.r.content.querySelector<HTMLButtonElement>('.mr-symbol-plan .mr-spec-link')!.click();
+  comment.r.content.querySelector<HTMLButtonElement>('.mr-symbol-plan .mr-symbol-link')!.click();
   expect(scroll.mock.contexts[0]).toBe(card);
 });
 

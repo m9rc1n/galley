@@ -210,12 +210,19 @@ try {
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'true');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-files-progress').textContent), '1 of 3 viewed');
+  // A checked file folds away, as on GitHub; Show changes opens it again, still viewed.
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-document[data-document="0"]').classList.contains('is-folded')),
+    true,
+  );
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-document[data-document="0"] [data-act="show-quiet"]').click());
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed')), 'true');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.act), 'close-settings');
   await page.keyboard.press('Tab');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.settingsTab), 'reading');
   await page.keyboard.press('ArrowRight');
-  // Layout sits between reading and review: five layouts drawn as pages, and a density choice.
+  // Layout sits between reading and review: six layouts drawn as pages, and a density choice.
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-layout-panel').hidden), false);
   assert.deepEqual(
     await inspect(() =>
@@ -226,6 +233,7 @@ try {
     ),
     [
       ['balanced', 'true'],
+      ['files', 'false'],
       ['review', 'false'],
       ['wide', 'false'],
       ['focus', 'false'],
@@ -758,7 +766,7 @@ try {
   const palettes = await inspect(() =>
     [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="theme"] [data-value]')].map((button) => button.dataset.value),
   );
-  assert.equal(palettes.length, 16);
+  assert.equal(palettes.length, 19);
   for (const theme of palettes) {
     await inspect(
       (theme) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-setting="theme"] [data-value="${theme}"]`).click(),
@@ -989,7 +997,7 @@ try {
   await checkCodeComments(browser, demoUrl, screenshots);
   await checkLargeReview(browser, demoUrl, screenshots);
   console.log(
-    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, sixteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description.',
+    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, nineteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description.',
   );
 } finally {
   await browser.close();

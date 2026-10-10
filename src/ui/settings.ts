@@ -16,6 +16,9 @@ export const THEMES = [
   'clay',
   'orchid',
   'graphite',
+  'hackerman',
+  'aurora',
+  'sunset',
 ] as const;
 /** galley pairs Newsreader headings with DM Sans text (reader.css); the others use one face throughout. */
 export const FONTS = ['galley', 'serif', 'sans', 'georgia', 'system', 'mono'] as const;
@@ -23,12 +26,13 @@ export const APPEARANCES = ['auto', 'light', 'dark'] as const;
 /**
  * How the window is shared on wide screens (1280px and up). Narrower windows always read in one column.
  * - balanced: the text centred at a comfortable measure, contents and comments in its margins.
+ * - files: balanced, with every file of the review in the left margin instead of one document's contents.
  * - review: the conversation gets the room: a comments column as wide as the text, with larger comment text.
  * - wide: a wider text column, for documents full of tables, code and diagrams.
  * - focus: the text alone, centred; comments sit below the paragraphs they discuss.
  * - fit: the balanced composition scaled to the window, so large screens get larger text.
  */
-export const LAYOUTS = ['balanced', 'review', 'wide', 'focus', 'fit'] as const;
+export const LAYOUTS = ['balanced', 'files', 'review', 'wide', 'focus', 'fit'] as const;
 /** Compact tightens line height and the space between blocks, files and comments. */
 export const DENSITIES = ['comfortable', 'compact'] as const;
 export type Theme = (typeof THEMES)[number];
@@ -47,6 +51,10 @@ export interface Settings {
   codeFiles: boolean;
   /** Code lines: a + or − beside each added or removed line, as in a diff. Tints and margin bars stay either way. */
   signs: boolean;
+  /** Lockfiles, generated code and whitespace-only edits start as one line, one click from their changes. */
+  fold: boolean;
+  /** Suggested: documents, then each source file followed by its tests, then files most reviewers skip. */
+  order: 'suggested' | 'listed';
   /** External images in documents: wait for a click, or always load them. */
   images: 'ask' | 'load';
   /** Comment cards: set apart by a shadow and their own tone, or by an outline. */
@@ -72,6 +80,8 @@ export const DEFAULT_SETTINGS: Settings = {
   scope: 'changed',
   codeFiles: false,
   signs: true,
+  fold: true,
+  order: 'suggested',
   images: 'ask',
   comments: 'shaded',
   tests: 'plan',
@@ -92,7 +102,7 @@ function extensionStorage(): chrome.storage.StorageArea | null {
   }
 }
 
-async function read<T>(key: string): Promise<T | null> {
+export async function readStored<T>(key: string): Promise<T | null> {
   const area = extensionStorage();
   try {
     if (area) return ((await area.get(key))[key] as T) ?? null;
@@ -103,7 +113,7 @@ async function read<T>(key: string): Promise<T | null> {
   }
 }
 
-async function write(key: string, value: unknown): Promise<void> {
+export async function writeStored(key: string, value: unknown): Promise<void> {
   const area = extensionStorage();
   try {
     if (area) await area.set({ [key]: value });
@@ -115,7 +125,7 @@ async function write(key: string, value: unknown): Promise<void> {
 
 export async function loadSettings(): Promise<Settings> {
   // Earlier versions used one setting for both colour and brightness. Preserve that choice.
-  const saved = (await read<Partial<Omit<Settings, 'theme'>> & { theme?: Theme | Appearance }>(SETTINGS_KEY)) ?? {};
+  const saved = (await readStored<Partial<Omit<Settings, 'theme'>> & { theme?: Theme | Appearance }>(SETTINGS_KEY)) ?? {};
   const theme = THEMES.find((theme) => theme === saved.theme) ?? DEFAULT_SETTINGS.theme;
   const legacyAppearance = saved.theme === 'dark' ? 'dark' : saved.theme === 'light' || saved.theme === 'sepia' ? 'light' : 'auto';
   const appearance = APPEARANCES.find((appearance) => appearance === saved.appearance) ?? legacyAppearance;
@@ -138,9 +148,11 @@ export async function loadSettings(): Promise<Settings> {
     density,
     overview: saved.overview === true,
     signs: saved.signs !== false,
+    fold: saved.fold !== false,
+    order: saved.order === 'listed' ? 'listed' : 'suggested',
   };
 }
 
 export function saveSettings(settings: Settings): Promise<void> {
-  return write(SETTINGS_KEY, settings);
+  return writeStored(SETTINGS_KEY, settings);
 }

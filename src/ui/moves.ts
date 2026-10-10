@@ -8,6 +8,8 @@ interface Line {
   number: number;
   text: string;
   used: boolean;
+  /** Unchanged lines before it in its file: lines with the same count belong to one change. */
+  hunk: number;
 }
 
 interface File {
@@ -52,11 +54,16 @@ export class MoveFinder {
     if (r.blocks.length > MAX_ROWS) return [];
     const file: File = { ref, removed: new Map(), added: new Map() };
     this.order.push(file);
+    let hunk = 0;
+    // Files are indexed as they render, before any comment becomes a note, so every block is a code row.
     for (const block of r.blocks) {
-      if (block.kind === 'same' || !block.el.classList.contains('mr-code-line')) continue;
+      if (block.kind === 'same') {
+        hunk++;
+        continue;
+      }
       const side = block.kind === 'removed' ? 'removed' : 'added';
       const unit = (side === 'removed' ? block.base : block.head)!;
-      const line: Line = { file, block, number: unit.lines[0], text: unit.text.trim(), used: false };
+      const line: Line = { file, block, number: unit.lines[0], text: unit.text.trim(), used: false, hunk };
       file[side].set(line.number, line);
       const same = this.lines[side].get(line.text);
       if (same) same.push(line);
@@ -78,6 +85,8 @@ export class MoveFinder {
     let best: Run | null = null;
     for (const other of candidates) {
       const [from, to] = side === 'removed' ? [line, other] : [other, line];
+      // Within one change, the same text removed and added is an edit in place (re-indented, say), not a move.
+      if (from.file === to.file && from.hunk === to.hunk) continue;
       const run: Run = { removed: [from], added: [to] };
       for (const step of [-1, 1]) {
         for (let k = 1; ; k++) {

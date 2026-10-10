@@ -1,6 +1,6 @@
 # Galley artwork
 
-**Understand changes. Review together.** Galley helps teams follow code and document changes with readable content, edits in context and comments beside the text. Artwork should show that benefit clearly, using the friendly, plain language in [COPY.md](../docs/COPY.md).
+**Understand changes. Review in peace.** Galley helps teams follow code and document changes with readable content, edits in context and comments beside the text. Artwork should show that benefit clearly, using the friendly, plain language in [COPY.md](../docs/COPY.md).
 
 - **The hero** (README, store marquee, social preview) puts a cramped monospace diff behind the same review in Galley: a paragraph and a code change with the edit marked in place, a margin conversation ("Does this cover batch uploads?" "Yes. Example added."), Viewed progress and the keys that move you around. It is labelled as an illustration.
 - **The store screenshots** are real reader captures from the demo, each under one line of copy that says what it shows. Nothing in them is mocked up or retouched.

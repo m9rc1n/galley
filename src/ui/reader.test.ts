@@ -267,8 +267,8 @@ it('moves between conversations and changes the view from the keyboard, and list
   expect(ui.q('[data-scope="all"]').getAttribute('aria-pressed')).toBe('true');
   expect(ui.q('.mr-toast').textContent).toContain('Whole files');
   ui.key('l');
-  expect(root.dataset.layout).toBe('review');
-  expect(ui.q('.mr-toast').textContent).toContain('Layout: Review');
+  expect(root.dataset.layout).toBe('files');
+  expect(ui.q('.mr-toast').textContent).toContain('Layout: Files');
   ui.key('d');
   expect(root.dataset.density).toBe('compact');
   ui.key('+');
@@ -342,7 +342,7 @@ it('shows the palettes six to a page, turns the pages, and opens on the page of 
   await ui.open(review());
   ui.click('[data-act="settings"]');
   const pages = [...ui.shadow().querySelectorAll('.mr-palette-page')];
-  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6, 4]);
+  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6, 6, 1]);
   // Nord is on the second page, so the settings open there.
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'auto' });
   expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(false);
@@ -355,6 +355,10 @@ it('shows the palettes six to a page, turns the pages, and opens on the page of 
   ui.q('.mr-palette-track').scrollLeft = 1280;
   ui.click('[data-act="palette-next"]');
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 2560, behavior: 'smooth' });
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(false);
+  ui.q('.mr-palette-track').scrollLeft = 2560;
+  ui.click('[data-act="palette-next"]');
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 3840, behavior: 'smooth' });
   expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
   ui.click('[data-setting="theme"] [data-value="ocean"]');
   expect(ui.q('.mr-root').dataset.theme).toBe('ocean');

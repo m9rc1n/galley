@@ -81,8 +81,8 @@ const server = createServer(async (req, res) => {
       shell(
         'Galley — Mission & artwork',
         `<main>
-<header><div><h1>Understand changes. Review together.</h1><p>Clearer code and document reviews for teams on GitHub and GitLab.</p></div><a href="/readme">Read the README →</a></header>
-<img class="hero" src="/store/assets/readme-hero-1600x640.png" alt="Galley. Understand changes. Review together: the same review as a diff and as readable content with edits in context">
+<header><div><h1>Understand changes. Review in peace.</h1><p>Clearer code and document reviews for teams on GitHub and GitLab.</p></div><a href="/readme">Read the README →</a></header>
+<img class="hero" src="/store/assets/readme-hero-1600x640.png" alt="Galley. Understand changes. Review in peace: the same review as a diff and as readable content with edits in context">
 <p class="label">README hero and store marquee · a typeset illustration, labelled as one.</p>
 <div class="grid"><div><img src="/store/assets/promo-small-440x280.jpg" alt="Galley small promotional tile"><p class="label">Store tile · 440 × 280</p></div>
 <div><h2>Context for the change. Space for the discussion.</h2><p>Read documents and code, see edits in context, and discuss the details beside the relevant text.</p><p><strong>Built in the open.</strong> GPL-licensed, with source and limitations you can inspect.</p><p><strong>Private by default.</strong> Local rendering, no analytics and no Galley backend.</p><p><strong>Part of your workflow.</strong> Ordinary GitHub and GitLab review conversations.</p></div></div>

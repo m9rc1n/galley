@@ -57,6 +57,14 @@ it('remembers how comment cards look, and shades them unless outlines were chose
   expect((await loadSettings()).comments).toBe('shaded');
 });
 
+it('folds skippable files and suggests a reading order unless told otherwise', async () => {
+  expect(DEFAULT_SETTINGS).toMatchObject({ fold: true, order: 'suggested' });
+  await saveSettings({ ...DEFAULT_SETTINGS, fold: false, order: 'listed' });
+  expect(await loadSettings()).toMatchObject({ fold: false, order: 'listed' });
+  localStorage.setItem('galley:settings', JSON.stringify({ fold: 'no', order: 'alphabetical' }));
+  expect(await loadSettings()).toMatchObject({ fold: true, order: 'suggested' });
+});
+
 it('shows + and − beside changed code lines unless they were turned off', async () => {
   expect(DEFAULT_SETTINGS.signs).toBe(true);
   await saveSettings({ ...DEFAULT_SETTINGS, signs: false });

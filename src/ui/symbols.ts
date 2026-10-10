@@ -83,20 +83,21 @@ function entries(r: RenderedDoc, base: SymbolDefinition[], head: SymbolDefinitio
   return { list, other };
 }
 
-/** The declaration's name; a renamed one shows the rename the way a document shows an edit. */
+/** The declaration's name, a method under its class; a renamed one shows the rename the way a document shows an edit. */
 function nameOf(doc: Document, entry: Entry): HTMLElement {
-  const name = element(doc, 'span', 'mr-spec-name');
-  if (!entry.old || entry.old.name === entry.symbol.name) name.textContent = entry.symbol.name;
-  else name.append(element(doc, 'del', 'mr-del', entry.old.name), element(doc, 'ins', 'mr-ins', entry.symbol.name));
+  const name = element(doc, 'span', 'mr-symbol-name');
+  const prefix = entry.symbol.parent ? `${entry.symbol.parent}.` : '';
+  if (!entry.old || entry.old.name === entry.symbol.name) name.textContent = `${prefix}${entry.symbol.name}`;
+  else name.append(prefix, element(doc, 'del', 'mr-del', entry.old.name), element(doc, 'ins', 'mr-ins', entry.symbol.name));
   return name;
 }
 
 /** Goes to the first line that changed, or to the formatted comment holding it. */
-function link(doc: Document, rows: RenderedBlock[], status: Status, depth: number): HTMLButtonElement {
-  const button = element(doc, 'button', 'mr-spec-link') as HTMLButtonElement;
+function link(doc: Document, rows: RenderedBlock[], status: Status, label: string): HTMLButtonElement {
+  const button = element(doc, 'button', 'mr-symbol-link') as HTMLButtonElement;
   button.type = 'button';
   button.dataset.status = status.toLowerCase();
-  button.style.setProperty('--spec-depth', String(depth));
+  button.setAttribute('aria-label', `${label}, ${status.toLowerCase()}: go to its first changed line`);
   if (status === 'Removed') button.classList.add('is-removed');
   button.addEventListener('click', () => {
     const target = rows[0].el.closest<HTMLElement>('.mr-source-comment') ?? rows[0].el;
@@ -111,51 +112,34 @@ function link(doc: Document, rows: RenderedBlock[], status: Status, depth: numbe
 const plans = new WeakMap<RenderedDoc, { base: SymbolDefinition[]; head: SymbolDefinition[] }>();
 
 /**
- * A short map of a source file's changes above its code: which functions, classes and types changed and
- * how, each a link to its first changed line. Files with a single change go without one.
+ * One quiet line above a source file's code: the functions, classes and types that changed, each marked
+ * + added, • edited, → moved or − removed, and each a way to its first changed line. Files with a single
+ * change go without one.
  */
 export function presentSymbols(r: RenderedDoc, base: SymbolDefinition[], head: SymbolDefinition[]): void {
   plans.set(r, { base, head });
   r.content.querySelector(':scope > .mr-symbol-plan')?.remove();
   const doc = r.content.ownerDocument;
   const { list, other } = entries(r, base, head);
-  // A class changed only through its methods is their heading, not a change of its own to count.
-  const counted = list.filter((entry) => !(entry.symbol.kind === 'class' && list.some((member) => member.symbol.parent === entry.symbol.name)));
-  if (counted.length + (other.length ? 1 : 0) < 2) return;
-  const plan = element(doc, 'nav', 'mr-spec-plan mr-symbol-plan');
+  // A class changed only through its methods is named by them (Limiter.check), not again on its own.
+  const shown = list.filter((entry) => !(entry.symbol.kind === 'class' && list.some((member) => member.symbol.parent === entry.symbol.name)));
+  if (shown.length + (other.length ? 1 : 0) < 2) return;
+  const plan = element(doc, 'nav', 'mr-symbol-plan');
   plan.setAttribute('aria-label', 'Changes in this file');
-  plan.append(
-    element(doc, 'p', 'mr-spec-kicker', 'In this file'),
-    element(doc, 'p', 'mr-spec-summary', `${counted.length} declaration${counted.length === 1 ? '' : 's'} changed`),
-  );
-  const counts = element(doc, 'p', 'mr-spec-counts');
-  for (const status of ['Added', 'Edited', 'Moved', 'Removed']) {
-    const count = counted.filter((entry) => entry.status === status).length;
-    if (count) counts.append(element(doc, 'span', `mr-spec-count is-${status.toLowerCase()}`, `${count} ${status.toLowerCase()}`));
-  }
-  const outline = element(doc, 'div', 'mr-spec-outline');
-  for (const entry of list) {
-    const button = link(doc, entry.changed, entry.status, entry.symbol.parent ? 1 : 0);
-    button.append(
-      element(doc, 'span', 'mr-symbol-kind', entry.symbol.kind),
-      nameOf(doc, entry),
-      element(doc, 'span', `mr-spec-status is-${entry.status.toLowerCase()}`, entry.status),
-    );
-    outline.append(button);
+  plan.append(element(doc, 'span', 'mr-symbol-title', 'In this file'));
+  for (const entry of shown) {
+    const button = link(doc, entry.changed, entry.status, `${entry.symbol.kind} ${entry.symbol.name}`);
+    button.append(nameOf(doc, entry));
+    plan.append(button);
   }
   if (other.length) {
     // In a new or deleted file, the lines outside declarations were simply added or removed.
     const kind = other.every((block) => block.kind === other[0].kind) ? other[0].kind : 'edited';
     const status = statusOf(other, kind === 'added' ? 'Added' : kind === 'removed' ? 'Removed' : 'Edited');
-    const button = link(doc, other, status, 0);
-    button.append(
-      element(doc, 'span', 'mr-symbol-kind', 'other'),
-      element(doc, 'span', 'mr-spec-name', 'Outside declarations'),
-      element(doc, 'span', `mr-spec-status is-${status.toLowerCase()}`, status),
-    );
-    outline.append(button);
+    const button = link(doc, other, status, 'Other changes');
+    button.append(element(doc, 'span', 'mr-symbol-other', 'other changes'));
+    plan.append(button);
   }
-  plan.append(counts, outline);
   r.content.prepend(plan);
 }
 

@@ -71,6 +71,13 @@ it('reads a move with a line edited on the way as one move, leaving the edit as 
   expect(r.content.querySelectorAll('.mr-move-note')).toHaveLength(2);
 });
 
+it('does not call code re-indented in place a move', () => {
+  const ref = file('src/limits.ts');
+  const body = '  const used = usage.get(client) ?? 0;\n  const spare = limit - used;\n  return Math.max(0, spare);\n';
+  const wrapped = rendered(ref, `function quota(client) {\n${body}}\n`, `function quota(client) {\n  if (client) {\n${body.replace(/^/gm, '  ')}  }\n}\n`);
+  expect(new MoveFinder().add(ref, wrapped)).toEqual([]);
+});
+
 it('does not call short, common or blank runs a move', () => {
   const finder = new MoveFinder();
   const ref = file('src/a.ts');

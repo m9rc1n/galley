@@ -4,7 +4,7 @@
 
 <h1 align="center">Galley</h1>
 
-<p align="center"><em>Understand changes. Review together.</em><br><sub>Clearer code and document reviews for teams on GitHub and GitLab.</sub></p>
+<p align="center"><em>Understand changes. Review in peace.</em><br><sub>Clearer code and document reviews for teams on GitHub and GitLab.</sub></p>
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic"><img src="https://img.shields.io/chrome-web-store/v/ccmihhdpegbhbijhahdanmcbbpoeneic?style=flat-square&color=243e32&label=chrome%20web%20store" alt="Chrome Web Store"></a>
@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="store/assets/readme-hero-1600x640.png" width="880" alt="Galley. Understand changes. Review together. An illustrated review with document and code edits shown in context, a comment about batch uploads, and keyboard shortcuts.">
+  <img src="store/assets/readme-hero-1600x640.png" width="880" alt="Galley. Understand changes. Review in peace. An illustrated review with document and code edits shown in context, a comment about batch uploads, and keyboard shortcuts.">
 </p>
 
 <p align="center">
@@ -44,9 +44,9 @@ The same merge request, files and comments, shown in a more readable view. Teamm
 
 1. **Make the content readable.** Documents keep their headings, tables, task lists, footnotes, alerts, images and Mermaid diagrams. Code keeps its line numbers, syntax colours and diff signs, with long lines that wrap to fit the screen.
 2. **See edits in context.** Added words are highlighted and removed words struck through inside their sentences. Table edits appear in their cells. Changed link destinations are called out even when the link text stays the same.
-3. **Focus on what changed.** Changes to paragraph wrapping are not marked as text edits. Unchanged sections fold away; open them whenever you need more context. Lockfiles, generated files and whitespace-only edits fold to one line each, code that moved says where it went, and JavaScript and TypeScript files start with a short list of the functions, classes and types that changed. Your scrollbar gets a breather.
+3. **Focus on what changed.** Changes to paragraph wrapping are not marked as text edits. Unchanged sections fold away; open them whenever you need more context. Lockfiles, generated files and whitespace-only edits fold to one line each, code that moved says where it went, tests follow the code they test, and JavaScript and TypeScript files start with a short list of the functions, classes and types that changed. Come back tomorrow and Galley offers to continue where you stopped. Your scrollbar gets a breather.
 4. **Discuss it beside the text.** Read threads beside their paragraph or code line. Select text to add a comment, reply in the thread, and keep drafts while you read on. Comments and replies go to the original GitHub or GitLab review.
-5. **Find your reading comfort.** Choose from sixteen palettes, six typefaces, five text sizes and five layouts, with light and dark modes, compact spacing and keyboard shortcuts.
+5. **Find your reading comfort.** Choose from nineteen palettes, six typefaces, five text sizes and six layouts, with light and dark modes, compact spacing and keyboard shortcuts.
 6. **Keep your work on your code host.** Files render in your browser. Galley has no server, account or analytics. External images load only when you choose.
 
 Source changes that do not appear in the rendered document, such as HTML comments and link definitions, are counted and linked to the platform diff.
@@ -57,8 +57,8 @@ Source changes that do not appear in the rendered document, such as HTML comment
 | ---: | --- |
 | **0** | Galley accounts needed. Use your existing GitHub or GitLab access. |
 | **1** | **Read** button to open changed documents and supported code files. |
-| **16** | reading palettes, each available in light and dark. |
-| **6 · 5 · 5** | typefaces, text sizes and layouts to suit your screen and your eyes. |
+| **19** | reading palettes, each available in light and dark. |
+| **6 · 5 · 6** | typefaces, text sizes and layouts to suit your screen and your eyes. |
 | **20** | keyboard shortcuts for navigation, comments and settings. |
 | **120** | characters of code per line on a wide screen, before wrapping. |
 
@@ -150,4 +150,4 @@ Tell us what makes your reviews harder: a long document, missing context, an acc
 
 **Commercial license.** Building Galley into a closed-source product, or shipping a modified version without its source? A separate commercial license is available: [open an issue](https://github.com/m9rc1n/galley/issues/new/choose) titled "Commercial license", leave your contact details out, and you'll get a private way to talk.
 
-<p align="center"><sub>Understand changes. Review together.</sub></p>
+<p align="center"><sub>Understand changes. Review in peace.</sub></p>

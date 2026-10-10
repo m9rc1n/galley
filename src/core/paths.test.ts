@@ -12,6 +12,7 @@ it('links and images resolve like on GitHub and GitLab', () => {
   expect(encodePath('docs/My Doc #1.md')).toBe('docs/My%20Doc%20%231.md');
   expect(isMarkdownPath('docs/guide.MD')).toBe(true);
   expect(isMarkdownPath('src/index.ts')).toBe(false);
+  expect(isCodePath('src/__snapshots__/upload.test.ts.snap')).toBe(true);
 });
 
 it('encoded dot segments and slashes cannot climb out of the repository', () => {
