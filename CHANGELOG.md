@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/m9rc1n/galley/compare/v0.8.0...v0.9.0) (2026-10-10)
+
+
+### Features
+
+* **reader:** add optional calming glow and refine file controls ([a3ea965](https://github.com/m9rc1n/galley/commit/a3ea965414d4d0bc18fac759b79857e0d7502650))
+* **reader:** read large reviews in a calmer order, fold any file, and pick up where you left off ([088fc79](https://github.com/m9rc1n/galley/commit/088fc793afebd75482c36f3af8d061b28380fd8e))
+* **reader:** read large reviews in a calmer order, fold any file, and pick up where you left off ([3b3f9d7](https://github.com/m9rc1n/galley/commit/3b3f9d7024319c51aa89226968f40f056b54585d))
+
+
+### Bug Fixes
+
+* **reader:** keep code clear of file navigation ([4fcc0fe](https://github.com/m9rc1n/galley/commit/4fcc0fe8e26b870a036f2e2bb6b5c1b0171f94de))
+* **reader:** stabilize resume coverage and spread the top glow ([36b20b3](https://github.com/m9rc1n/galley/commit/36b20b3dc4120bcd6bf2047ec71b75393427ce5c))
+
 ## [0.8.0](https://github.com/m9rc1n/galley/compare/v0.7.0...v0.8.0) (2026-10-10)
 
 
