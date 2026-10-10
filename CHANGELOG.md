@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/m9rc1n/galley/compare/v0.7.0...v0.8.0) (2026-10-10)
+
+
+### Features
+
+* **reader:** comment from the comments column, and make +/− signs optional ([cd03347](https://github.com/m9rc1n/galley/commit/cd03347d8b1f6eea241cf760353aabe31ea9fa18))
+* **reader:** make large reviews comfortable to read ([7f6338c](https://github.com/m9rc1n/galley/commit/7f6338cab7b895f0c0ba25c83fe9720e42f4e8b7))
+* **reader:** make large reviews comfortable to read ([c33a240](https://github.com/m9rc1n/galley/commit/c33a240e69f958190f40a95f2e0443471d6e9c42))
+
+
+### Bug Fixes
+
+* **reader:** offer a comment anywhere in the comments column ([3318d3d](https://github.com/m9rc1n/galley/commit/3318d3dbde2b9cdb9546344be1b3b95d7c9d2568))
+
 ## [0.7.0](https://github.com/m9rc1n/galley/compare/v0.6.1...v0.7.0) (2026-10-09)
 
 
