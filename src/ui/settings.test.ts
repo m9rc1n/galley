@@ -49,12 +49,12 @@ it('falls back to the balanced, comfortable layout for unknown saved choices', a
   expect(await loadSettings()).toMatchObject({ layout: 'balanced', density: 'comfortable' });
 });
 
-it('remembers how comment cards look, and shades them unless outlines were chosen', async () => {
-  expect(DEFAULT_SETTINGS.comments).toBe('shaded');
-  await saveSettings({ ...DEFAULT_SETTINGS, comments: 'outlined' });
-  expect((await loadSettings()).comments).toBe('outlined');
-  localStorage.setItem('galley:settings', JSON.stringify({ comments: 'boxed' }));
-  expect((await loadSettings()).comments).toBe('shaded');
+it('discards the retired comment-card preference when loading and saving settings', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ comments: 'outlined' }));
+  const settings = await loadSettings();
+  expect(settings).toEqual(DEFAULT_SETTINGS);
+  await saveSettings(settings);
+  expect(JSON.parse(localStorage.getItem('galley:settings')!)).not.toHaveProperty('comments');
 });
 
 it('folds skippable files and suggests a reading order unless told otherwise', async () => {

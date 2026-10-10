@@ -3922,45 +3922,6 @@
   animation: mr-pop 0.14s ease-out;
 }
 
-/* Outlined comment cards (Reading settings → Review): hairlines instead of shadows and tones. */
-.mr-root[data-comments="outlined"] :is(.mr-thread, .mr-composer, .mr-reply, .mr-comment-btn:not(.is-lane)) {
-  border: 1px solid var(--control-rule);
-  background: var(--bg);
-  box-shadow: none;
-}
-
-.mr-root[data-comments="outlined"] .mr-composer {
-  box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.35);
-}
-
-.mr-root[data-comments="outlined"] .mr-thread:is(:hover, :focus-within) {
-  border-color: color-mix(in srgb, var(--fg) 26%, var(--rule));
-  box-shadow: none;
-}
-
-.mr-root[data-comments="outlined"] .mr-thread.is-own {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
-}
-
-.mr-root[data-comments="outlined"] :is(.mr-composer, .mr-reply):focus-within {
-  border-color: color-mix(in srgb, var(--accent) 65%, var(--rule));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
-}
-
-.mr-root[data-comments="outlined"] .mr-comment-btn.is-lane {
-  border: 1px dashed color-mix(in srgb, var(--fg) 26%, transparent);
-  background: transparent;
-}
-
-.mr-root[data-comments="outlined"] .mr-comment-btn.is-lane.is-gap {
-  border-style: solid;
-  background: var(--bg);
-}
-
-.mr-root[data-comments="outlined"] :is(.mr-avatar, .mr-thread-tag) {
-  background: var(--soft);
-}
-
 .mr-reply-context {
   margin: 0 0 4px;
   overflow: hidden;

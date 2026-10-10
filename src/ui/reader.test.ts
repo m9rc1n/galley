@@ -417,17 +417,17 @@ it('hides the description switch when the platform has no description to show', 
   expect(ui.q('.mr-overview')).toBeNull();
 });
 
-it('lets the reader choose shaded or outlined comment cards, and remembers the choice', async () => {
+it('keeps comment cards shaded without offering the retired setting, even after an outlined preference', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ comments: 'outlined' }));
   await ui.open(review());
-  expect(ui.q('.mr-root').dataset.comments).toBe('shaded');
+  expect(ui.q('.mr-root').hasAttribute('data-comments')).toBe(false);
   ui.click('[data-act="settings"]');
   ui.click('[data-settings-tab="review"]');
-  ui.click('[data-setting="comments"] [data-value="outlined"]');
-  expect(ui.q('.mr-root').dataset.comments).toBe('outlined');
-  expect(ui.q('[data-setting="comments"] [data-value="outlined"]').getAttribute('aria-pressed')).toBe('true');
+  expect(ui.q('[data-setting="comments"]')).toBeNull();
+  expect(ui.q('.mr-settings').textContent).not.toContain('Comment cards');
   ui.close();
   await ui.open(review());
-  expect(ui.q('.mr-root').dataset.comments).toBe('outlined');
+  expect(ui.q('.mr-root').hasAttribute('data-comments')).toBe(false);
 });
 
 it('changes palettes without changing brightness and remembers both after reopening', async () => {

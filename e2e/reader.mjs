@@ -257,6 +257,11 @@ try {
   );
   await page.keyboard.press('ArrowRight');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-review-panel').hidden), false);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-setting="comments"]')), null);
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-settings').textContent.includes('Comment cards')),
+    false,
+  );
   await page.keyboard.press('Tab');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.mode), 'changes');
   await page.screenshot({ path: join(screenshots, 'galley-reader-review-settings.png') });

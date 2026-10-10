@@ -59,8 +59,6 @@ export interface Settings {
   order: 'suggested' | 'listed';
   /** External images in documents: wait for a click, or always load them. */
   images: 'ask' | 'load';
-  /** Comment cards: set apart by a shadow and their own tone, or by an outline. */
-  comments: 'shaded' | 'outlined';
   /** Test files: a plan of suites and test cases to read, or the plain diff. */
   tests: 'plan' | 'source';
   /** Comments in code files: formatted notes, or the comment lines as written. */
@@ -86,7 +84,6 @@ export const DEFAULT_SETTINGS: Settings = {
   fold: true,
   order: 'suggested',
   images: 'ask',
-  comments: 'shaded',
   tests: 'plan',
   codeComments: 'formatted',
   layout: 'balanced',
@@ -128,12 +125,13 @@ export async function writeStored(key: string, value: unknown): Promise<void> {
 
 export async function loadSettings(): Promise<Settings> {
   // Earlier versions used one setting for both colour and brightness. Preserve that choice.
-  const saved = (await readStored<Partial<Omit<Settings, 'theme'>> & { theme?: Theme | Appearance }>(SETTINGS_KEY)) ?? {};
+  // Retired card-style choices do not carry forward; comment cards always use shaded surfaces.
+  const { comments: _comments, ...saved } =
+    (await readStored<Partial<Omit<Settings, 'theme'>> & { theme?: Theme | Appearance; comments?: unknown }>(SETTINGS_KEY)) ?? {};
   const theme = THEMES.find((theme) => theme === saved.theme) ?? DEFAULT_SETTINGS.theme;
   const legacyAppearance = saved.theme === 'dark' ? 'dark' : saved.theme === 'light' || saved.theme === 'sepia' ? 'light' : 'auto';
   const appearance = APPEARANCES.find((appearance) => appearance === saved.appearance) ?? legacyAppearance;
   const font = FONTS.find((font) => font === saved.font) ?? DEFAULT_SETTINGS.font;
-  const comments = saved.comments === 'outlined' ? 'outlined' : 'shaded';
   const tests = saved.tests === 'source' ? 'source' : 'plan';
   const codeComments = saved.codeComments === 'source' ? 'source' : 'formatted';
   const layout = LAYOUTS.find((layout) => layout === saved.layout) ?? DEFAULT_SETTINGS.layout;
@@ -144,7 +142,6 @@ export async function loadSettings(): Promise<Settings> {
     theme,
     appearance,
     font,
-    comments,
     tests,
     codeComments,
     layout,

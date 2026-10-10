@@ -147,7 +147,7 @@ const KEY_GROUPS = SHORTCUTS.map(
 ).join('');
 
 /** Settings chosen from a group of buttons in the settings sheet (data-setting / data-value). */
-type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'comments' | 'tests' | 'codeComments' | 'layout' | 'density' | 'order';
+type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'tests' | 'codeComments' | 'layout' | 'density' | 'order';
 
 const TEMPLATE = `
 <div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley reader">
@@ -223,7 +223,6 @@ const TEMPLATE = `
         <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
         <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
         <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-        <div class="mr-set-row"><span>Comment cards<small>Choose a shaded background or a border</small></span><div class="mr-seg" data-setting="comments" role="group" aria-label="Comment cards"><button data-value="shaded">Shaded</button><button data-value="outlined">Outlined</button></div></div>
       </section>
       <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>
       </div>
@@ -1432,7 +1431,6 @@ class Reader {
     r.classList.toggle('mode-clean', s.mode === 'clean');
     r.dataset.font = s.font;
     r.dataset.theme = s.theme;
-    r.dataset.comments = s.comments;
     r.dataset.layout = s.layout;
     r.dataset.density = s.density;
     r.classList.toggle('is-dark', s.appearance === 'dark' || (s.appearance === 'auto' && this.dark.matches));
