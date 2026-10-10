@@ -29,11 +29,11 @@ const screenshot = (name, image, kicker, caption) => ({
 });
 
 export const ARTWORK = [
-  screenshot('screenshot-1-read.jpg', 'reader-changes.jpg', 'Clearer reviews for GitHub & GitLab', 'Understand changes. Review together.'),
+  screenshot('screenshot-1-read.jpg', 'reader-changes.jpg', 'Clearer reviews for GitHub & GitLab', 'Understand changes. Review in peace.'),
   screenshot('screenshot-2-button.jpg', 'reader-diff.jpg', 'One click from the diff', 'Press Read on any pull or merge request.'),
   screenshot('screenshot-3-comments.jpg', 'reader-comments.jpg', 'Review together', 'Discuss the change beside the text.'),
   screenshot('screenshot-4-code.jpg', 'reader-code.jpg', 'Readable code', 'Long lines wrap. Comments sit beside the line.'),
-  screenshot('screenshot-5-comfort.jpg', 'reader-settings.jpg', 'Your reading preferences', '12 palettes, 6 typefaces, 5 layouts. Light or dark.'),
+  screenshot('screenshot-5-comfort.jpg', 'reader-settings.jpg', 'Your reading preferences', '19 palettes, 6 typefaces, 6 layouts. Light or dark.'),
   { template: 'promo-small.html', name: 'promo-small-440x280.jpg', width: 440, height: 280, type: 'jpeg' },
   { template: 'hero.html', name: 'promo-marquee-1400x560.jpg', width: 1400, height: 560, type: 'jpeg' },
   { template: 'hero.html', name: 'readme-hero-1600x640.png', width: 1600, height: 640, type: 'png' },

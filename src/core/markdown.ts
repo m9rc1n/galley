@@ -1,5 +1,6 @@
 import markdownit from 'markdown-it';
 import footnote from 'markdown-it-footnote';
+import { full as emoji } from 'markdown-it-emoji';
 import type { Env, StateCore, Token } from 'markdown-it';
 
 export type UnitKind = 'frontmatter' | 'heading' | 'paragraph' | 'code' | 'table' | 'html' | 'rule';
@@ -306,6 +307,9 @@ function createMarkdown() {
   // Keep smart quotes but never rewrite `--`, `...` or `(c)`: reviewers need the text as written.
   md.disable('replacements');
   md.use(footnote);
+  // :smile: and the rest of GitHub's and GitLab's shortcodes, as the emoji themselves (no images to load).
+  // Emoticons like :) stay as written, as they do on both platforms.
+  md.use(emoji, { shortcuts: {} });
   md.core.ruler.push('mr_tasks', taskLists);
   md.core.ruler.push('mr_alerts', alerts);
   md.core.ruler.push('mr_units', annotateUnits);

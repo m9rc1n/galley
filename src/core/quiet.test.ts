@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { quietFile } from './quiet.ts';
+import { quietFile, quietPath } from './quiet.ts';
 import type { DocRef } from '../platforms/types.ts';
 
 const code = (path: string, status: DocRef['status'] = 'modified', oldPath = path): DocRef => ({ path, oldPath, status, kind: 'code' });
@@ -15,6 +15,14 @@ it('folds files a package manager or build wrote, wherever they live', () => {
   expect(label(code('packages/ui/dist/index.js'))).toBe('Build output');
   for (const path of ['api/service.pb.go', 'proto/service_pb2.py', 'lib/user.g.dart', 'src/schema.generated.ts', 'src/routes.gen.ts'])
     expect(label(code(path)), path).toBe('Generated');
+  expect(quietPath(code('src/__generated__/graphql.ts'))?.reason).toBe('Written by a tool, in a generated folder.');
+  expect(label(code('api/generated/client.ts'))).toBe('Generated');
+  for (const path of ['src/__snapshots__/upload.test.ts.snap', 'tests/output.snap']) expect(label(code(path)), path).toBe('Snapshot');
+  expect(label(code('assets/icons/check.svg'))).toBe('Vector image');
+  // The path alone decides these, so the reader can put them last before they load.
+  expect(quietPath(code('yarn.lock'))?.label).toBe('Lockfile');
+  expect(quietPath(code('src/generator.ts'))).toBeNull();
+  expect(quietPath({ path: 'docs/guide.md', oldPath: 'docs/guide.md', status: 'modified' })).toBeNull();
 });
 
 it('folds a file that says it was generated, but only in its first lines', () => {

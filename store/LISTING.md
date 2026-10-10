@@ -23,7 +23,7 @@ Understand GitHub and GitLab changes: readable docs and code, edits in context, 
 **Description** (plain text; paste as-is)
 
 ```
-Understand changes. Review together.
+Understand changes. Review in peace.
 
 Galley helps your team understand code and document changes on GitHub and GitLab. Read the explanation, inspect the edits and discuss the details in one clear view.
 
@@ -49,8 +49,8 @@ DISCUSS THE DETAILS TOGETHER
 • Return to GitHub or GitLab to approve a request, request changes or resolve threads.
 
 CHOOSE YOUR READING COMFORT
-• 16 palettes, each available in light and dark, with 6 typefaces and 5 text sizes.
-• 5 layouts, with space for text, code or comments, plus compact spacing.
+• 19 palettes, each available in light and dark, with 6 typefaces and 5 text sizes.
+• 6 layouts, with space for text, code, comments or every file of a large review, plus compact spacing.
 • 20 keyboard shortcuts for changes, files, conversations, comments and settings.
 
 USE YOUR EXISTING WORKFLOW
@@ -77,7 +77,7 @@ GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. Galle
 | Field | File | Required |
 | --- | --- | --- |
 | Store icon, 128×128 | `icon-128.png` | Yes |
-| Screenshot 1 | `screenshot-1-read.jpg`: "Understand changes. Review together." | At least one |
+| Screenshot 1 | `screenshot-1-read.jpg`: "Understand changes. Review in peace." | At least one |
 | Screenshot 2 | `screenshot-2-button.jpg`: the Read button on a pull request | |
 | Screenshot 3 | `screenshot-3-comments.jpg`: a comment written beside its paragraph | |
 | Screenshot 4 | `screenshot-4-code.jpg`: a source file with a comment beside a line | |

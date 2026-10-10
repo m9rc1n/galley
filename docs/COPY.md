@@ -1,6 +1,6 @@
 # Galley voice and product copy
 
-**Understand changes. Review together.**
+**Understand changes. Review in peace.**
 
 Galley helps teams understand GitHub pull requests and GitLab merge requests with readable documents and code, edits in context, and comments beside the relevant text.
 

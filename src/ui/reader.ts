@@ -12,6 +12,8 @@ import {
 import { highlightCode, languageName, languageOf } from './code.ts';
 import { renderCodeFile } from './code-files.ts';
 import { quietFile, type QuietFile } from '../core/quiet.ts';
+import { readingOrder } from '../core/order.ts';
+import { loadPosition, savePosition } from './positions.ts';
 import { MoveFinder, showMove } from './moves.ts';
 import { enhanceSymbols, refreshSymbols } from './symbols.ts';
 import { enhanceSpecs } from './specs.ts';
@@ -49,6 +51,9 @@ const PALETTES: Array<[Theme, string, string]> = [
   ['clay', 'Clay', 'Stone · terracotta'],
   ['orchid', 'Orchid', 'Stone · lavender'],
   ['graphite', 'Graphite', 'Charcoal · blue'],
+  ['hackerman', 'Hackerman', 'Terminal green'],
+  ['aurora', 'Aurora', 'Teal · violet glow'],
+  ['sunset', 'Sunset', 'Peach · rose glow'],
 ];
 const PALETTES_PER_PAGE = 6;
 const paletteButton = ([value, name, caption]: [Theme, string, string]) => `
@@ -75,6 +80,7 @@ const PALETTE_DOTS = Array.from(
  */
 const LAYOUT_CHOICES: Array<[Layout, string, string]> = [
   ['balanced', 'Balanced', 'Contents, text and comments side by side'],
+  ['files', 'Files', 'Every file in the margin, for large reviews'],
   ['review', 'Review', 'More space for review comments'],
   ['wide', 'Wide text', 'For tables, code and diagrams'],
   ['focus', 'Focus', 'Text in one column, with comments below'],
@@ -141,7 +147,7 @@ const KEY_GROUPS = SHORTCUTS.map(
 ).join('');
 
 /** Settings chosen from a group of buttons in the settings sheet (data-setting / data-value). */
-type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'comments' | 'tests' | 'codeComments' | 'layout' | 'density';
+type SettingKey = 'theme' | 'appearance' | 'font' | 'images' | 'tests' | 'codeComments' | 'layout' | 'density' | 'order';
 
 const TEMPLATE = `
 <div class="mr-root mode-changes" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley reader">
@@ -187,11 +193,12 @@ const TEMPLATE = `
             </div>
           </div>
         </div>
+        <div class="mr-set-row"><span id="mr-top-glow-label">Top glow<small>A soft wash of color to ease into a review</small></span><button class="mr-switch" data-act="top-glow" role="switch" aria-checked="true" aria-labelledby="mr-top-glow-label"></button></div>
       </section>
       <section class="mr-settings-section" aria-label="Typography">
         <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="galley">Galley</option><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
         <div class="mr-set-row"><span>Text size</span><div class="mr-size-control"><button class="mr-btn" data-act="smaller" aria-label="Smaller text">A−</button><output class="mr-text-size" aria-live="polite">20 px</output><button class="mr-btn" data-act="larger" aria-label="Larger text">A+</button></div></div>
-        <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>Understand changes. Review together.</p><span>Read the context. See the edits. Ask a question.</span></div>
+        <div class="mr-type-preview" aria-label="Typeface and text size preview"><p>Understand changes. Review in peace.</p><span>Read the context. See the edits. Ask a question.</span></div>
       </section>
       <p class="mr-settings-note">Changes to your settings appear in the reader right away.</p>
       </div>
@@ -211,10 +218,11 @@ const TEMPLATE = `
         <div class="mr-set-row"><span id="mr-overview-label">Title &amp; description<small>Show the request’s title and description before the files</small></span><button class="mr-switch mr-overview-toggle" data-act="overview" role="switch" aria-checked="false" aria-labelledby="mr-overview-label"></button></div>
         <div class="mr-set-row"><span id="mr-code-label">Code files<small>Review changed source files after the documents</small></span><button class="mr-switch mr-code-toggle" data-act="code-files" role="switch" aria-checked="false" aria-labelledby="mr-code-label"></button></div>
         <div class="mr-set-row"><span id="mr-signs-label">+ and − signs<small>Mark added and removed lines of code with + and −</small></span><button class="mr-switch" data-act="signs" role="switch" aria-checked="true" aria-labelledby="mr-signs-label"></button></div>
+        <div class="mr-set-row"><span id="mr-fold-label">Fold files you can skip<small>Lockfiles, generated code and whitespace-only edits start as one line</small></span><button class="mr-switch" data-act="fold" role="switch" aria-checked="true" aria-labelledby="mr-fold-label"></button></div>
+        <div class="mr-set-row"><span>File order<small>Suggested reads tests after their code, and skippable files last</small></span><div class="mr-seg" data-setting="order" role="group" aria-label="File order"><button data-value="suggested">Suggested</button><button data-value="listed">As listed</button></div></div>
         <div class="mr-set-row"><span>Test files<small>Read suites and cases, or every line of the raw source</small></span><div class="mr-seg" data-setting="tests" role="group" aria-label="Test files"><button data-value="plan">Test plan</button><button data-value="source">Whole file</button></div></div>
         <div class="mr-set-row"><span>Code comments<small>Show comments in code as formatted notes, or as written</small></span><div class="mr-seg" data-setting="codeComments" role="group" aria-label="Code comments"><button data-value="formatted">Formatted</button><button data-value="source">Source</button></div></div>
         <div class="mr-set-row"><span>External images<small>Images hosted elsewhere can tell their host who is reading</small></span><div class="mr-seg" data-setting="images" role="group" aria-label="External images"><button data-value="ask">Ask</button><button data-value="load">Load</button></div></div>
-        <div class="mr-set-row"><span>Comment cards<small>Choose a shaded background or a border</small></span><div class="mr-seg" data-setting="comments" role="group" aria-label="Comment cards"><button data-value="shaded">Shaded</button><button data-value="outlined">Outlined</button></div></div>
       </section>
       <p class="mr-settings-note">To comment, select some text or point at a paragraph. Replies stay in their thread.</p>
       </div>
@@ -244,6 +252,7 @@ const TEMPLATE = `
     <button class="mr-btn mr-icon-btn mr-lightbox-close" data-act="close-lightbox" aria-label="Close diagram (Esc)" title="Close (Esc)">${icons.close}</button>
   </div>
   <p class="mr-toast" role="status" aria-live="polite" hidden></p>
+  <div class="mr-resume" role="status" hidden><span class="mr-resume-text"></span><button type="button" class="mr-resume-go" data-act="resume">Continue</button><button type="button" class="mr-resume-close" data-act="dismiss-resume" aria-label="Start from the top">×</button></div>
   <div class="mr-pill" hidden>
     <button class="mr-btn" data-act="prev" title="Previous change (K)" aria-label="Previous change">${icons.up}</button>
     <span class="mr-pill-label" aria-live="polite"></span>
@@ -373,6 +382,8 @@ interface View {
   /** Folded as noise (a lockfile, generated code, a whitespace-only edit) until the reviewer opens it. */
   quiet?: QuietFile;
   open?: boolean;
+  /** Folded by the reviewer: its content stays, hidden behind the same one-line card. */
+  folded?: boolean;
 }
 
 interface Hit {
@@ -450,6 +461,7 @@ class Reader {
     | 'pillLabel'
     | 'chip'
     | 'toast'
+    | 'resume'
     | 'empty'
     | 'lightbox',
     HTMLElement
@@ -490,6 +502,11 @@ class Reader {
   private readonly editorOf = new WeakMap<Element, Editor>();
   private drafts: Draft[] = [];
   private readonly moves = new MoveFinder();
+  /** The files in the platform's order; `views` follow the File order setting. */
+  private listed: DocRef[] = [];
+  private orderedBy: Settings['order'] | null = null;
+  private resumeAt: { view: View; offset: number } | null = null;
+  private positionTimer = 0;
   /** The card the comments column is arranged around: the one being written in, or the last one used. */
   private active: HTMLElement | null = null;
   private threadEls: Array<{ view: View; card: HTMLElement; anchor: HTMLElement }> = [];
@@ -530,6 +547,7 @@ class Reader {
       pillLabel: q('.mr-pill-label'),
       chip: q('.mr-select-chip'),
       toast: q('.mr-toast'),
+      resume: q('.mr-resume'),
       empty: q('.mr-empty-reader'),
       lightbox: q('.mr-lightbox'),
     };
@@ -600,6 +618,12 @@ class Reader {
       () => {
         if (!this.el.chip.hidden && !this.chipTarget?.range) this.hideChip();
         this.schedule(false);
+        // Only scrolling moves the reader on, so only scrolling is remembered (not layout passes).
+        clearTimeout(this.positionTimer);
+        this.positionTimer = window.setTimeout(() => {
+          this.positionTimer = 0;
+          this.rememberPosition();
+        }, 800);
       },
       { passive: true },
     );
@@ -640,13 +664,25 @@ class Reader {
     if (source.viewed) void this.initNativeViewed();
     this.overview = source.overview ? this.renderOverview(source.overview) : null;
     this.el.doc.replaceChildren(...(this.overview ? [this.overview] : []), ...this.views.map((view) => view.section));
+    this.listed = all;
+    this.orderViews();
+    // Opened at its start, a review starts at the first file in reading order.
+    if (!start) this.index = 0;
     this.updateFileButton();
-    void this.loadAll(this.index);
+    // A review opened at its start, and read over several sittings, offers to continue where the reader was.
+    void this.loadAll(this.index).then(() => {
+      if (!start) void this.offerResume();
+    });
     void this.loadThreads();
   }
 
   close(): void {
     if (this.closed) return;
+    // A scroll just before closing is the place to come back to.
+    if (this.positionTimer) {
+      clearTimeout(this.positionTimer);
+      this.rememberPosition();
+    }
     this.closed = true;
     cancelAnimationFrame(this.frame);
     this.resize.disconnect();
@@ -712,11 +748,11 @@ class Reader {
       const contents = await this.load(view.doc);
       if (this.closed) return;
       // Files most reviewers skip start folded, one click away. A file with a discussion on it never does.
-      const quiet = view.open || this.threads.some((thread) => thread.doc === view.doc) ? null : quietFile(view.doc, contents);
+      const quiet = view.open || !this.settings.fold || this.threads.some((thread) => thread.doc === view.doc) ? null : quietFile(view.doc, contents);
       if (quiet) {
         view.quiet = quiet;
         view.section.classList.add('is-quiet');
-        view.section.replaceChildren(this.quietCard(view, index));
+        view.section.replaceChildren(this.quietCard(view));
         this.schedule(true);
         // Release the loading slot before progress storage resolves: a newly arrived discussion
         // may need to open this folded file immediately.
@@ -778,7 +814,10 @@ class Reader {
       }
       this.schedule(true);
       if (!this.source!.viewed) await this.initLocalViewed(view.doc, contents);
-      else this.updateViewed();
+      else {
+        this.updateViewed();
+        this.foldIfViewed(view);
+      }
     } catch (err) {
       if (this.closed) return;
       const box = h('div', 'mr-message');
@@ -788,9 +827,7 @@ class Reader {
       platform.target = '_blank';
       platform.rel = 'noopener noreferrer';
       box.append(platform);
-      const retry = actionButton('Try again', 'retry-doc', 'mr-outline');
-      retry.dataset.doc = String(index);
-      box.append(retry);
+      box.append(actionButton('Try again', 'retry-doc', 'mr-outline'));
       view.section.replaceChildren(box);
       this.schedule(true);
     } finally {
@@ -808,13 +845,15 @@ class Reader {
       const moved = other.rendered!.blocks.filter((block) => 'mrMoved' in block.el.dataset).length;
       const byline = other.section.querySelector('.mr-byline')!;
       byline.querySelector('.is-moved')?.remove();
-      byline.append(chip('moved', `${moved} moved`));
+      // Alongside the file's other counts.
+      byline.querySelector('.mr-file-meta')!.append(chip('moved', `${moved} moved`));
       refreshSymbols(other.rendered!);
     }
     this.schedule(true);
   }
 
-  private quietCard(view: View, index: number): HTMLElement {
+  /** One line for a folded file: what it is, why it is folded (Galley's reason, or the reviewer's), and how much changed. */
+  private quietCard(view: View): HTMLElement {
     const { doc, quiet } = view;
     const card = h('div', 'mr-quiet');
     const name = h('p', 'mr-quiet-name');
@@ -822,16 +861,88 @@ class Reader {
     if (slash > 0) name.append(h('span', 'mr-code-dir', doc.path.slice(0, slash + 1)));
     name.append(doc.path.slice(slash + 1));
     const meta = h('p', 'mr-quiet-meta');
-    meta.append(h('span', 'mr-quiet-label', quiet!.label), h('span', 'mr-quiet-reason', quiet!.reason));
-    if (quiet!.added) meta.append(chip('added', `${quiet!.added.toLocaleString('en-US')} added`));
-    if (quiet!.removed) meta.append(chip('removed', `${quiet!.removed.toLocaleString('en-US')} removed`));
-    const show = actionButton('Show changes', 'show-quiet', 'mr-outline mr-quiet-show');
-    show.dataset.doc = String(index);
+    meta.append(h('span', 'mr-quiet-label', quiet?.label ?? 'Folded'));
+    if (quiet) meta.append(h('span', 'mr-quiet-reason', quiet.reason));
+    const counts = quiet ?? { ...view.rendered!.stats };
+    if ('modified' in counts && counts.modified) meta.append(chip('modified', `${counts.modified.toLocaleString('en-US')} edited`));
+    if (counts.added) meta.append(chip('added', `${counts.added.toLocaleString('en-US')} added`));
+    if (counts.removed) meta.append(chip('removed', `${counts.removed.toLocaleString('en-US')} removed`));
+    const show = actionButton('', 'show-quiet', 'mr-quiet-show');
+    const icon = h('span', 'mr-file-action-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    // biome-ignore lint/plugin: a bundled icon constant.
+    icon.innerHTML = icons.down;
+    show.append(h('span', '', 'Show changes'), icon);
     show.setAttribute('aria-label', `Show changes in ${doc.path}`);
     const text = h('div', 'mr-quiet-text');
     text.append(name, meta);
-    card.append(text, show);
+    const actions = h('div', 'mr-quiet-actions');
+    actions.append(this.viewedToggle(doc), show);
+    card.append(text, actions);
     return card;
+  }
+
+  /** Put the files in the order the File order setting asks for, keeping the current file current. */
+  private orderViews(): void {
+    const order = this.settings.order === 'suggested' ? readingOrder(this.listed) : this.listed;
+    const rank = new Map(order.map((doc, i) => [doc, i]));
+    const current = this.views[this.index];
+    this.views.sort((a, b) => rank.get(a.doc)! - rank.get(b.doc)!);
+    this.views.forEach((view, i) => {
+      view.section.dataset.document = String(i);
+    });
+    this.el.doc.append(...this.views.map((view) => view.section));
+    this.index = this.views.indexOf(current);
+    this.orderedBy = this.settings.order;
+  }
+
+  private async offerResume(): Promise<void> {
+    const visible = this.views.filter((view) => !view.section.hidden);
+    const saved = await loadPosition(
+      this.source!.diffUrl,
+      visible.map((view) => view.doc.path),
+    );
+    if (!saved || this.closed || this.root.scrollTop > 200) return;
+    const view = visible.find((view) => view.doc.path === saved.path)!;
+    // Near the very top there is nothing to pick up.
+    if (view === visible[0] && saved.offset < 600) return;
+    this.resumeAt = { view, offset: saved.offset };
+    this.el.resume.querySelector('.mr-resume-text')!.textContent = `Pick up where you left off: ${baseName(saved.path)}`;
+    this.el.resume.hidden = false;
+  }
+
+  private continueReading(): void {
+    const { view, offset } = this.resumeAt!;
+    this.el.resume.hidden = true;
+    this.root.scrollTop += view.section.getBoundingClientRect().top - this.root.getBoundingClientRect().top + Math.min(offset, view.section.offsetHeight);
+  }
+
+  /** Remembered per review, in this browser: which file the reader is in, and how far into it. */
+  private rememberPosition(): void {
+    // Before the review loads, or in one with nothing to read, there is no place to remember.
+    const view = this.views[this.index];
+    if (!view) return;
+    const offset = Math.max(0, Math.round(this.root.getBoundingClientRect().top - view.section.getBoundingClientRect().top));
+    void savePosition(this.source!.diffUrl, view.doc.path, offset);
+  }
+
+  /** Any file folds to one line, and opens again as it was: drafts, discussions and moves stay with it. */
+  private foldView(view: View): void {
+    view.folded = true;
+    view.section.classList.add('is-quiet', 'is-folded');
+    view.section.prepend(this.quietCard(view));
+    // Folding the file being read keeps its card in view instead of leaving the reader further down.
+    if (view.section.getBoundingClientRect().top < this.root.getBoundingClientRect().top) this.scrollToEl(view.section, 0.12, false);
+    this.updateViewed();
+    this.schedule(true);
+  }
+
+  private unfoldView(view: View): void {
+    view.folded = false;
+    view.section.classList.remove('is-quiet', 'is-folded');
+    view.section.firstElementChild!.remove();
+    this.updateViewed();
+    this.schedule(true);
   }
 
   private openQuiet(index: number): void {
@@ -849,7 +960,7 @@ class Reader {
     this.rendered = view.rendered;
     this.closeMenus();
     this.updateFileButton();
-    if (view.rendered) this.buildToc(view.rendered);
+    this.buildToc(view.rendered);
     this.scrollToEl(view.section, 0.12, false);
   }
 
@@ -916,20 +1027,84 @@ class Reader {
         'Images hosted outside this site were not loaded, so their hosts cannot see that you are reading. To load them automatically, choose Load in Reading settings → Review → External images.';
       line.append(load);
     }
+    // The file's own controls end the byline: Viewed beside Fold, so finishing a file and putting it away sit together.
+    const actions = h('span', 'mr-file-actions');
+    const fold = actionButton('', 'fold-file', 'mr-fold-file');
+    const icon = h('span', 'mr-file-action-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    // biome-ignore lint/plugin: a bundled icon constant.
+    icon.innerHTML = icons.up;
+    fold.append(icon, h('span', 'mr-file-action-label', 'Fold'));
+    fold.title = 'Fold this file to one line';
+    fold.setAttribute('aria-label', `Fold ${doc.path}`);
+    actions.append(this.viewedToggle(doc), fold);
+    const facts = h('span', 'mr-file-meta');
+    facts.append(...line.childNodes);
+    line.append(facts, actions);
     return line;
   }
 
-  private buildToc(r: RenderedDoc): void {
+  /** Every file of the review, as the margin of the Files layout lists them: status, folded, viewed. */
+  private fileList(): HTMLElement {
+    const list = h('nav', 'mr-toc-list mr-file-list');
+    list.setAttribute('aria-label', 'Files in this review');
+    const visible = this.views.filter((view) => !view.section.hidden);
+    list.append(h('p', 'mr-toc-title', `${visible.length} file${visible.length === 1 ? '' : 's'}`));
+    for (const view of visible) {
+      const index = this.views.indexOf(view);
+      const link = h('button', 'mr-file-link');
+      link.type = 'button';
+      link.dataset.act = 'doc';
+      link.dataset.doc = String(index);
+      link.title = view.doc.path;
+      if (index === this.index) {
+        link.classList.add('is-current');
+        link.setAttribute('aria-current', 'true');
+      }
+      if ((view.quiet && !view.open) || view.folded) link.classList.add('is-folded');
+      const dot = h('span', `mr-status-dot is-${view.doc.status}`);
+      dot.setAttribute('aria-hidden', 'true');
+      link.append(dot, h('span', 'mr-file-link-name', baseName(view.doc.path)));
+      if (this.viewed.get(view.doc)!.value) {
+        const check = h('span', 'mr-file-check');
+        // biome-ignore lint/plugin: a bundled icon constant.
+        check.innerHTML = icons.check;
+        check.setAttribute('aria-label', 'Viewed');
+        link.append(check);
+      }
+      list.append(link);
+      if (index === this.index) list.append(h('div', 'mr-file-headings'));
+    }
+    return list;
+  }
+
+  /** A file's own Viewed check, in its byline or folded card, kept in step with the one in the top bar. */
+  private viewedToggle(doc: DocRef): HTMLButtonElement {
+    const toggle = actionButton('', 'viewed-file', 'mr-file-viewed');
+    toggle.append(h('span', 'mr-file-viewed-box'), h('span', 'mr-file-action-label', 'Viewed'));
+    toggle.setAttribute('role', 'switch');
+    toggle.setAttribute('aria-checked', 'false');
+    toggle.setAttribute('aria-label', `Viewed: ${doc.path}`);
+    return toggle;
+  }
+
+  private buildToc(r: RenderedDoc | null): void {
     this.headings = [];
     const toc = this.el.toc;
     toc.replaceChildren();
-    if (r.isCode) return;
+    // The Files layout lists every file of the review here; the current one opens to its headings.
+    const files = this.settings.layout === 'files' ? this.fileList() : null;
+    if (files) toc.append(files);
+    if (!r || r.isCode) return;
     const all = [...r.content.querySelectorAll<HTMLElement>('h1, h2, h3')].filter((el) => el !== r.lead && !el.closest('.mr-ghost') && !el.hidden);
     if (all.length < 3) return;
     const top = Math.min(...all.map((el) => Number(el.tagName[1])));
-    const list = h('div', 'mr-toc-list');
-    list.append(h('p', 'mr-toc-title', 'Contents'));
-    toc.append(list);
+    let list = files?.querySelector<HTMLElement>('.mr-file-headings');
+    if (!list) {
+      list = h('div', 'mr-toc-list');
+      list.append(h('p', 'mr-toc-title', 'Contents'));
+      toc.append(list);
+    }
     all.forEach((el, i) => {
       const link = h('a', `lvl-${Math.min(3, Number(el.tagName[1]) - top + 1)}`);
       link.href = '#';
@@ -955,6 +1130,9 @@ class Reader {
   private updateFileButton(): void {
     const visible = this.views.filter((view) => !view.section.hidden);
     const docs = visible.map((view) => view.doc);
+    // Each file's slug says where it is in the review: "File 3 of 8" (reader.css).
+    this.el.doc.style.setProperty('--files', String(visible.length));
+    this.el.doc.dataset.files = String(visible.length);
     this.el.empty.hidden = visible.length > 0;
     if (!visible.length) {
       this.el.fileBtn.hidden = this.el.viewed.hidden = true;
@@ -981,7 +1159,7 @@ class Reader {
     const meta = h('p', 'mr-files-meta');
     if (this.source!.subtitle) meta.append(h('span', 'mr-files-source', this.source!.subtitle));
     meta.append(h('span', 'mr-files-progress', `${docs.filter((doc) => this.viewed.get(doc)?.value).length} of ${docs.length} viewed`));
-    const folded = this.views.filter((view) => !view.section.hidden && view.quiet && !view.open).length;
+    const folded = this.views.filter((view) => !view.section.hidden && ((view.quiet && !view.open) || view.folded)).length;
     if (folded) meta.append(h('span', 'mr-files-folded', `${folded} folded`));
     head.append(meta);
     menu.append(head);
@@ -1000,8 +1178,8 @@ class Reader {
       name.append(h('span', 'mr-path-name', baseName(d.path)));
       if (dir) name.append(h('span', 'mr-path-dir', dir));
       item.append(dot, name);
-      const { quiet, open } = this.views[i];
-      if (quiet && !open) item.append(h('span', 'mr-menu-quiet', quiet.label));
+      const { quiet, open, folded } = this.views[i];
+      if ((quiet && !open) || folded) item.append(h('span', 'mr-menu-quiet', quiet?.label ?? 'Folded'));
       item.append(h('span', 'mr-menu-status', STATUS_LABEL[d.status]));
       if (this.viewed.get(d)?.value) {
         const check = h('span', 'mr-file-check');
@@ -1013,6 +1191,7 @@ class Reader {
       menu.append(item);
     });
     this.updateActiveViewed();
+    if (this.settings.layout === 'files') this.buildToc(this.rendered);
   }
 
   private skeleton(): HTMLElement {
@@ -1096,7 +1275,10 @@ class Reader {
       state.error = err instanceof Error ? err.message : String(err);
     } finally {
       state.busy = false;
-      if (!this.closed) this.updateViewed();
+      if (!this.closed) {
+        this.updateViewed();
+        this.foldIfViewed(this.views.find((view) => view.doc === doc)!);
+      }
     }
   }
 
@@ -1115,12 +1297,27 @@ class Reader {
       for (const state of this.viewed.values()) state.error = err instanceof Error ? err.message : String(err);
     } finally {
       for (const state of this.viewed.values()) state.busy = false;
-      if (!this.closed) this.updateViewed();
+      if (!this.closed) {
+        this.updateViewed();
+        for (const view of this.views) this.foldIfViewed(view);
+      }
     }
+  }
+
+  /** Viewed files fold, as on GitHub, when their state is first known, unless the reviewer opened them. */
+  private foldIfViewed(view: View): void {
+    if (view.rendered && !view.open && !view.folded && this.viewed.get(view.doc)!.value) this.foldView(view);
   }
 
   private updateViewed(): void {
     this.updateFileButton();
+    for (const view of this.views) {
+      const state = this.viewed.get(view.doc)!;
+      for (const toggle of view.section.querySelectorAll<HTMLButtonElement>('.mr-file-viewed')) {
+        toggle.setAttribute('aria-checked', String(state.value));
+        toggle.disabled = state.busy || (!state.ready && !state.error);
+      }
+    }
   }
 
   private updateActiveViewed(): void {
@@ -1165,6 +1362,9 @@ class Reader {
       if (this.source!.viewed) await this.source!.viewed.set(view.doc, value);
       else await saveViewed(state.key!, value);
       state.value = value;
+      // Checking a file puts it away; unchecking opens it again.
+      if (value && view.rendered && !view.folded) this.foldView(view);
+      if (!value && view.folded) this.unfoldView(view);
     } catch (err) {
       state.error = err instanceof Error ? err.message : String(err);
     } finally {
@@ -1202,6 +1402,15 @@ class Reader {
     overviewToggle.closest<HTMLElement>('.mr-set-row')!.hidden = Boolean(this.source) && !this.source?.overview;
     if (this.overview) this.overview.hidden = !s.overview;
     this.shadow.querySelector('[data-act="signs"]')!.setAttribute('aria-checked', String(s.signs));
+    this.shadow.querySelector('[data-act="top-glow"]')!.setAttribute('aria-checked', String(s.topGlow));
+    r.classList.toggle('no-top-glow', !s.topGlow);
+    this.shadow.querySelector('[data-act="fold"]')!.setAttribute('aria-checked', String(s.fold));
+    // Turning folding off opens every folded file; turned on, it folds files as they load.
+    if (!s.fold)
+      this.views.forEach((view, index) => {
+        if (view.quiet && !view.open) this.openQuiet(index);
+      });
+    if (this.source && s.order !== this.orderedBy) this.orderViews();
     r.classList.toggle('no-signs', !s.signs);
     const codeToggle = this.shadow.querySelector<HTMLElement>('[data-act="code-files"]')!;
     codeToggle.setAttribute('aria-checked', String(s.codeFiles));
@@ -1214,8 +1423,7 @@ class Reader {
       }
     if (this.source) {
       this.updateFileButton();
-      if (this.rendered) this.buildToc(this.rendered);
-      else this.el.toc.replaceChildren();
+      this.buildToc(this.rendered);
     }
     if (loadCode) void this.loadAll(0);
     for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-scope]')) b.setAttribute('aria-pressed', String(b.dataset.scope === s.scope));
@@ -1223,7 +1431,6 @@ class Reader {
     r.classList.toggle('mode-clean', s.mode === 'clean');
     r.dataset.font = s.font;
     r.dataset.theme = s.theme;
-    r.dataset.comments = s.comments;
     r.dataset.layout = s.layout;
     r.dataset.density = s.density;
     r.classList.toggle('is-dark', s.appearance === 'dark' || (s.appearance === 'auto' && this.dark.matches));
@@ -1786,6 +1993,9 @@ class Reader {
       case 'signs':
         this.update({ signs: !this.settings.signs });
         return;
+      case 'top-glow':
+        this.update({ topGlow: !this.settings.topGlow });
+        return;
       case 'zoom-diagram':
         this.openLightbox(action);
         return;
@@ -1807,6 +2017,9 @@ class Reader {
       case 'viewed':
         void this.toggleViewed(Number(action.dataset.doc));
         return;
+      case 'viewed-file':
+        void this.toggleViewed(this.views.findIndex((view) => view.section.contains(action)));
+        return;
       case 'smaller':
         this.update({ size: Math.max(0, this.settings.size - 1) });
         return;
@@ -1823,10 +2036,25 @@ class Reader {
         void this.show(Number(action.dataset.doc));
         return;
       case 'retry-doc':
-        void this.loadView(Number(action.dataset.doc));
+        void this.loadView(this.views.findIndex((view) => view.section.contains(action)));
         return;
-      case 'show-quiet':
-        this.openQuiet(Number(action.dataset.doc));
+      case 'show-quiet': {
+        const index = this.views.findIndex((view) => view.section.contains(action));
+        if (this.views[index].folded) this.unfoldView(this.views[index]);
+        else this.openQuiet(index);
+        return;
+      }
+      case 'fold-file':
+        this.foldView(this.views.find((view) => view.section.contains(action))!);
+        return;
+      case 'fold':
+        this.update({ fold: !this.settings.fold });
+        return;
+      case 'resume':
+        this.continueReading();
+        return;
+      case 'dismiss-resume':
+        this.el.resume.hidden = true;
         return;
       case 'comment-block':
         this.commentOn(this.hover!);
@@ -2686,20 +2914,24 @@ class Reader {
     if (contents) {
       const box = contents.getBoundingClientRect();
       const beneath = (rect: DOMRect) => rect.top < box.bottom + 32 && rect.bottom > box.top - 32;
+      // In the Files layout code starts beside the list, so nothing passes beneath it.
       this.el.toc.classList.toggle(
         'is-covered',
-        this.views.some((view) => {
-          if (view.section.hidden) return false;
-          if (view.doc.kind === 'code') return beneath(view.section.getBoundingClientRect());
-          // So do code blocks that run wider than the text, into the contents column.
-          return [...view.section.querySelectorAll<HTMLElement>('.mr-content > pre')].some((pre) => {
-            const rect = pre.getBoundingClientRect();
-            return rect.left < box.right + 16 && beneath(rect);
-          });
-        }),
+        this.settings.layout !== 'files' &&
+          this.views.some((view) => {
+            if (view.section.hidden) return false;
+            if (view.doc.kind === 'code') return beneath(view.section.getBoundingClientRect());
+            // So do code blocks that run wider than the text, into the contents column.
+            return [...view.section.querySelectorAll<HTMLElement>('.mr-content > pre')].some((pre) => {
+              const rect = pre.getBoundingClientRect();
+              return rect.left < box.right + 16 && beneath(rect);
+            });
+          }),
       );
     }
     this.el.topbar.classList.toggle('is-scrolled', top > 2);
+    // Reading on from the top answers the offer to continue elsewhere.
+    if (top > this.root.clientHeight) this.el.resume.hidden = true;
     let currentDoc = this.index;
     this.views.forEach((view, i) => {
       if (!view.section.hidden && view.section.getBoundingClientRect().top <= 150) currentDoc = i;
@@ -2708,8 +2940,7 @@ class Reader {
       this.index = currentDoc;
       this.rendered = this.views[currentDoc].rendered;
       this.updateFileButton();
-      if (this.rendered) this.buildToc(this.rendered);
-      else this.el.toc.replaceChildren();
+      this.buildToc(this.rendered);
     }
     if (this.chipTarget?.range) this.placeChip(this.chipTarget.range.getBoundingClientRect());
 

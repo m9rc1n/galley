@@ -26,19 +26,20 @@ export async function checkLargeReview(browser, demoUrl, screenshots) {
       moves: texts('.mr-move-link'),
       chips: texts('.mr-chip.is-moved'),
       plans: [...s.querySelectorAll('.mr-symbol-plan')].map((plan) =>
-        [...plan.querySelectorAll('.mr-spec-link')].map((link) => `${link.querySelector('.mr-spec-name').textContent} ${link.dataset.status}`),
+        [...plan.querySelectorAll('.mr-symbol-link')].map((link) => `${link.textContent} ${link.dataset.status}`),
       ),
       tinted: background(moved) !== background(removed) && background(moved) !== 'rgba(0, 0, 0, 0)',
       comment: getComputedStyle(s.querySelector('.mr-source-comment:has([data-mr-moved]) .mr-ghost'), '::before').content,
     };
   });
-  assert.deepEqual(overview.folded, ['docs/guides/limits.md', 'package-lock.json', 'src/legacy/format.ts', 'dist/limits.min.js']);
-  assert.deepEqual(overview.labels, ['Renamed', 'Lockfile', 'Whitespace only', 'Minified']);
+  // Suggested order: files known by name as skippable (the lockfile, the minified build) come last.
+  assert.deepEqual(overview.folded, ['docs/guides/limits.md', 'src/legacy/format.ts', 'package-lock.json', 'dist/limits.min.js']);
+  assert.deepEqual(overview.labels, ['Renamed', 'Whitespace only', 'Lockfile', 'Minified']);
   assert.deepEqual(overview.moves, ['Moved to src/limits/quota.ts, line 3', 'Moved from src/limits/rate-limiter.ts, old line 18']);
   assert.deepEqual(overview.chips, ['6 moved', '6 moved']);
   assert.deepEqual(overview.plans, [
-    ['createRateLimiter edited', 'remaining moved', 'resetAll removed', 'describeLimit edited', 'Window added', 'Outside declarations edited'],
-    ['remaining moved', 'retryAfter added', 'Outside declarations added'],
+    ['createRateLimiter edited', 'remaining moved', 'resetAll removed', 'describeLimit edited', 'Window added', 'other changes edited'],
+    ['remaining moved', 'retryAfter added', 'other changes added'],
   ]);
   assert.ok(overview.tinted, 'Moved lines have a tint of their own');
   assert.equal(overview.comment, '"Moved"');
@@ -51,7 +52,7 @@ export async function checkLargeReview(browser, demoUrl, screenshots) {
     links[0].click();
     const target = links[1].getBoundingClientRect();
     const move = { focused: s.activeElement === links[1], visible: target.top > 0 && target.bottom < innerHeight };
-    [...s.querySelectorAll('.mr-symbol-plan .mr-spec-link')].find((link) => link.textContent.includes('resetAll')).click();
+    [...s.querySelectorAll('.mr-symbol-plan .mr-symbol-link')].find((link) => link.textContent.includes('resetAll')).click();
     const flashed = s.querySelector('.mr-code-line.is-flash').getBoundingClientRect();
     return { move, line: flashed.top > 0 && flashed.bottom < innerHeight };
   });

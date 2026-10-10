@@ -394,3 +394,16 @@ it('a heading in a comment cannot take an anchor id from the document', () => {
   expect(frag.querySelector('h2')!.textContent).toBe('Title');
   expect(frag.querySelectorAll('[id]')).toHaveLength(0);
 });
+
+it('shows emoji shortcodes as the emoji, in documents and comments, but not in code or as emoticons', () => {
+  const r = renderMarkdown('Ship it.\n', 'Ship it :rocket: :+1: :)\n\n`:smile:` and :not_an_emoji:\n');
+  const text = r.content.textContent!;
+  expect(text).toContain('🚀 👍 :)');
+  expect(r.content.querySelector('code')!.textContent).toBe(':smile:');
+  expect(text).toContain(':not_an_emoji:');
+  // The edit reads as words: the shortcodes became emoji in the new version.
+  expect(r.content.querySelector('ins')!.textContent).toContain('🚀');
+  const comment = document.createElement('div');
+  comment.append(renderSnippet(document, 'Looks good :tada:', 'https://gitlab.example'));
+  expect(comment.textContent!.trim()).toBe('Looks good 🎉');
+});

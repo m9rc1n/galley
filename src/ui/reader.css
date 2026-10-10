@@ -81,6 +81,8 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--bg);
+  /* Gradient palettes glow in the margins of the page; where the text is read, the page stays plain. */
+  background-image: var(--page-art, none);
   color: var(--fg);
   color-scheme: light;
   font-family: var(--sans);
@@ -430,6 +432,48 @@
   --accent: #4667aa;
 }
 
+/* Hackerman: a terminal. Green on near-black in the dark, green ink on pale terminal paper in the light. */
+.mr-root[data-theme="hackerman"],
+.mr-theme-options [data-value="hackerman"] {
+  --bg: #f1faf2;
+  --fg: #0a3a17;
+  --muted: #2d6a3c;
+  --soft: #dcefe0;
+  --rule: #c3dfc9;
+  --code-bg: #e5f4e8;
+  --accent: #12803a;
+}
+
+/* Aurora and Sunset: lively glows in the corners of the page, fading to plain paper under the text. */
+.mr-root[data-theme="aurora"],
+.mr-theme-options [data-value="aurora"] {
+  --bg: #f7f8fd;
+  --fg: #22273f;
+  --muted: #4f5675;
+  --soft: #e8eaf7;
+  --rule: #d6dbf0;
+  --code-bg: #eef0fa;
+  --accent: #5848d4;
+  --page-art:
+    radial-gradient(60% 45% at 0% 0%, rgba(94, 234, 212, 0.28), transparent 70%),
+    radial-gradient(55% 50% at 100% 0%, rgba(167, 139, 250, 0.26), transparent 70%),
+    radial-gradient(70% 55% at 50% 110%, rgba(244, 114, 182, 0.18), transparent 70%);
+}
+.mr-root[data-theme="sunset"],
+.mr-theme-options [data-value="sunset"] {
+  --bg: #fff8f2;
+  --fg: #3b2420;
+  --muted: #6f4a43;
+  --soft: #fbe6da;
+  --rule: #f2d2c4;
+  --code-bg: #fcefe7;
+  --accent: #c2410c;
+  --page-art:
+    radial-gradient(60% 45% at 0% 0%, rgba(253, 186, 116, 0.32), transparent 70%),
+    radial-gradient(55% 50% at 100% 0%, rgba(251, 113, 133, 0.24), transparent 70%),
+    radial-gradient(70% 55% at 50% 110%, rgba(250, 204, 21, 0.16), transparent 70%);
+}
+
 /* Surface-first hierarchy: page, code, neutral secondary cards, then controls. The accent is used
    sparingly for focus and selection; decorative rules are quieter than interactive control borders. */
 .mr-root.is-dark,
@@ -644,6 +688,46 @@
   --code-bg: #292f38;
   --accent: #b1c0df;
   --card: #363c46;
+}
+.mr-root.is-dark[data-theme="hackerman"],
+.is-dark .mr-theme-options [data-value="hackerman"] {
+  --bg: #030a05;
+  --fg: #7dffa1;
+  --muted: #4fcf78;
+  --soft: #1d4a2c;
+  --rule: #1f5a33;
+  --code-bg: #0c2213;
+  --accent: #39ff6a;
+  --card: #143a22;
+  --control-rule: #4fa86b;
+}
+.mr-root.is-dark[data-theme="aurora"],
+.is-dark .mr-theme-options [data-value="aurora"] {
+  --bg: #0c0f1f;
+  --fg: #eef0ff;
+  --muted: #b8bddb;
+  --soft: #3a4170;
+  --rule: #3a4170;
+  --code-bg: #191e3a;
+  --accent: #a99cff;
+  --card: #2a3058;
+  --page-art:
+    radial-gradient(55% 45% at 0% 0%, rgba(20, 184, 166, 0.3), transparent 70%), radial-gradient(55% 50% at 100% 0%, rgba(124, 92, 255, 0.32), transparent 70%),
+    radial-gradient(70% 50% at 50% 115%, rgba(219, 39, 119, 0.22), transparent 70%);
+}
+.mr-root.is-dark[data-theme="sunset"],
+.is-dark .mr-theme-options [data-value="sunset"] {
+  --bg: #1b1015;
+  --fg: #ffeef0;
+  --muted: #e2b9c0;
+  --soft: #613846;
+  --rule: #613846;
+  --code-bg: #311c25;
+  --accent: #ff9e7a;
+  --card: #4a2a35;
+  --page-art:
+    radial-gradient(55% 45% at 0% 0%, rgba(251, 146, 60, 0.26), transparent 70%), radial-gradient(55% 50% at 100% 0%, rgba(225, 29, 72, 0.26), transparent 70%),
+    radial-gradient(70% 50% at 50% 115%, rgba(147, 51, 234, 0.2), transparent 70%);
 }
 
 .mr-root ::selection {
@@ -912,8 +996,9 @@
 }
 
 .mr-content li {
-  margin-top: var(--item-gap, 0.55em);
+  margin-top: var(--item-gap, 0.75em);
   padding-left: 0.2em;
+  line-height: var(--list-leading, 1.42);
 }
 
 .mr-content li::marker {
@@ -1647,26 +1732,42 @@
   /* biome-ignore lint/complexity/noImportantStyles: `hidden` must hide whatever display rule an element otherwise has */
   display: none !important;
 }
-/* Documents follow one another like chapters: a long pause, marked by a dinkus. */
-.mr-document:not([hidden]) ~ .mr-document::before {
-  content: "*\2002*\2002*";
+/* Files follow one another closely, each opening with a slug, the way proofs on a galley are marked: its
+   place in the review, under a hairline that ends the file before it. */
+.mr-doc {
+  counter-reset: galley-file galley-files var(--files, 0);
+}
+.mr-document:not(.mr-overview, [hidden]) {
+  counter-increment: galley-file;
+}
+.mr-document:not(.mr-overview)::before {
+  content: "File " counter(galley-file) " of " counter(galley-files);
   display: block;
-  margin-block: 104px 88px;
+  margin: 0 0 18px;
   color: var(--muted);
-  font: 400 26px / 1 var(--serif);
-  text-align: center;
+  font: 600 11px / 1.4 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mr-doc[data-files="1"] .mr-document::before {
+  content: none;
+}
+.mr-document:not([hidden]) ~ .mr-document::before {
+  margin-top: 88px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
 }
 @media (max-width: 760px) {
   .mr-document:not([hidden]) ~ .mr-document::before {
-    margin-block: 72px 60px;
+    margin-top: 60px;
   }
 }
 
 /* ------------------------------------------------------------------ folded files
    Lockfiles, generated code and whitespace-only edits read as one quiet line each, one click from their
    changes. A run of them stacks without the usual break between documents. */
-.mr-document:not([hidden]) ~ .mr-document.is-quiet::before {
-  margin-block: 64px 40px;
+.mr-document.is-quiet::before {
+  margin-bottom: 12px;
 }
 .mr-document.is-quiet + .mr-document.is-quiet::before {
   content: none;
@@ -1710,6 +1811,113 @@
 }
 .mr-quiet-show {
   flex: none;
+  height: 36px;
+  padding: 0 12px;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--rule));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg));
+  color: var(--fg);
+  font: 500 13px / 1 var(--sans);
+}
+.mr-quiet-show:hover {
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
+}
+/* The checkbox marks progress; the disclosure puts a file away. Clear labels stay visible on phones. */
+.mr-file-actions,
+.mr-quiet-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.mr-file-actions {
+  margin-left: auto;
+}
+.mr-file-meta {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  min-width: 0;
+}
+.mr-file-actions::before {
+  content: "";
+  width: 1px;
+  height: 16px;
+  margin-right: 8px;
+  background: var(--rule);
+}
+.mr-btn:is(.mr-fold-file, .mr-file-viewed) {
+  height: 34px;
+  padding: 0 8px;
+  gap: 8px;
+  border-radius: 6px;
+  color: var(--muted);
+  font: 500 13px / 1 var(--sans);
+}
+:is(.mr-fold-file, .mr-file-viewed):hover {
+  color: var(--fg);
+}
+.mr-file-viewed-box {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--control-rule);
+  border-radius: 3px;
+}
+.mr-file-viewed[aria-checked="true"] {
+  color: var(--fg);
+}
+.mr-file-viewed[aria-checked="true"] .mr-file-viewed-box {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.mr-file-viewed[aria-checked="true"] .mr-file-viewed-box::after {
+  content: "";
+  width: 7px;
+  height: 4px;
+  border-bottom: 1.5px solid var(--bg);
+  border-left: 1.5px solid var(--bg);
+  transform: translateY(-1px) rotate(-45deg);
+}
+.mr-file-viewed:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.mr-file-action-icon {
+  display: inline-flex;
+  align-items: center;
+}
+.mr-file-action-icon svg {
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 760px) {
+  .mr-byline {
+    column-gap: 12px;
+  }
+  .mr-file-meta {
+    column-gap: 12px;
+  }
+  .mr-file-actions::before {
+    content: none;
+  }
+  .mr-btn:is(.mr-fold-file, .mr-file-viewed) {
+    height: 44px;
+  }
+}
+@media (max-width: 360px) {
+  .mr-file-meta {
+    flex-basis: 100%;
+  }
+}
+.mr-document.is-folded > :not(.mr-quiet) {
+  display: none;
 }
 .mr-menu-quiet {
   flex: none;
@@ -1731,6 +1939,9 @@
   }
   .mr-quiet-show {
     min-height: 44px;
+  }
+  .mr-quiet-actions {
+    justify-content: space-between;
   }
 }
 .mr-article {
@@ -2189,13 +2400,63 @@
   -webkit-backdrop-filter: saturate(180%) blur(16px);
   backdrop-filter: saturate(180%) blur(16px);
   border-bottom: 1px solid transparent;
-  transition:
-    border-color 0.2s ease,
-    transform 0.28s ease;
+  transition: transform 0.28s ease;
 }
 
-.mr-topbar.is-scrolled {
-  border-bottom-color: var(--rule);
+/* Light washes down from the whole top edge: teal, violet and rose blend with the palette's accent.
+   The broad glow stays anchored to the screen, becoming softer once reading moves down the page. */
+.mr-topbar {
+  --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
+  --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
+  --aurora-c: color-mix(in srgb, color-mix(in srgb, #f472b6 55%, var(--accent)) var(--aurora-strength, 10%), transparent);
+  overflow-x: clip;
+}
+.mr-root.is-dark .mr-topbar {
+  --aurora-strength: 14%;
+}
+.mr-topbar::before,
+.mr-topbar::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  background: linear-gradient(100deg, var(--aurora-a), var(--aurora-b) 48%, var(--aurora-c));
+  pointer-events: none;
+  transition: opacity 0.75s ease;
+}
+.mr-topbar::before {
+  height: 320px;
+  mask-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.35) 30%, rgba(0, 0, 0, 0.07) 68%, transparent);
+  animation: mr-aurora-glow 32s ease-in-out infinite alternate;
+}
+.mr-topbar::after {
+  height: 96px;
+  opacity: 0.18;
+  mask-image: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
+}
+.no-top-glow .mr-topbar::before,
+.no-top-glow .mr-topbar::after {
+  content: none;
+  animation: none;
+}
+.mr-topbar.is-scrolled::before {
+  opacity: 0.55;
+}
+.mr-topbar.is-scrolled::after {
+  opacity: 0.1;
+}
+@keyframes mr-aurora-glow {
+  from {
+    filter: opacity(0.92);
+  }
+  to {
+    filter: opacity(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mr-topbar::before {
+    animation: none;
+  }
 }
 
 .mr-topbar.is-hidden {
@@ -2687,6 +2948,7 @@
   border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
   border-radius: 12px;
   background: var(--bg);
+  background-image: var(--page-art, none);
   color: var(--fg);
   font: inherit;
   text-align: left;
@@ -3353,6 +3615,68 @@
   font-weight: 600;
 }
 
+/* Picking up a review read over several sittings: a quiet offer at the bottom, gone once reading moves on. */
+.mr-resume {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 6px 6px 6px 18px;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font: 13px / 1.3 var(--sans);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  animation: mr-pop 0.18s ease-out;
+}
+.mr-resume-text {
+  min-width: 0;
+  margin-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-resume-go {
+  flex: none;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 600 13px / 1 var(--sans);
+  cursor: pointer;
+}
+.mr-resume-close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font: 18px / 1 var(--sans);
+  cursor: pointer;
+  opacity: 0.75;
+}
+.mr-resume-close:hover {
+  opacity: 1;
+}
+@media (hover: none), (max-width: 760px) {
+  .mr-resume-go {
+    min-height: 44px;
+  }
+  .mr-resume-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 /* ------------------------------------------------------------------ threads */
 /* Wide screens: a column to the right of the document, each card level with its text. Narrow
    screens: the same cards below the text they belong to. */
@@ -3600,45 +3924,6 @@
   animation: mr-pop 0.14s ease-out;
 }
 
-/* Outlined comment cards (Reading settings → Review): hairlines instead of shadows and tones. */
-.mr-root[data-comments="outlined"] :is(.mr-thread, .mr-composer, .mr-reply, .mr-comment-btn:not(.is-lane)) {
-  border: 1px solid var(--control-rule);
-  background: var(--bg);
-  box-shadow: none;
-}
-
-.mr-root[data-comments="outlined"] .mr-composer {
-  box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.35);
-}
-
-.mr-root[data-comments="outlined"] .mr-thread:is(:hover, :focus-within) {
-  border-color: color-mix(in srgb, var(--fg) 26%, var(--rule));
-  box-shadow: none;
-}
-
-.mr-root[data-comments="outlined"] .mr-thread.is-own {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
-}
-
-.mr-root[data-comments="outlined"] :is(.mr-composer, .mr-reply):focus-within {
-  border-color: color-mix(in srgb, var(--accent) 65%, var(--rule));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
-}
-
-.mr-root[data-comments="outlined"] .mr-comment-btn.is-lane {
-  border: 1px dashed color-mix(in srgb, var(--fg) 26%, transparent);
-  background: transparent;
-}
-
-.mr-root[data-comments="outlined"] .mr-comment-btn.is-lane.is-gap {
-  border-style: solid;
-  background: var(--bg);
-}
-
-.mr-root[data-comments="outlined"] :is(.mr-avatar, .mr-thread-tag) {
-  background: var(--soft);
-}
-
 .mr-reply-context {
   margin: 0 0 4px;
   overflow: hidden;
@@ -3815,6 +4100,22 @@
   --hl-builtin: #7a4d0c;
   --hl-tag: #4f6b1d;
   --hl-meta: #6b5638;
+}
+
+/* Hackerman's code glows green, like everything else on its screen. */
+.mr-root.is-dark[data-theme="hackerman"] {
+  --hl-comment: #5fbf7f;
+  --hl-keyword: #39ff7a;
+  --hl-string: #c8ff8a;
+  --hl-number: #8affd8;
+  --hl-title: #f6ff7a;
+  --hl-attr: #8affd8;
+  --hl-builtin: #ffd166;
+  --hl-tag: #39ff7a;
+  --hl-meta: #6fd98f;
+}
+.mr-root.is-dark[data-theme="hackerman"] :is(.mr-title, .mr-content h1, .mr-content h2) {
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .mr-root.is-dark[data-theme="night"] {
@@ -4022,10 +4323,6 @@
     width: var(--code-span);
     margin-left: calc(var(--code-left) - var(--text-left));
   }
-  .mr-document.is-code::before {
-    width: var(--measure);
-    margin-left: calc(var(--text-left) - var(--code-left));
-  }
   .mr-threads > .is-code-card {
     right: auto;
     left: calc(var(--code-left) + var(--code-span) - var(--text-left) - var(--measure));
@@ -4117,9 +4414,10 @@
    smaller screens. Proportions stay the same, so it works at every text size and with every layout. */
 .mr-root[data-density="compact"] {
   --leading: 1.46;
+  --list-leading: 1.35;
   --block-gap: 0.9em;
   --heading-gap: 1.35em;
-  --item-gap: 0.25em;
+  --item-gap: 0.4em;
 }
 .mr-root[data-density="compact"] .mr-main {
   padding-top: 56px;
@@ -4141,7 +4439,7 @@
   padding: 10px 0;
 }
 .mr-root[data-density="compact"] .mr-document:not([hidden]) ~ .mr-document::before {
-  margin-block: 56px 44px;
+  margin-top: 56px;
 }
 .mr-root[data-density="compact"] .mr-content .mr-diagram {
   margin: 22px 0;
@@ -4240,6 +4538,77 @@
 }
 [data-value="fit"] .mr-layout-preview .t b {
   height: 3px;
+}
+[data-value="files"] .mr-layout-preview .c {
+  flex-basis: 18%;
+  margin-left: 4%;
+  background:
+    linear-gradient(var(--muted) 0 0) 2px 3px / 70% 2px no-repeat,
+    linear-gradient(var(--rule) 0 0) 2px 8px / 60% 2px no-repeat,
+    linear-gradient(var(--rule) 0 0) 2px 13px / 66% 2px no-repeat,
+    linear-gradient(var(--rule) 0 0) 2px 18px / 50% 2px no-repeat,
+    linear-gradient(var(--rule) 0 0) 2px 23px / 62% 2px no-repeat;
+}
+
+/* Files: every file of the review in the left margin, the current one open to its headings, for finding
+   your way through a large review. Code starts beside the list instead of under it, so the list stays. */
+.mr-root[data-layout="files"] {
+  --toc-width: 236px;
+  --toc-gap: 52px;
+}
+@media (min-width: 1280px) {
+  .mr-root[data-layout="files"] {
+    --code-span: min(var(--code-width), calc(var(--rail-end) - var(--text-left) - var(--rail-gap) - 300px));
+    --code-left: var(--text-left);
+    --code-md-span: var(--measure);
+  }
+}
+.mr-file-list .mr-toc-title {
+  margin-left: 10px;
+}
+.mr-file-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 8px 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 13px / 1.35 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.mr-file-link:hover {
+  background: var(--soft);
+  color: var(--fg);
+}
+.mr-file-link.is-current {
+  background: var(--soft);
+  color: var(--fg);
+  font-weight: 600;
+}
+.mr-file-link.is-folded .mr-file-link-name {
+  opacity: 0.7;
+}
+.mr-file-link .mr-status-dot {
+  flex: none;
+}
+.mr-file-link-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-file-link .mr-file-check {
+  flex: none;
+  margin-left: auto;
+}
+.mr-file-headings {
+  margin: 2px 0 8px 18px;
 }
 
 /* The pull or merge request's own description: the first document when chosen in the Review settings.
@@ -4381,12 +4750,6 @@
   --glyph-fg: var(--del);
   --glyph-ring: none;
 }
-.mr-spec-link[data-status="moved"] {
-  --glyph: "→";
-  --glyph-bg: color-mix(in srgb, var(--accent) 16%, var(--bg));
-  --glyph-fg: var(--accent);
-  --glyph-ring: none;
-}
 :is(.mr-spec-link, .mr-spec-section).is-todo {
   --glyph: "";
   --glyph-bg: transparent;
@@ -4497,9 +4860,6 @@
 .mr-spec-count.is-todo::before {
   background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--muted);
-}
-.mr-spec-count.is-moved::before {
-  background: var(--gutter-moved);
 }
 .mr-spec-outline {
   display: flex;
@@ -4664,19 +5024,77 @@
   background: var(--del-bg);
   color: var(--del);
 }
-.mr-spec-status.is-moved {
-  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
-  color: var(--accent);
-}
 
 /* ---------------------------------------------------------------- source files: what changed, by declaration
-   The test plan's card and links, listing functions, classes and types. A link lands on the first changed
-   line and lights it briefly, so the eye finds it. */
-.mr-symbol-kind {
-  flex: none;
-  min-width: 8.5ch;
+   One quiet line between the byline and the code: each name marked + added, • edited, → moved or − removed,
+   and each a way to its first changed line, which lights briefly so the eye finds it. */
+.mr-content > .mr-symbol-plan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px;
+  margin: -28px 0 18px;
   color: var(--muted);
-  font: 500 11px / 1.4 var(--mono);
+}
+.mr-symbol-title {
+  margin-right: 10px;
+  font: 600 11px / 1.9 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mr-symbol-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0 8px 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: 12.5px / 1.9 var(--mono);
+  cursor: pointer;
+}
+.mr-symbol-link::before {
+  content: var(--glyph);
+  color: var(--glyph-fg);
+  font: 700 12px / 1 var(--sans);
+}
+.mr-symbol-link:hover {
+  background: var(--soft);
+}
+.mr-symbol-link[data-status="added"] {
+  --glyph: "+";
+  --glyph-fg: var(--add);
+}
+.mr-symbol-link[data-status="edited"] {
+  --glyph: "•";
+  --glyph-fg: var(--mod);
+}
+.mr-symbol-link[data-status="moved"] {
+  --glyph: "→";
+  --glyph-fg: var(--accent);
+}
+.mr-symbol-link[data-status="removed"] {
+  --glyph: "−";
+  --glyph-fg: var(--del);
+  color: var(--muted);
+}
+.mr-symbol-link[data-status="removed"] .mr-symbol-name {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--del-strike) 60%, transparent);
+}
+.mr-symbol-other {
+  color: var(--muted);
+  font-family: var(--sans);
+}
+.mode-clean .mr-symbol-link.is-removed {
+  display: none;
+}
+@media (hover: none), (max-width: 760px) {
+  .mr-symbol-link {
+    align-items: center;
+    min-height: 36px;
+  }
 }
 :is(.mr-code-line, .mr-source-comment).is-flash {
   animation: mr-line-flash 1.4s ease-out;
@@ -4931,6 +5349,10 @@
   }
   .mr-spec-plan {
     padding: 12px 14px 10px;
+  }
+  .mr-spec-count {
+    gap: 5px;
+    padding: 3px 7px;
   }
   .mr-content .mr-spec-browse > summary {
     min-height: 44px;

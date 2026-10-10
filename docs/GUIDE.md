@@ -26,6 +26,8 @@ Optionally, the request's own title and description come first (**Settings → R
 - **Wide screens** set the text the way a reading site does: centred at a comfortable line length, the contents in the margin to its left and the comments column in the margin to its right. The text moves left only when the comments would otherwise get too narrow. Below 1280 pixels everything reads in one column, with comments under the paragraphs they discuss.
 - **The margin** carries thin change bars beside changed Markdown blocks: one colour each for added, edited and removed.
 - **Unchanged content** folds. By default you see the changed parts and the headings above them; each folded stretch has one **N unchanged blocks** toggle, even when it crosses lists or quotes. Press <kbd>A</kbd> (or **Settings → Review → Context → Whole files**) to read everything.
+- **Files follow one another** on one page. Each opens with its place in the review, such as **File 3 of 8**, under a hairline that ends the file before it.
+- **Pick up where you left off.** Galley remembers which file you were reading and how far into it, for your 50 most recent reviews, in this browser (as fingerprints: no addresses or paths are stored). Open a review again and **Continue** takes you back there; scroll on, or choose ×, to start from the top.
 
 ## Settings
 
@@ -33,12 +35,12 @@ Press <kbd>,</kbd> or the sliders in the top bar. The settings open as a sheet (
 
 | Tab | What it holds |
 | --- | --- |
-| **Reading** | Appearance (System, Light, Dark); sixteen palettes in a carousel: Paper, E-ink, Cream, Sepia, Night, Blush, Sage, Seafoam, Slate, Nord, Dusk, Contrast, Ocean, Clay, Orchid and Graphite; the typeface (Galley's Newsreader and DM Sans pairing, Newsreader, DM Sans, Georgia, your system font or monospace); text size from 17 to 24 pixels, with a live preview. |
-| **Layout** | **Balanced** (the text centred, contents and comments in its margins), **Review** (a comments column as wide as the text, with larger comment text), **Wide text** (longer lines for tables, code and diagrams), **Focus** (the text alone, comments below it) and **Fit to screen** (everything grows with the window); then **Comfortable** or **Compact** density. |
-| **Review** | Change marks (**Marked** or **Clean**), Context (**Changed parts** or **Whole files**), Title & description, Code files, + and − signs, Test files (**Test plan** or **Whole file**), Code comments (**Formatted** or **Source**), External images (**Ask** or **Load**), and the look of comment cards (**Shaded** or **Outlined**). |
+| **Reading** | Appearance (System, Light, Dark); Top glow, a soft wash of color that can be turned off; nineteen palettes in a carousel: Paper, E-ink, Cream, Sepia, Night, Blush, Sage, Seafoam, Slate, Nord, Dusk, Contrast, Ocean, Clay, Orchid, Graphite, Hackerman, Aurora and Sunset; the typeface (Galley's Newsreader and DM Sans pairing, Newsreader, DM Sans, Georgia, your system font or monospace); text size from 17 to 24 pixels, with a live preview. |
+| **Layout** | **Balanced** (the text centred, contents and comments in its margins), **Files** (every file of the review in the left margin, the current one open to its headings, for large reviews), **Review** (a comments column as wide as the text, with larger comment text), **Wide text** (longer lines for tables, code and diagrams), **Focus** (the text alone, comments below it) and **Fit to screen** (everything grows with the window); then **Comfortable** or **Compact** density. |
+| **Review** | Change marks (**Marked** or **Clean**), Context (**Changed parts** or **Whole files**), Title & description, Code files, + and − signs, Fold files you can skip, File order (**Suggested** or **As listed**), Test files (**Test plan** or **Whole file**), Code comments (**Formatted** or **Source**), and External images (**Ask** or **Load**). |
 | **Keys** | Every keyboard shortcut. |
 
-Every palette has a light and a dark appearance. Cards and formatted notes use quiet secondary surfaces instead of full outlines. Dark mode keeps the page, code, cards and controls distinct without washing every layer in the accent colour. Borders identify editable fields and the optional Outlined comment style; accents identify focus and selection, while green, amber and rose identify changes. Text and syntax colours are checked against their reading and diff backgrounds in every palette, light and dark. Fonts ship with the extension; nothing loads from a font service.
+Every palette has a light and a dark appearance. Comment cards and formatted notes use quiet shaded surfaces. Dark mode keeps the page, code, cards and controls distinct without washing every layer in the accent colour. Borders identify editable fields; accents identify focus and selection, while green, amber and rose identify changes. Text and syntax colours are checked against their reading and diff backgrounds in every palette, light and dark. Fonts ship with the extension; nothing loads from a font service.
 
 ## Documents
 
@@ -49,6 +51,7 @@ Both versions of each document are parsed as GitHub-flavoured Markdown: tables, 
 - **Tables** are compared row by row, then cell by cell.
 - **Links and images** whose text stays the same but whose destination changed are named in the text.
 - **Changes that render nowhere** (HTML comments, link definitions) are counted in the byline and linked to the platform diff, so you can inspect changes that do not appear in the rendered document.
+- **Emoji shortcodes** such as `:tada:` show as the emoji, as they do on GitHub and GitLab, in documents and comments alike. Emoticons such as `:)` and anything in code stay as written.
 - **Clean mode** (<kbd>C</kbd>) hides the marks and reads the new version as it will be published, with quiet bars left in the margin.
 - **Images** hosted on the review site load normally. Images hosted elsewhere wait behind a **Load** button, so a pull request cannot track who reads it; **External images: Load** changes that.
 
@@ -92,11 +95,16 @@ These files fold to one line each, saying what the file is, why it is folded and
 - lockfiles, such as `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `Gemfile.lock` and `go.sum`;
 - minified files (`.min.js`, `.min.css`) and build output in a `dist` folder;
 - vendored code in `vendor`, `node_modules`, `third_party` or `bower_components`;
-- generated files, named like `.pb.go`, `_pb2.py` or `.generated.ts`, or marked `@generated` or `DO NOT EDIT` in their first five lines;
+- generated files, named like `.pb.go`, `_pb2.py` or `.generated.ts`, kept in a `generated` or `__generated__` folder, or marked `@generated` or `DO NOT EDIT` in their first five lines;
+- test snapshots (`.snap` files and `__snapshots__` folders) and SVG images;
 - edits that only change spaces, tabs or line breaks, except in languages where indentation is meaning, such as Python, YAML and Makefiles;
 - renamed files whose text did not change.
 
-Choose **Show changes** to read one. The document menu tags folded files and counts them. A file with a discussion on it is never folded, even when the discussion loads after the file.
+Choose **Show changes** to read one. The document menu tags folded files and counts them. A file with a discussion on it is never folded, even when the discussion loads after the file. To read every file in full, turn off **Settings → Review → Fold files you can skip**.
+
+### Reading order
+
+With **Settings → Review → File order → Suggested**, the default, a review reads in the order you would explain it: documents first, then the code, each file followed by its tests, and last the files most reviewers skip. Tests are matched to their code by name and folder: `quota.test.ts`, `quota_test.go`, `test_quota.py` and `QuotaTest.java` follow `quota`, and so does a `quota` file in `__tests__`. **As listed** keeps the platform's order.
 
 ### Moved code
 
@@ -106,7 +114,7 @@ A match needs at least two distinctive lines, 40 characters between them, so a l
 
 ### What changed, by declaration
 
-JavaScript and TypeScript files with more than one change start with a short list, **In this file**: each function, class, method, interface, type and enum that changed, marked **Added**, **Edited**, **Moved** or **Removed**, then any changes outside declarations. A renamed function shows its old and new names. Choose an entry to go to its first changed line. Declarations are read by the same sandboxed parser as test plans, and the code is never run.
+JavaScript and TypeScript files with more than one change start with one quiet line, **In this file**, naming each function, class, method (as `Limiter.check`), interface, type and enum that changed, marked + added, • edited, → moved or − removed, then any other changes. A renamed function shows its old and new names. Choose a name to go to its first changed line. Declarations are read by the same sandboxed parser as test plans, and the code is never run.
 
 ## Diagrams
 
@@ -130,7 +138,9 @@ Comments use the platform's own review APIs, [GitHub review comments](https://do
 
 ## Viewed progress
 
-**Viewed** in the top bar (<kbd>V</kbd>) tracks your review without collapsing the file. The document menu shows progress and a check beside finished files.
+Mark a file **Viewed** in the top bar (<kbd>V</kbd>) or beside **Fold** at the end of its byline, and it folds to one line, as on GitHub; uncheck it to open it again. Files you already viewed start folded, and a folded file you open yourself stays open. The document menu shows progress and a check beside finished files.
+
+Any file folds the same way: choose **Fold** in its byline, and **Show changes** on the folded line to read it again, just as you left it.
 
 With a GitHub token, Galley reads and updates GitHub's native [Viewed status](https://docs.github.com/en/graphql/reference/pulls#markfileasviewed), including unmarking; these requests check that the review revision is still current, and a failure leaves the previous state and shows an error. Without a token, and on GitLab, progress stays in this browser, keyed to a fingerprint of the file's old and new contents: it resets when that file changes, and unrelated updates keep it. The button's tooltip says where progress is saved.
 

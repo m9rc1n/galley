@@ -267,8 +267,8 @@ it('moves between conversations and changes the view from the keyboard, and list
   expect(ui.q('[data-scope="all"]').getAttribute('aria-pressed')).toBe('true');
   expect(ui.q('.mr-toast').textContent).toContain('Whole files');
   ui.key('l');
-  expect(root.dataset.layout).toBe('review');
-  expect(ui.q('.mr-toast').textContent).toContain('Layout: Review');
+  expect(root.dataset.layout).toBe('files');
+  expect(ui.q('.mr-toast').textContent).toContain('Layout: Files');
   ui.key('d');
   expect(root.dataset.density).toBe('compact');
   ui.key('+');
@@ -342,7 +342,7 @@ it('shows the palettes six to a page, turns the pages, and opens on the page of 
   await ui.open(review());
   ui.click('[data-act="settings"]');
   const pages = [...ui.shadow().querySelectorAll('.mr-palette-page')];
-  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6, 4]);
+  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6, 6, 1]);
   // Nord is on the second page, so the settings open there.
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'auto' });
   expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(false);
@@ -355,6 +355,10 @@ it('shows the palettes six to a page, turns the pages, and opens on the page of 
   ui.q('.mr-palette-track').scrollLeft = 1280;
   ui.click('[data-act="palette-next"]');
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 2560, behavior: 'smooth' });
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(false);
+  ui.q('.mr-palette-track').scrollLeft = 2560;
+  ui.click('[data-act="palette-next"]');
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 3840, behavior: 'smooth' });
   expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
   ui.click('[data-setting="theme"] [data-value="ocean"]');
   expect(ui.q('.mr-root').dataset.theme).toBe('ocean');
@@ -413,17 +417,17 @@ it('hides the description switch when the platform has no description to show', 
   expect(ui.q('.mr-overview')).toBeNull();
 });
 
-it('lets the reader choose shaded or outlined comment cards, and remembers the choice', async () => {
+it('keeps comment cards shaded without offering the retired setting, even after an outlined preference', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ comments: 'outlined' }));
   await ui.open(review());
-  expect(ui.q('.mr-root').dataset.comments).toBe('shaded');
+  expect(ui.q('.mr-root').hasAttribute('data-comments')).toBe(false);
   ui.click('[data-act="settings"]');
   ui.click('[data-settings-tab="review"]');
-  ui.click('[data-setting="comments"] [data-value="outlined"]');
-  expect(ui.q('.mr-root').dataset.comments).toBe('outlined');
-  expect(ui.q('[data-setting="comments"] [data-value="outlined"]').getAttribute('aria-pressed')).toBe('true');
+  expect(ui.q('[data-setting="comments"]')).toBeNull();
+  expect(ui.q('.mr-settings').textContent).not.toContain('Comment cards');
   ui.close();
   await ui.open(review());
-  expect(ui.q('.mr-root').dataset.comments).toBe('outlined');
+  expect(ui.q('.mr-root').hasAttribute('data-comments')).toBe(false);
 });
 
 it('changes palettes without changing brightness and remembers both after reopening', async () => {

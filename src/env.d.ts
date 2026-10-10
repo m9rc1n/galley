@@ -10,6 +10,11 @@ declare module 'markdown-it-footnote' {
   export default footnote;
 }
 
+declare module 'markdown-it-emoji' {
+  import type { MarkdownIt } from 'markdown-it';
+  export const full: (md: MarkdownIt, options?: { shortcuts?: Record<string, string | string[]> }) => void;
+}
+
 /** true in the local development build (`npm run dev`), false in release builds. */
 declare const __GALLEY_DEV__: boolean;
 

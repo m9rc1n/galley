@@ -190,11 +190,11 @@ it('chooses palette pages directly and stops the next-change button at the final
   await ui.open(review());
   ui.key(',');
   ui.scroll.mockClear();
-  ui.click('.mr-carousel-dot[data-page="2"]');
-  expect(ui.q('.mr-carousel-dot[data-page="2"]').getAttribute('aria-current')).toBe('true');
+  ui.click('.mr-carousel-dot[data-page="3"]');
+  expect(ui.q('.mr-carousel-dot[data-page="3"]').getAttribute('aria-current')).toBe('true');
   expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
   expect(ui.q<HTMLButtonElement>('[data-act="palette-prev"]').disabled).toBe(false);
-  expect(ui.scroll).toHaveBeenLastCalledWith({ left: 2560, behavior: 'smooth' });
+  expect(ui.scroll).toHaveBeenLastCalledWith({ left: 3840, behavior: 'smooth' });
   ui.key('Escape');
   ui.scroll.mockClear();
   ui.bounds(ui.q('[data-mr-change="modified"]'), 300);

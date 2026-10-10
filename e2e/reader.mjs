@@ -14,6 +14,7 @@ import puppeteer from 'puppeteer-core';
 import { startDemoServer } from '../scripts/serve.mjs';
 import { checkCodeComments, checkSpecs } from './specs.mjs';
 import { checkLargeReview } from './large.mjs';
+import { checkFilesLayout } from './files.mjs';
 
 function contrast(first, second) {
   const luminance = (colour) =>
@@ -196,6 +197,21 @@ try {
     }
   }
   await page.setViewport({ width: 1440, height: 1000 });
+  // The top glow is optional, independently of the palette and brightness.
+  const glow = () =>
+    inspect(() => {
+      const s = document.querySelector('#galley-reader').shadowRoot;
+      return {
+        checked: s.querySelector('[data-act="top-glow"]').getAttribute('aria-checked'),
+        layers: ['::before', '::after'].map((pseudo) => getComputedStyle(s.querySelector('.mr-topbar'), pseudo).content),
+      };
+    });
+  assert.equal((await glow()).checked, 'true');
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="top-glow"]').click());
+  assert.deepEqual(await glow(), { checked: 'false', layers: ['none', 'none'] });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="top-glow"]').click());
+  assert.equal((await glow()).checked, 'true');
+  assert.ok((await glow()).layers.every((content) => content !== 'none'));
   // The bar names the current document; settings live in a sheet, paths and progress in the documents menu.
   assert.equal(
     await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-topbar [data-mode], .mr-topbar [data-scope]').length),
@@ -210,12 +226,19 @@ try {
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'true');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-files-progress').textContent), '1 of 3 viewed');
+  // A checked file folds away, as on GitHub; Show changes opens it again, still viewed.
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-document[data-document="0"]').classList.contains('is-folded')),
+    true,
+  );
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-document[data-document="0"] [data-act="show-quiet"]').click());
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed')), 'true');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="settings"]').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.act), 'close-settings');
   await page.keyboard.press('Tab');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.settingsTab), 'reading');
   await page.keyboard.press('ArrowRight');
-  // Layout sits between reading and review: five layouts drawn as pages, and a density choice.
+  // Layout sits between reading and review: six layouts drawn as pages, and a density choice.
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-layout-panel').hidden), false);
   assert.deepEqual(
     await inspect(() =>
@@ -226,6 +249,7 @@ try {
     ),
     [
       ['balanced', 'true'],
+      ['files', 'false'],
       ['review', 'false'],
       ['wide', 'false'],
       ['focus', 'false'],
@@ -234,6 +258,11 @@ try {
   );
   await page.keyboard.press('ArrowRight');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('#mr-review-panel').hidden), false);
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-setting="comments"]')), null);
+  assert.equal(
+    await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-settings').textContent.includes('Comment cards')),
+    false,
+  );
   await page.keyboard.press('Tab');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.activeElement.dataset.mode), 'changes');
   await page.screenshot({ path: join(screenshots, 'galley-reader-review-settings.png') });
@@ -676,6 +705,28 @@ try {
   });
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path === 'README.md');
   assert.equal(await inspect(() => Math.round(document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar').getBoundingClientRect().top)), 0);
+  await page.waitForFunction(() => {
+    const bar = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar');
+    return ['::before', '::after'].every((pseudo) => {
+      const opacity = Number(getComputedStyle(bar, pseudo).opacity);
+      return opacity > 0 && opacity <= 0.6;
+    });
+  });
+  const scrolledGlow = await inspect(() => {
+    const bar = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar');
+    return {
+      border: getComputedStyle(bar).borderBottomColor,
+      layers: ['::before', '::after'].map((pseudo) => {
+        const style = getComputedStyle(bar, pseudo);
+        return { opacity: Number(style.opacity), animation: style.animationPlayState };
+      }),
+    };
+  });
+  assert.ok(
+    scrolledGlow.layers.every((layer) => layer.opacity > 0 && layer.opacity <= 0.6 && layer.animation === 'running'),
+    'The top glow stays visible but gentler while scrolling',
+  );
+  assert.equal(scrolledGlow.border, 'rgba(0, 0, 0, 0)');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').dataset.doc), '1');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'true');
@@ -758,7 +809,7 @@ try {
   const palettes = await inspect(() =>
     [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="theme"] [data-value]')].map((button) => button.dataset.value),
   );
-  assert.equal(palettes.length, 16);
+  assert.equal(palettes.length, 19);
   for (const theme of palettes) {
     await inspect(
       (theme) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-setting="theme"] [data-value="${theme}"]`).click(),
@@ -988,8 +1039,9 @@ try {
   await checkSpecs(browser, demoUrl, screenshots);
   await checkCodeComments(browser, demoUrl, screenshots);
   await checkLargeReview(browser, demoUrl, screenshots);
+  await checkFilesLayout(browser, demoUrl, screenshots);
   console.log(
-    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, sixteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description.',
+    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, nineteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description.',
   );
 } finally {
   await browser.close();

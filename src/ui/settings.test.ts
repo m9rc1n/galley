@@ -49,12 +49,20 @@ it('falls back to the balanced, comfortable layout for unknown saved choices', a
   expect(await loadSettings()).toMatchObject({ layout: 'balanced', density: 'comfortable' });
 });
 
-it('remembers how comment cards look, and shades them unless outlines were chosen', async () => {
-  expect(DEFAULT_SETTINGS.comments).toBe('shaded');
-  await saveSettings({ ...DEFAULT_SETTINGS, comments: 'outlined' });
-  expect((await loadSettings()).comments).toBe('outlined');
-  localStorage.setItem('galley:settings', JSON.stringify({ comments: 'boxed' }));
-  expect((await loadSettings()).comments).toBe('shaded');
+it('discards the retired comment-card preference when loading and saving settings', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ comments: 'outlined' }));
+  const settings = await loadSettings();
+  expect(settings).toEqual(DEFAULT_SETTINGS);
+  await saveSettings(settings);
+  expect(JSON.parse(localStorage.getItem('galley:settings')!)).not.toHaveProperty('comments');
+});
+
+it('folds skippable files and suggests a reading order unless told otherwise', async () => {
+  expect(DEFAULT_SETTINGS).toMatchObject({ fold: true, order: 'suggested' });
+  await saveSettings({ ...DEFAULT_SETTINGS, fold: false, order: 'listed' });
+  expect(await loadSettings()).toMatchObject({ fold: false, order: 'listed' });
+  localStorage.setItem('galley:settings', JSON.stringify({ fold: 'no', order: 'alphabetical' }));
+  expect(await loadSettings()).toMatchObject({ fold: true, order: 'suggested' });
 });
 
 it('shows + and − beside changed code lines unless they were turned off', async () => {
@@ -63,6 +71,14 @@ it('shows + and − beside changed code lines unless they were turned off', asyn
   expect((await loadSettings()).signs).toBe(false);
   localStorage.setItem('galley:settings', JSON.stringify({ signs: 'no' }));
   expect((await loadSettings()).signs).toBe(true);
+});
+
+it('starts with a top glow and remembers when it is turned off', async () => {
+  expect(DEFAULT_SETTINGS.topGlow).toBe(true);
+  await saveSettings({ ...DEFAULT_SETTINGS, topGlow: false });
+  expect((await loadSettings()).topGlow).toBe(false);
+  localStorage.setItem('galley:settings', JSON.stringify({ topGlow: 'no' }));
+  expect((await loadSettings()).topGlow).toBe(true);
 });
 
 it('remembers how test files and code comments read, and starts with the plan and formatted notes', async () => {
