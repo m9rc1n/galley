@@ -17,5 +17,7 @@ export const icons = {
   chevronRight: svg('<path d="M9 6l6 6-6 6"/>'),
   up: svg('<path d="M18 15l-6-6-6 6"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>'),
+  map: svg('<circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/>'),
+  refresh: svg('<path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19.2 4.6v3.6h-3.6"/>'),
   book: svg('<path d="M3 5.5C5.5 4 8.5 4 12 6c3.5-2 6.5-2 9-.5v13c-2.5-1.5-5.5-1.5-9 .5-3.5-2-6.5-2-9-.5z"/><path d="M12 6v13"/>'),
 };
