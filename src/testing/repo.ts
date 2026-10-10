@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, vi } from 'vitest';
 import type { RepoDiscovery } from '../core/discovery.ts';
 import { ReaderError, type RepositorySource } from '../platforms/types.ts';
+import { storageIdle } from '../ui/project-store.ts';
 import { openRepository, type RepoReaderHandle } from '../ui/repo-reader.ts';
 
 /** A small handbook: a README, a decision that links to a spec, and the spec. */
@@ -78,8 +79,10 @@ export function repoHarness() {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     handle?.close();
+    // Closing writes any draft of unsaved notes; the next test starts with empty storage.
+    await storageIdle();
     document.body.replaceChildren();
     document.documentElement.style.overflow = '';
     localStorage.clear();
@@ -107,7 +110,8 @@ export function repoHarness() {
   const settled = () => vi.waitFor(() => expect(shadow().querySelector('.mr-doc .mr-skeleton')).toBeNull());
   async function open(source: RepositorySource | Promise<RepositorySource>, options?: Parameters<typeof openRepository>[1]) {
     handle = openRepository(source, options);
-    await settled();
+    // Opened from a review, the reader starts at the review, with no document open yet.
+    if (!options?.review) await settled();
     return handle;
   }
   return {

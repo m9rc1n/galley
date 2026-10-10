@@ -4,6 +4,7 @@ import {
   type DocRef,
   type DocStatus,
   type ReviewOverview,
+  type ReviewProject,
   type ReviewSource,
   type CommentTarget,
   type CommentPlan,
@@ -21,6 +22,7 @@ import { enhanceSpecs } from './specs.ts';
 import { renderSourceComments, showCommentSource } from './source-comments.ts';
 import { isPalette, PALETTE_KEYS, type DiagramPalette } from './diagram-palette.ts';
 import { renderDiagrams } from './diagrams.ts';
+import { openRepository, type RepoReaderHandle } from './repo-reader.ts';
 import { viewedKey, loadViewed, saveViewed } from './viewed.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
@@ -165,6 +167,7 @@ const TEMPLATE = `
       </button>
     </div>
     <div class="mr-tb-right">
+      <button type="button" class="mr-btn mr-project-btn" data-act="project" hidden aria-haspopup="menu" aria-expanded="false" title="Read the repository’s docs at this review’s base or head">Project docs</button>
       <button type="button" class="mr-btn mr-chapters-toggle" hidden aria-haspopup="dialog" aria-expanded="false">Chapters</button>
       <button class="mr-btn mr-icon-btn mr-viewed" data-act="viewed" aria-pressed="false" disabled hidden>${icons.viewed}</button>
       <button class="mr-btn mr-icon-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
@@ -172,6 +175,7 @@ const TEMPLATE = `
   </header>
   <p class="mr-viewed-feedback" role="status" hidden></p>
   <div class="mr-menu mr-files" role="menu" aria-label="Changed files" hidden></div>
+  <div class="mr-menu mr-project" role="menu" aria-label="Project docs" hidden></div>
   <div class="mr-settings" hidden>
     <div class="mr-settings-backdrop" data-act="close-settings"></div>
     <aside class="mr-settings-panel" role="dialog" aria-modal="true" aria-labelledby="mr-settings-title" tabindex="-1">
@@ -458,6 +462,7 @@ class Reader {
     | 'viewedFeedback'
     | 'fileCount'
     | 'files'
+    | 'project'
     | 'settings'
     | 'toc'
     | 'article'
@@ -523,6 +528,8 @@ class Reader {
   private frame = 0;
   private needLayout = false;
   private closed = false;
+  /** The repository's docs, opened over the review from Project docs; the review waits underneath, as it was. */
+  private layer: RepoReaderHandle | null = null;
   private readonly dark = matchMedia('(prefers-color-scheme: dark)');
   private readonly resize = new ResizeObserver(() => this.schedule(true));
   private readonly prevOverflow: string;
@@ -545,6 +552,7 @@ class Reader {
       viewedFeedback: q('.mr-viewed-feedback'),
       fileCount: q('.mr-file-btn .mr-count'),
       files: q('.mr-files'),
+      project: q('.mr-project'),
       settings: q('.mr-settings'),
       toc: q('.mr-toc'),
       article: q('.mr-article'),
@@ -660,6 +668,7 @@ class Reader {
     if (this.closed) return;
     this.source = source;
     this.shadow.querySelector<HTMLElement>('[data-act="code-files"]')!.title = `${source.codeDocs?.length ?? 0} supported code files`;
+    if (source.project) this.offerProject(source.project);
     const all = [...source.docs, ...(source.codeDocs ?? [])];
     if (!all.length) {
       this.chapters.setSource([], source.otherFiles ?? []);
@@ -704,6 +713,7 @@ class Reader {
       this.rememberPosition();
     }
     this.closed = true;
+    this.layer?.close();
     this.chapters.close();
     cancelAnimationFrame(this.frame);
     this.resize.disconnect();
@@ -1293,10 +1303,45 @@ class Reader {
     }
   }
 
+  /** Project docs: the repository behind the review, at its base or its head, read over the review (RFC 0049). */
+  private offerProject(project: ReviewProject): void {
+    this.shadow.querySelector<HTMLElement>('[data-act="project"]')!.hidden = false;
+    const item = (revision: 'base' | 'head', title: string) => {
+      const at = project[revision];
+      const b = h('button', 'mr-menu-item');
+      b.type = 'button';
+      b.setAttribute('role', 'menuitem');
+      b.dataset.act = 'project-open';
+      b.dataset.revision = revision;
+      const name = h('span', 'mr-menu-name');
+      name.append(h('span', 'mr-path-name', title), h('span', 'mr-path-dir', `${at.ref} @ ${at.commit.slice(0, 7)}`));
+      b.append(name);
+      return b;
+    };
+    this.el.project.replaceChildren(
+      h('p', 'mr-project-intro', 'Read the repository’s docs and map at one side of this review. Close them to come back here, where you were.'),
+      item('head', 'As this change leaves them'),
+      item('base', 'Before this change'),
+    );
+  }
+
+  private openProject(revision: 'base' | 'head'): void {
+    const source = this.source!;
+    const project = source.project!;
+    const back = this.shadow.querySelector<HTMLElement>('[data-act="project"]')!;
+    this.layer = openRepository(project.open(revision), {
+      review: { title: source.title, revision, ref: project[revision].ref, chapters: this.chapters.outline() },
+      onClose: () => {
+        this.layer = null;
+        back.focus({ preventScroll: true });
+      },
+    });
+  }
+
   private closeMenus(): boolean {
     const drawerOpen = !this.el.settings.hidden;
-    const wasOpen = drawerOpen || !this.el.files.hidden;
-    this.el.files.hidden = this.el.settings.hidden = true;
+    const wasOpen = drawerOpen || !this.el.files.hidden || !this.el.project.hidden;
+    this.el.files.hidden = this.el.project.hidden = this.el.settings.hidden = true;
     for (const b of this.shadow.querySelectorAll('.mr-topbar [aria-expanded]')) b.setAttribute('aria-expanded', 'false');
     if (drawerOpen) {
       for (const el of this.root.querySelectorAll<HTMLElement>('.mr-topbar, .mr-main, .mr-toc')) el.inert = false;
@@ -1821,8 +1866,9 @@ class Reader {
   /** Keep the page's own keyboard shortcuts from firing while the reader is open. */
   private readonly shield = (e: Event) => {
     // The reader is modal: keys reach it when focus is inside it, or when focus fell back to the page body.
+    // While the project's docs are open over it, they have the keys.
     const origin = e.target;
-    if (origin !== this.host && origin !== document.body && origin !== document.documentElement) return;
+    if (this.layer || (origin !== this.host && origin !== document.body && origin !== document.documentElement)) return;
     if (e.type === 'keydown') this.onKey(e as KeyboardEvent);
     if (e.type === 'keyup' && (e as KeyboardEvent).key === 'Shift') {
       const target = e.composedPath()[0];
@@ -2031,6 +2077,13 @@ class Reader {
         return;
       case 'files':
         if (this.views.some((view) => !view.section.hidden)) this.toggleMenu(this.el.files, action);
+        return;
+      case 'project':
+        this.toggleMenu(this.el.project, action);
+        return;
+      case 'project-open':
+        this.closeMenus();
+        this.openProject(action.dataset.revision as 'base' | 'head');
         return;
       case 'settings':
         if (this.source && !this.views.some((view) => !view.section.hidden)) this.selectSettingsTab('review');

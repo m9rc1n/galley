@@ -2693,6 +2693,18 @@
   width: min(460px, calc(100vw - 24px));
 }
 
+/* Project docs: the repository's docs at one side of the review, opened over it. */
+.mr-project {
+  right: 12px;
+  width: min(360px, calc(100vw - 24px));
+}
+
+.mr-project-intro {
+  margin: 6px 10px 8px;
+  color: var(--muted);
+  font: 13px / 1.45 var(--sans);
+}
+
 .mr-files-head {
   margin: 0 0 4px;
   padding: 10px 12px 12px;
@@ -3007,7 +3019,8 @@
     min-height: 44px;
     box-sizing: border-box;
   }
-  .mr-chapters-toggle {
+  .mr-chapters-toggle,
+  .mr-project-btn {
     min-height: 44px;
   }
 }

@@ -23,6 +23,10 @@ it('a document’s kind is what its front matter says, else a guess from its pat
     status: null,
   });
   expect(indexDocument('notes/long-status.md', `---\nstatus: ${'x'.repeat(80)}\n---\n`).status).toBe(`${'x'.repeat(59)}…`);
+  // Front matter and a Status section can disagree; both are kept, front matter first.
+  const torn = indexDocument('adr/0003.md', '---\nstatus: Accepted\nRFCs: 36\n---\n# Queue\n\n## Status\n\nSuperseded by ADR 7');
+  expect(torn).toMatchObject({ status: 'Accepted', statusAlso: 'Superseded by ADR 7', meta: { status: 'Accepted', rfcs: '36' } });
+  expect(indexDocument('adr/0004.md', '---\nstatus: accepted.\n---\n## Status\n\nAccepted').statusAlso).toBe(null);
   expect(pathKind('README.md')).toBe('overview');
   expect(pathKind('docs/RFC-0042-reading.md')).toBe('spec');
   expect(pathKind('handbook/runbooks/deploy/rollback.md')).toBe('runbook');

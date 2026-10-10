@@ -25,7 +25,7 @@ export type KindSource = 'metadata' | 'path' | 'reader' | 'none';
 export const KIND_SOURCES: Record<KindSource, string> = {
   metadata: 'from the document’s front matter',
   path: 'guessed from its path',
-  reader: 'set by you for this session',
+  reader: 'set by you',
   none: 'no type found',
 };
 
@@ -48,6 +48,10 @@ export interface IndexedDoc {
   kindFrom: KindSource;
   /** A decision's or spec's status, when the document states one (front matter or a Status section). */
   status: string | null;
+  /** A different status the same document states elsewhere: front matter and its Status section disagree. */
+  statusAlso: string | null;
+  /** Front matter, by lower-case key: where `supersedes`, `superseded-by` and `rfcs` are stated. */
+  meta: Record<string, string>;
   headings: OutlineHeading[];
   links: DocLink[];
   /** Every id a link can point at: headings and ids written in raw HTML. */
@@ -135,7 +139,11 @@ export function indexDocument(path: string, src: string): IndexedDoc {
   const guessed = pathKind(path);
   const h1 = outline.headings.find((heading) => heading.level === 1);
   const statusSection = outline.headings.find((heading) => /^status$/i.test(heading.text));
-  const status = fields.get('status') || (statusSection && outline.firstParagraph.get(statusSection.id)) || null;
+  const statusField = fields.get('status') || null;
+  const statusText = (statusSection && outline.firstParagraph.get(statusSection.id)) || null;
+  const status = statusField ?? statusText;
+  const firstWord = (text: string) => text.toLowerCase().split(/[^a-z]+/)[0];
+  const statusAlso = statusField && statusText && firstWord(statusField) !== firstWord(statusText) ? short(statusText) : null;
   const anchors = new Set(outline.headings.map((heading) => heading.id));
   for (const m of src.matchAll(/\s(?:id|name)\s*=\s*["']([^"'\s]+)["']/g)) anchors.add(m[1]);
   const links = outline.links.flatMap((link): DocLink[] => {
@@ -151,6 +159,8 @@ export function indexDocument(path: string, src: string): IndexedDoc {
     kind: stated ?? guessed ?? 'other',
     kindFrom: stated ? 'metadata' : guessed ? 'path' : 'none',
     status: status ? short(status) : null,
+    statusAlso,
+    meta: Object.fromEntries(fields),
     headings: outline.headings,
     links,
     anchors,

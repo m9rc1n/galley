@@ -145,7 +145,7 @@ it('documents that could not be read, or are too large, say so in the map', asyn
   expect(ui.text('.mr-repo-backlinks')).toBe('Linked from No other document links here.');
 });
 
-it('the reader can correct a document’s type, or a folder’s, for this session only', async () => {
+it('the reader can correct a document’s type, or a folder’s, and keep it with their notes', async () => {
   await ui.open(repository(handbook, { start: { path: decision, folder: false } }));
   await showMap();
   const select = () => ui.q<HTMLSelectElement>('[data-act="kind"]');
@@ -155,12 +155,17 @@ it('the reader can correct a document’s type, or a folder’s, for this sessio
   select().dispatchEvent(new Event('change', { bubbles: true }));
   expect(ui.text('.mr-map-facts')).toBe('Runbook Accepted');
   expect(ui.q('.mr-map-facts .mr-repo-kind').classList).toContain('is-reader');
-  expect(ui.text('.mr-map-kind small')).toBe('Set by you for this session; Galley does not save it.');
+  expect(ui.text('.mr-map-kind small')).toBe('Set by you. Kept with your notes when you save them.');
   expect(folderWide().checked).toBe(false);
   folderWide().checked = true;
   folderWide().dispatchEvent(new Event('change', { bubbles: true }));
   expect(folderWide().checked).toBe(true);
   expect(ui.text('.mr-map-facts')).toBe('Runbook Accepted');
+  // Another type for the same folder replaces the first.
+  select().value = 'guide';
+  select().dispatchEvent(new Event('change', { bubbles: true }));
+  expect(ui.text('.mr-map-facts')).toBe('Guide Accepted');
+  expect(folderWide().checked).toBe(true);
   folderWide().checked = false;
   folderWide().dispatchEvent(new Event('change', { bubbles: true }));
   expect(folderWide().checked).toBe(false);

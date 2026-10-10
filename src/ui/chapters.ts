@@ -70,6 +70,11 @@ export class ChapterMap {
   private readonly progress = node('p', 'mr-chapters-progress');
   private readonly feedback = node('p', 'mr-chapters-feedback');
 
+  /** The chapters as they stand, with the paths of their files: what a repository read from this review shows. */
+  outline(): Array<{ title: string; paths: string[] }> {
+    return this.chapters.map((chapter) => ({ title: chapter.title, paths: chapter.files.map((doc) => doc.path) }));
+  }
+
   constructor(private readonly options: Options) {
     this.focus = options.toggle;
     this.overlay.hidden = this.route.hidden = true;

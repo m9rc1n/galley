@@ -1,4 +1,5 @@
-import type { RepoDiscovery } from '../core/discovery.ts';
+import { buildLens, MAX_CONFIG_CHARS, ORIGIN_NAMES, type ArchitectureInput, type ConfigReading, type LensName } from '../core/architecture.ts';
+import { configFormat, type RepoDiscovery } from '../core/discovery.ts';
 import {
   classify,
   DOC_KINDS,
@@ -15,23 +16,51 @@ import {
   type FolderNode,
   type KindSource,
 } from '../core/docindex.ts';
+import {
+  anchorState,
+  exportMarkdown,
+  exportMermaid,
+  MAX_NOTES,
+  NOTE_NAMES,
+  sectionText,
+  type Anchor,
+  type AnchorState,
+  type ExportContext,
+  type Note,
+} from '../core/notes.ts';
 import { ReaderError, type RepositorySource } from '../platforms/types.ts';
 import { highlightCode } from './code.ts';
+import { readConfiguration } from './configs.ts';
 import { isPalette, PALETTE_KEYS, type DiagramPalette } from './diagram-palette.ts';
 import { renderDiagrams } from './diagrams.ts';
 import { loadReaderFonts } from './fonts.ts';
 import { icons } from './icons.ts';
 import css from './reader.css';
+import { digestText, ProjectNotes, when } from './project-store.ts';
 import { loadImage, renderDocument, type RenderedDoc } from './render.ts';
+import {
+  button,
+  configStatus,
+  exportDialog,
+  external,
+  h,
+  lensSwitch,
+  lensView,
+  notesView,
+  reviewView,
+  type ConfigState,
+  type ReviewRelated,
+} from './repo-views.ts';
 import repoCss from './repo.css';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, TEXT_SIZES, type Settings } from './settings.ts';
 
 /**
  * The repository reader: a project's docs read at one commit, with the same typography, sanitiser and
- * diagrams as the review reader, and none of its review operations. Two views share one index: Read,
- * a document with its contents and the documents that link to it, and Map, one document's
- * neighbourhood of links with the evidence for each. Nothing is saved: history and corrections last
- * as long as the reader is open.
+ * diagrams as the review reader, and none of its review operations. Its views share one index: Read,
+ * a document with its contents and the documents that link to it; Map, one document's neighbourhood
+ * of links, or what configuration and decision records state, with the evidence for each; Notes, the
+ * reader's own thinking; and, when opened from a review, This review. History lasts as long as the
+ * reader is open; notes, proposals and types are kept only when the reader saves them (ADR 0028).
  */
 
 const WORDS_PER_MINUTE = 230;
@@ -41,6 +70,10 @@ const MAP_COLUMN = 8;
 const OPEN_OUTLINE = 40;
 /** Room under the top bar when a paragraph is brought into view. */
 const TOP = 72;
+/** Configuration files read at a time. */
+const CONFIG_CONCURRENCY = 4;
+/** Longest address a new-issue link may have: browsers and platforms refuse longer ones. */
+const MAX_ISSUE_URL = 8_000;
 
 const TEMPLATE = `
 <div class="mr-root mr-repo" tabindex="-1" role="dialog" aria-modal="true" aria-label="Galley: repository docs">
@@ -58,7 +91,7 @@ const TEMPLATE = `
       <button class="mr-btn mr-file-btn" data-act="docs" aria-haspopup="dialog" aria-expanded="false" title="Documents (/)"><span class="mr-file-name">Documents</span>${icons.chevronDown}</button>
     </div>
     <div class="mr-tb-right">
-      <div class="mr-seg mr-repo-views" role="group" aria-label="View"><button data-view="read" aria-pressed="true">Read</button><button data-view="map" aria-pressed="false" title="Map (M)">Map</button></div>
+      <div class="mr-seg mr-repo-views" role="group" aria-label="View"><button data-view="review" aria-pressed="false" hidden>This review</button><button data-view="read" aria-pressed="true">Read</button><button data-view="map" aria-pressed="false" title="Map (M)">Map</button><button data-view="notes" aria-pressed="false" title="Your notes (N)">Notes</button></div>
       <button class="mr-btn mr-repo-commit" data-act="refresh" hidden>${icons.refresh}<span class="mr-repo-commit-label"></span></button>
       <button class="mr-btn mr-icon-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
     </div>
@@ -79,34 +112,17 @@ const TEMPLATE = `
   <main class="mr-main">
     <article class="mr-article mr-repo-read"><div class="mr-doc"></div></article>
     <section class="mr-repo-map" aria-label="Project map" hidden></section>
+    <div class="mr-repo-thinking" hidden></div>
+    <div class="mr-repo-review" hidden></div>
   </main>
+  <div class="mr-repo-export" role="dialog" aria-modal="true" aria-label="Export notes" hidden></div>
   <div class="mr-repo-zoom" role="dialog" aria-modal="true" aria-label="Enlarged diagram" hidden><button class="mr-btn mr-icon-btn" data-act="close-zoom" aria-label="Close diagram (Esc)" title="Close (Esc)">${icons.close}</button><img alt=""></div>
   <p class="mr-toast" role="status" aria-live="polite" hidden></p>
 </div>`;
 
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text?: string): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag);
-  if (className) el.className = className;
-  if (text !== undefined) el.textContent = text;
-  return el;
-}
-
-function button(label: string, act: string, className = 'mr-btn mr-outline'): HTMLButtonElement {
-  const b = h('button', className, label);
-  b.type = 'button';
-  b.dataset.act = act;
-  return b;
-}
-
-function external(label: string, href: string, className = ''): HTMLAnchorElement {
-  const a = h('a', className, label);
-  a.href = href;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  return a;
-}
-
 const shortSha = (sha: string) => sha.slice(0, 7);
+const edgeKey = (from: string, to: string) => `${from}\u0000${to}`;
+const newId = (prefix: string) => `${prefix}:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString('en')} ${n === 1 ? one : many}`;
 const folderOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')));
 const safeDecode = (value: string) => {
@@ -116,6 +132,33 @@ const safeDecode = (value: string) => {
     return value;
   }
 };
+
+/** What the reader typed or chose in a view's forms, put back after the view is drawn again, with the focus. */
+function typed(root: HTMLElement): () => void {
+  const key = (form: HTMLFormElement) => `${form.dataset.act}:${form.dataset.id ?? form.dataset.from ?? form.dataset.lens ?? ''}`;
+  const fields = (form: HTMLFormElement) => [...form.querySelectorAll<HTMLInputElement>('input, textarea, select')];
+  const field = (el: HTMLInputElement) => (el.type === 'radio' ? `${el.name}=${el.value}` : el.name);
+  const active = (root.getRootNode() as ShadowRoot).activeElement;
+  const before = new Map(
+    [...root.querySelectorAll('form')].map((form) => [
+      key(form),
+      new Map(fields(form).map((el) => [field(el), { value: el.value, checked: el.checked, focused: el === active }])),
+    ]),
+  );
+  return () => {
+    for (const form of root.querySelectorAll('form')) {
+      const saved = before.get(key(form));
+      if (!saved) continue;
+      for (const el of fields(form)) {
+        const was = saved.get(field(el));
+        if (!was) continue;
+        if (el.type === 'checkbox' || el.type === 'radio') el.checked = was.checked;
+        else el.value = was.value;
+        if (was.focused) el.focus();
+      }
+    }
+  };
+}
 
 function problem(err: unknown): { title: string; hint: string } {
   if (err instanceof ReaderError) return { title: err.message, hint: err.hint };
@@ -129,6 +172,18 @@ interface Place {
   offset: number;
 }
 
+type View = 'read' | 'map' | 'notes' | 'review';
+
+/** The review a repository reader was opened from (RFC 0049, Phase 5): its title, the revision read and its chapters. */
+export interface ReviewContext {
+  title: string;
+  revision: 'base' | 'head';
+  /** The branch of that revision. */
+  ref: string;
+  /** The review's chapters, in reading order, with the paths each one changes. */
+  chapters: Array<{ title: string; paths: string[] }>;
+}
+
 let active: RepoReader | null = null;
 
 export interface RepoReaderHandle {
@@ -136,9 +191,12 @@ export interface RepoReaderHandle {
 }
 
 /** Open the repository reader over the page. Accepts a promise so it can show loading and errors itself. */
-export function openRepository(source: RepositorySource | Promise<RepositorySource>, options: { onClose?: () => void } = {}): RepoReaderHandle {
+export function openRepository(
+  source: RepositorySource | Promise<RepositorySource>,
+  options: { onClose?: () => void; review?: ReviewContext } = {},
+): RepoReaderHandle {
   active?.close();
-  const reader = new RepoReader(options.onClose);
+  const reader = new RepoReader(options.onClose, options.review ?? null);
   active = reader;
   Promise.resolve(source).then(
     (s) => reader.setSource(s),
@@ -159,7 +217,7 @@ class RepoReader {
   private index: ProjectIndex | null = null;
   private readonly corrections: Corrections = { docs: new Map(), folders: new Map() };
   private readonly cache = new Map<string, Promise<string>>();
-  /** Documents opened before the listing arrived; they join the map as soon as it exists. */
+  /** Documents read in this snapshot; those read before the listing arrived join the map as soon as it exists. */
   private readonly read = new Map<string, string>();
   /** The pass reading documents for the map, while it runs. */
   private indexing: { cancelled: boolean } | null = null;
@@ -168,8 +226,32 @@ class RepoReader {
   private at = -1;
   private path: string | null = null;
   private rendered: RenderedDoc | null = null;
-  private view: 'read' | 'map' = 'read';
+  private view: View = 'read';
   private focus: string | null = null;
+  /** The map's lens: documents and their links, or what configuration and decision records state. */
+  private lens: 'documents' | LensName = 'documents';
+  private entityFocus: string | null = null;
+  /** Configuration read at this snapshot's commit, by path; read only when the reader asks. */
+  private readonly configs = new Map<string, ConfigReading>();
+  private config: { state: ConfigState['state']; read: number; notes: string[]; run: { cancelled: boolean } | null } = {
+    state: 'idle',
+    read: 0,
+    notes: [],
+    run: null,
+  };
+  private notes: ProjectNotes | null = null;
+  /** Notes chosen for export: this session only. */
+  private readonly chosen = new Set<string>();
+  private editing: string | null = null;
+  /** The note whose list of things to connect to is open: one at a time, so long lists stay quick. */
+  private connecting: string | null = null;
+  private confirmDelete = false;
+  private anchorStates = new Map<string, AnchorState>();
+  private exportFormat: 'markdown' | 'mermaid' = 'markdown';
+  /** The snapshot before a refresh: which documents had been read, and their links, to say what changed. */
+  private previous: { commit: string; read: Set<string>; edges: Set<string> } | null = null;
+  /** Paths the review changes, when opened from one. */
+  private readonly changed: Set<string>;
   private search = '';
   /** The map reads its first batch by itself once; after that, only when the reader asks. */
   private indexedOnce = false;
@@ -179,7 +261,11 @@ class RepoReader {
   private readonly prevOverflow: string;
   private readonly prevFocus: Element | null;
 
-  constructor(private readonly onClose?: () => void) {
+  constructor(
+    private readonly onClose: (() => void) | undefined,
+    private readonly review: ReviewContext | null,
+  ) {
+    this.changed = new Set(review?.chapters.flatMap((chapter) => chapter.paths));
     loadReaderFonts(document);
     this.host.id = __GALLEY_DEV__ ? 'galley-repo-reader-dev' : 'galley-repo-reader';
     // biome-ignore lint/plugin: the bundled stylesheets and a fixed template; no document content.
@@ -193,6 +279,14 @@ class RepoReader {
     this.root.focus({ preventScroll: true });
     this.root.addEventListener('click', (e) => this.onClick(e));
     this.root.addEventListener('change', (e) => this.onChange(e));
+    this.root.addEventListener('submit', (e) => this.onSubmit(e));
+    if (review) {
+      // Opened over a review: closing goes back to it, where the reader left it.
+      const close = this.q('[data-act="close"]');
+      close.title = 'Back to the review (Esc)';
+      close.setAttribute('aria-label', 'Back to the review (Esc)');
+      this.q('[data-view="review"]').hidden = false;
+    }
     this.root.addEventListener('scroll', () => this.onScroll(), { passive: true });
     this.q('.mr-repo-search').addEventListener('input', (e) => {
       this.search = (e.target as HTMLInputElement).value;
@@ -213,11 +307,27 @@ class RepoReader {
     if (this.closed) return;
     this.source = source;
     this.showSnapshot();
+    // Notes belong to the repository, not the commit: a refresh keeps them.
+    const notes = new ProjectNotes(source.id);
+    this.notes = notes;
+    void notes.load().then(() => {
+      if (this.closed) return;
+      this.applyCorrections();
+      this.redraw();
+      if (this.view === 'notes') void this.checkAnchors();
+    });
+    // Opened from a review, the reader starts at what the review changes.
+    if (this.review) void this.showReview();
+    else this.start();
+  }
+
+  /** The document the reader was opened at; a folder or the repository opens at its README, else its first document. */
+  private start(): void {
+    const source = this.source!;
     if (!source.start.folder) {
       void this.open(source.start.path);
       return;
     }
-    // A folder or the repository opens at its README, else its first document, so listing comes first.
     void this.discover().then(
       (found) => {
         const folder = source.start.path;
@@ -255,6 +365,8 @@ class RepoReader {
     if (this.closed) return;
     this.closed = true;
     if (this.indexing) this.indexing.cancelled = true;
+    if (this.config.run) this.config.run.cancelled = true;
+    this.notes?.flush();
     for (const type of ['keydown', 'keyup', 'keypress']) window.removeEventListener(type, this.shield, true);
     this.dark.removeEventListener('change', this.onSchemeChange);
     clearTimeout(this.toastTimer);
@@ -345,6 +457,17 @@ class RepoReader {
     }
     if (this.indexing) this.indexing.cancelled = true;
     this.indexing = null;
+    if (this.config.run) this.config.run.cancelled = true;
+    // What was read before, to say which links changed and which notes need another look.
+    if (this.index?.docs.size)
+      this.previous = {
+        commit: before.commit,
+        read: new Set(this.index.docs.keys()),
+        edges: new Set(this.index.edges.map((edge) => edgeKey(edge.from, edge.to))),
+      };
+    this.configs.clear();
+    this.config = { state: 'idle', read: 0, notes: [], run: null };
+    this.entityFocus = null;
     this.source = next;
     this.discovery = null;
     this.listing = null;
@@ -356,14 +479,18 @@ class RepoReader {
     this.indexedOnce = false;
     this.showSnapshot();
     this.toast(`Now reading ${shortSha(next.commit)}. It was ${shortSha(before.commit)}.`);
-    if (this.view === 'map') {
+    this.anchorStates = new Map();
+    void this.checkAnchors();
+    if (this.view !== 'read') {
       // The document is read again at the new commit when the reader goes back to it.
       this.rendered = null;
       this.q('.mr-doc').replaceChildren(this.skeleton());
-      await this.showMap();
+      if (this.view === 'map') await this.showMap();
+      else if (this.view === 'review') await this.showReview();
+      else this.drawNotes();
     } else if (this.path) await this.open(this.path, { push: false });
     // Nothing was open, such as a repository without documents: start again at the new commit.
-    else this.setSource(next);
+    else this.start();
   }
 
   // ---------------------------------------------------------------- reading
@@ -438,12 +565,13 @@ class RepoReader {
       if (kind !== 'other') facts.append(this.kindChip(kind, from));
       if (indexed.status) facts.append(h('span', 'mr-repo-status', indexed.status));
     }
+    if (this.changed.has(path)) facts.append(h('span', 'mr-review-flag is-changed', 'Changed in this review'));
     const at = h('span', 'mr-repo-at', `${path} · ${source.ref ?? 'default branch'} @ ${shortSha(source.commit)}`);
     at.title = `Read at commit ${source.commit}`;
     facts.append(at);
     if (r.heldImages) facts.append(button(`Load ${plural(r.heldImages, 'external image')}`, 'load-images', 'mr-btn mr-chip is-images'));
     const actions = h('span', 'mr-file-actions');
-    actions.append(external(`Open on ${source.platform}`, source.links.blob(path), 'mr-repo-open'));
+    actions.append(button('Add a note', 'note-here', 'mr-repo-note'), external(`Open on ${source.platform}`, source.links.blob(path), 'mr-repo-open'));
     byline.append(facts, actions);
     intro.push(byline);
     if (r.lead) {
@@ -685,17 +813,22 @@ class RepoReader {
       const { kind, from } = classify(doc, this.corrections);
       if (kind !== 'other') item.append(this.kindChip(kind, from));
     }
+    if (this.changed.has(path)) item.append(h('span', 'mr-review-flag is-changed', 'Changed'));
     if (path === this.path) item.setAttribute('aria-current', 'true');
     return item;
   }
 
   // ---------------------------------------------------------------- map
 
-  private setView(view: 'read' | 'map'): void {
+  private setView(view: View): void {
     if (view !== this.view) this.remember();
     this.view = view;
     this.q('.mr-repo-read').hidden = view !== 'read';
     this.q('.mr-repo-map').hidden = view !== 'map';
+    this.q('.mr-repo-thinking').hidden = view !== 'notes';
+    this.q('.mr-repo-review').hidden = view !== 'review';
+    // Focus never stays in a view that is hidden: it goes back to the reader.
+    if (this.shadow.activeElement?.closest('[hidden]')) this.root.focus({ preventScroll: true });
     this.q('.mr-toc').hidden = view !== 'read';
     for (const b of this.shadow.querySelectorAll<HTMLElement>('[data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
   }
@@ -704,25 +837,34 @@ class RepoReader {
     if (!this.source) return;
     this.closeMenus();
     this.setView('map');
-    const map = this.q('.mr-repo-map');
-    if (!this.index) {
-      map.replaceChildren(this.skeleton());
-      try {
-        await this.discover();
-      } catch (err) {
-        if (this.view !== 'map') return;
-        const { title, hint } = problem(err);
-        const box = h('div', 'mr-message');
-        box.append(h('h2', '', title), h('p', '', hint), button('Try again', 'map'));
-        map.replaceChildren(box);
-        return;
-      }
-      if (this.closed || this.view !== 'map') return;
-    }
+    // Once listed, the map is drawn at once.
+    if (!this.index && !(await this.listed('map', this.q('.mr-repo-map'), 'map'))) return;
     const index = this.index!;
     this.focus = focus && index.documentAt(focus) ? index.documentAt(focus) : (index.documentAt('') ?? index.listed[0] ?? null);
     this.drawMap();
-    if (!this.indexing && index.unread().length && index.docs.size < index.listed.length && !this.indexedOnce) void this.indexMore();
+    this.autoIndex();
+  }
+
+  /** The listing, for a view that needs it: a skeleton meanwhile, and a way to try again when it fails. */
+  private async listed(view: View, pane: HTMLElement, retry: string): Promise<boolean> {
+    pane.replaceChildren(this.skeleton());
+    try {
+      await this.discover();
+    } catch (err) {
+      if (this.view === view) {
+        const { title, hint } = problem(err);
+        const box = h('div', 'mr-message');
+        box.append(h('h2', '', title), h('p', '', hint), button('Try again', retry));
+        pane.replaceChildren(box);
+      }
+      return false;
+    }
+    return !this.closed && this.view === view;
+  }
+
+  /** The map and the review view read a first batch of documents by themselves, once per snapshot. */
+  private autoIndex(): void {
+    if (!this.indexing && this.index!.unread().length && !this.indexedOnce) void this.indexMore();
   }
 
   /** Read the next batch of documents for the map; the reader can stop it at any time. */
@@ -735,7 +877,13 @@ class RepoReader {
     this.refreshIndexViews();
     const sizes = new Map(this.listing!.docs.flatMap((doc) => (doc.size === undefined ? [] : [[doc.path, doc.size] as [string, number]])));
     let last = 0;
-    const result = await readForIndex(index, (path) => this.load(path), {
+    // Documents read for the map also count for suggestions in the architecture views.
+    const load = async (path: string) => {
+      const text = await this.load(path);
+      if (!signal.cancelled) this.read.set(path, text);
+      return text;
+    };
+    const result = await readForIndex(index, load, {
       sizes,
       signal,
       progress: () => {
@@ -761,6 +909,7 @@ class RepoReader {
   /** After the index changes: the map, the list's kinds and the current document's backlinks. */
   private refreshIndexViews(): void {
     if (this.view === 'map') this.drawMap();
+    else if (this.view === 'review') this.drawReview();
     else this.updateIndexStatus();
     this.buildOutline();
     this.updateBacklinks();
@@ -800,11 +949,22 @@ class RepoReader {
     return status;
   }
 
+  private mapHead(): HTMLElement {
+    const head = h('header', 'mr-map-head');
+    head.append(h('h1', 'mr-title', 'Project map'), lensSwitch(this.lens), this.indexStatus());
+    return head;
+  }
+
   private drawMap(): void {
+    if (this.lens !== 'documents') {
+      this.drawLens(this.lens);
+      return;
+    }
     const map = this.q('.mr-repo-map');
     const index = this.index!;
-    const head = h('header', 'mr-map-head');
-    head.append(h('h1', 'mr-title', 'Project map'), this.indexStatus());
+    const head = this.mapHead();
+    const since = this.sinceRefresh();
+    if (since) head.append(since);
     if (!this.focus) {
       map.replaceChildren(head, h('p', 'mr-repo-quiet', 'No Markdown documents at this commit.'));
       return;
@@ -826,6 +986,7 @@ class RepoReader {
       const facts = h('p', 'mr-map-facts');
       facts.append(this.kindChip(kind, from));
       if (doc.status) facts.append(h('span', 'mr-repo-status', doc.status));
+      if (this.changed.has(focus)) facts.append(h('span', 'mr-review-flag is-changed', 'Changed in this review'));
       if (doc.unread) facts.append(h('span', 'mr-repo-limit', doc.unread === 'failed' ? 'Could not be read' : 'Too large to read'));
       center.append(facts, this.kindEditor(focus, kind, from));
     } else center.append(h('p', 'mr-repo-quiet', 'Not read yet: its own links are not shown.'));
@@ -897,20 +1058,492 @@ class RepoReader {
       all.append(check, ` Everything in ${folder}/`);
       box.append(all);
     }
-    box.append(h('small', '', from === 'reader' ? 'Set by you for this session; Galley does not save it.' : `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}.`));
+    box.append(h('small', '', from === 'reader' ? 'Set by you. Kept with your notes when you save them.' : `${KIND_NAMES[kind]}, ${KIND_SOURCES[from]}.`));
     return box;
   }
 
+  /** A type the reader sets is part of their notes: kept when they save, both types visible on the map. */
   private setKind(path: string, kind: DocKind, folderWide: boolean): void {
     const folder = folderOf(path);
-    this.corrections.docs.delete(path);
-    if (folderWide && folder) this.corrections.folders.set(folder, kind);
-    else {
-      this.corrections.folders.delete(folder);
-      this.corrections.docs.set(path, kind);
-    }
+    this.notes!.change((thinking) => {
+      thinking.docKinds = thinking.docKinds.filter(([doc]) => doc !== path);
+      if (folderWide && folder) thinking.folderKinds = [...thinking.folderKinds.filter(([at]) => at !== folder), [folder, kind]];
+      else {
+        thinking.folderKinds = thinking.folderKinds.filter(([at]) => at !== folder);
+        thinking.docKinds.push([path, kind]);
+      }
+    });
+    this.applyCorrections();
     this.drawMap();
     this.buildOutline();
+  }
+
+  /** The types the reader set, from their notes. */
+  private applyCorrections(): void {
+    const thinking = this.notes!.thinking;
+    this.corrections.docs = new Map(thinking.docKinds);
+    this.corrections.folders = new Map(thinking.folderKinds);
+  }
+
+  // ---------------------------------------------------------------- architecture, infrastructure and decisions
+
+  private lensInput(): ArchitectureInput {
+    const thinking = this.notes!.thinking;
+    return {
+      index: this.index!,
+      corrections: this.corrections,
+      configs: this.configs,
+      texts: this.read,
+      proposed: thinking,
+      kinds: new Map(thinking.entityKinds),
+    };
+  }
+
+  private configState(): ConfigState {
+    const { state, read, notes } = this.config;
+    return { state, read, notes, files: this.listing!.configs.files.length, commit: this.source!.commit };
+  }
+
+  private drawLens(lens: LensName): void {
+    const map = this.q('.mr-repo-map');
+    const source = this.source!;
+    const model = buildLens(lens, this.lensInput());
+    const restore = typed(map);
+    map.replaceChildren(
+      this.mapHead(),
+      lensView({
+        lens,
+        model,
+        focus: this.entityFocus,
+        config: this.configState(),
+        links: { isDocument: (path) => this.index!.documentAt(path) === path, fileAt: (path, line) => `${source.links.blob(path)}#L${line}` },
+        reading: this.path ? { path: this.path, title: this.titleOf(this.path) } : null,
+      }),
+    );
+    restore();
+  }
+
+  /**
+   * Read the listed configuration files in the sandboxed frame, a few at a time, only when the reader
+   * asks. Nothing in them is run or followed; what could not be read is said.
+   */
+  private async readConfigs(): Promise<void> {
+    const { files, limits } = this.listing!.configs;
+    const run = { cancelled: false };
+    const notes = [...limits];
+    this.config = { state: 'reading', read: 0, notes, run };
+    this.updateConfigStatus();
+    let next = 0;
+    const work = async () => {
+      while (next < files.length) {
+        const file = files[next++];
+        const listedLarge = (file.size ?? 0) > MAX_CONFIG_CHARS;
+        const text = listedLarge ? null : await this.load(file.path).catch(() => null);
+        if (run.cancelled) return;
+        const large = listedLarge || (text ?? '').length > MAX_CONFIG_CHARS;
+        const reading = text === null || large ? null : await readConfiguration(this.shadow, file.path, configFormat(file.path)!, text);
+        if (run.cancelled) return;
+        if (reading) {
+          this.configs.set(file.path, reading);
+          this.config.read++;
+          for (const note of reading.notes) notes.push(`${file.path}: ${note}`);
+        } else notes.push(large ? `${file.path} is too large to read.` : `${file.path} could not be read.`);
+        this.updateConfigStatus();
+      }
+    };
+    await Promise.all(Array.from({ length: CONFIG_CONCURRENCY }, work));
+    if (run.cancelled) return;
+    this.config.state = 'done';
+    this.config.run = null;
+    this.redraw();
+  }
+
+  private updateConfigStatus(): void {
+    for (const box of this.shadow.querySelectorAll('.mr-lens-configs')) box.replaceWith(configStatus(this.configState()));
+  }
+
+  /** Draw the current view again after its data changed, keeping what the reader is typing. */
+  private redraw(): void {
+    if (!this.index && this.view !== 'notes') return;
+    if (this.view === 'map') this.drawMap();
+    else if (this.view === 'review') this.drawReview();
+    else if (this.view === 'notes') this.drawNotes();
+    else this.buildOutline();
+  }
+
+  /** After a refresh: links that changed among the documents read at both commits, and notes to look at again. */
+  private sinceRefresh(): HTMLElement | null {
+    const previous = this.previous;
+    if (!previous) return null;
+    const index = this.index!;
+    const both = (path: string) => previous.read.has(path) && index.docs.has(path);
+    const now = index.edges.filter((edge) => both(edge.from)).map((edge) => edgeKey(edge.from, edge.to));
+    const added = now.filter((key) => !previous.edges.has(key));
+    const gone = [...previous.edges].filter((key) => both(key.split('\u0000')[0]) && !now.includes(key));
+    const read = [...previous.read].filter(both).length;
+    const box = h('section', 'mr-map-since');
+    box.setAttribute('aria-label', `Since ${shortSha(previous.commit)}`);
+    const head = h('h3', '', `Since ${shortSha(previous.commit)}`);
+    box.append(head);
+    box.append(
+      h(
+        'p',
+        '',
+        added.length || gone.length
+          ? `Among the ${plural(read, 'document')} read at both commits, ${plural(added.length, 'link is', 'links are')} new and ${plural(gone.length, 'link is', 'links are')} gone.`
+          : `No links changed among the ${plural(read, 'document')} read at both commits.`,
+      ),
+    );
+    const list = h('ul', 'mr-map-since-list');
+    for (const [key, what] of [...added.map((key) => [key, 'New'] as const), ...gone.map((key) => [key, 'Gone'] as const)]) {
+      const [from, to] = key.split('\u0000');
+      const item = h('li', '', `${what}: `);
+      const a = button(this.titleOf(from), 'focus', 'mr-repo-edge-doc');
+      a.dataset.path = from;
+      const b = button(this.titleOf(to), 'focus', 'mr-repo-edge-doc');
+      b.dataset.path = to;
+      item.append(a, ' → ', b);
+      list.append(item);
+    }
+    if (list.childElementCount) box.append(list);
+    const stale = [...this.anchorStates.values()].filter((state) => state === 'changed' || state === 'missing').length;
+    if (stale)
+      box.append(
+        h('p', '', `${plural(stale, 'of your notes is', 'of your notes are')} about a section that changed or is gone.`),
+        button('Look at them', 'view-notes'),
+      );
+    box.append(button('Dismiss', 'dismiss-since'));
+    return box;
+  }
+
+  private proposeEntity(form: HTMLFormElement): void {
+    const data = new FormData(form);
+    const name = String(data.get('name')).trim();
+    if (!name) return;
+    const reading = data.get('anchor') && this.path ? { path: this.path, label: this.titleOf(this.path).slice(0, 200) } : null;
+    const entity = { id: newId('reader'), name, kind: String(data.get('kind')), lens: form.dataset.lens as 'architecture' | 'infrastructure', anchor: reading };
+    this.notes!.change((thinking) => thinking.entities.push(entity));
+    this.entityFocus = entity.id;
+    form.reset();
+    this.drawMap();
+    this.toast(`${name} added as your proposal. Save your notes to keep it.`);
+  }
+
+  private proposeRelation(form: HTMLFormElement): void {
+    const data = new FormData(form);
+    const relation = { id: newId('link'), from: form.dataset.from!, to: String(data.get('to')), label: String(data.get('label')).trim() };
+    if (!relation.label) return;
+    this.notes!.change((thinking) => {
+      const same = thinking.relations.some((r) => r.from === relation.from && r.to === relation.to && r.label === relation.label);
+      if (!same) thinking.relations.push(relation);
+    });
+    this.drawMap();
+  }
+
+  // ---------------------------------------------------------------- notes
+
+  private showNotes(): void {
+    this.closeMenus();
+    this.setView('notes');
+    this.drawNotes();
+    void this.checkAnchors();
+  }
+
+  /** What a new note can be about: the document being read, whole or one of its sections. */
+  private anchorOptions(): Map<string, { path: string; heading: string | null; label: string; text: string }> {
+    const options = new Map<string, { path: string; heading: string | null; label: string; text: string }>();
+    const path = this.path;
+    const text = path === null ? undefined : this.read.get(path);
+    if (text === undefined) return options;
+    const doc = indexDocument(path!, text);
+    const title = doc.title.slice(0, 200);
+    options.set(`${path}\u0000`, { path: path!, heading: null, label: title, text });
+    for (const heading of doc.headings.filter((heading) => heading.id.length <= 200))
+      options.set(`${path}\u0000${heading.id}`, { path: path!, heading: heading.id, label: `${title} § ${heading.text}`.slice(0, 400), text });
+    return options;
+  }
+
+  private noteLabel(note: Note): string {
+    const line = note.text.split('\n')[0];
+    return `${NOTE_NAMES[note.kind]}: ${line.length > 60 ? `${line.slice(0, 59)}…` : line}`;
+  }
+
+  /** What a note can be connected to: other notes, and the components, services and environments in the views. */
+  private targets(): Array<{ id: string; label: string }> {
+    const notes = this.notes!.thinking.notes.map((note) => ({ id: note.id, label: this.noteLabel(note) }));
+    if (!this.index) return notes;
+    const entities = (['architecture', 'infrastructure'] as const).flatMap((lens) =>
+      buildLens(lens, this.lensInput()).entities.filter((entity) => !entity.doc),
+    );
+    return [...notes, ...entities.map((entity) => ({ id: entity.id, label: `${entity.name} (${entity.kind}, ${ORIGIN_NAMES[entity.origin].toLowerCase()})` }))];
+  }
+
+  private drawNotes(): void {
+    const notes = this.notes!;
+    const pane = this.q('.mr-repo-thinking');
+    const restore = typed(pane);
+    pane.replaceChildren(
+      notesView({
+        notes: notes.thinking.notes,
+        chosen: this.chosen,
+        state: notes.state,
+        dirty: notes.dirty,
+        error: notes.error,
+        recovery: notes.offer ? { at: when(notes.offer.at) } : null,
+        confirmDelete: this.confirmDelete,
+        anchors: [...this.anchorOptions()].map(([value, option]) => ({ value, label: option.label })),
+        anchorStates: this.anchorStates,
+        targets: this.targets(),
+        editing: this.editing,
+        connecting: this.connecting,
+      }),
+    );
+    restore();
+  }
+
+  /** Whether each note's section is still as it was when the note was written, at the commit read. */
+  private async checkAnchors(): Promise<void> {
+    const source = this.source!;
+    const listing = await this.discover().catch(() => null);
+    const states: Array<[Note, Anchor, AnchorState]> = [];
+    for (const note of this.notes!.thinking.notes) {
+      const anchor = note.anchor;
+      if (!anchor) continue;
+      let digest: string | null = null;
+      if (anchor.commit !== source.commit && (!listing || this.index?.documentAt(anchor.path) === anchor.path)) {
+        // A document that cannot be read now says nothing about its sections.
+        const text = await this.load(anchor.path).catch(() => null);
+        if (text === null) continue;
+        const section = sectionText(text, anchor.heading);
+        digest = section === null ? null : await digestText(section);
+      }
+      states.push([note, anchor, anchorState(anchor, source.commit, digest)]);
+    }
+    if (this.closed || this.source !== source) return;
+    // A note reconfirmed or detached meanwhile keeps the state it has now.
+    for (const [note, anchor, state] of states) if (note.anchor === anchor) this.anchorStates.set(note.id, state);
+    if (this.view === 'notes') this.drawNotes();
+    else if (this.view === 'map' && this.previous) this.drawMap();
+  }
+
+  private async addNote(form: HTMLFormElement): Promise<void> {
+    const notes = this.notes!;
+    const data = new FormData(form);
+    const text = String(data.get('text')).trim();
+    if (!text) return;
+    if (notes.thinking.notes.length >= MAX_NOTES) {
+      this.toast(`You have ${MAX_NOTES} notes, the most Galley keeps for one repository. Delete some to add more.`);
+      return;
+    }
+    const kind = data.get('kind') as Note['kind'];
+    const choice = this.anchorOptions().get(String(data.get('anchor')));
+    const source = this.source!;
+    const anchor = choice
+      ? {
+          path: choice.path,
+          heading: choice.heading,
+          label: choice.label,
+          commit: source.commit,
+          digest: await digestText(sectionText(choice.text, choice.heading)!),
+        }
+      : null;
+    const now = Date.now();
+    const note: Note = {
+      id: newId('note'),
+      kind,
+      text,
+      group: kind === 'alternative' ? String(data.get('group')).trim() : '',
+      anchor,
+      links: [],
+      created: now,
+      updated: now,
+    };
+    notes.change((thinking) => thinking.notes.push(note));
+    if (anchor) this.anchorStates.set(note.id, 'current');
+    // The form may have been drawn again meanwhile: the one on screen is the one to clear.
+    this.q<HTMLFormElement>('form[data-act="add-note"]').reset();
+    this.drawNotes();
+    this.q<HTMLTextAreaElement>('form[data-act="add-note"] textarea').focus();
+  }
+
+  private saveNote(form: HTMLFormElement): void {
+    const data = new FormData(form);
+    const text = String(data.get('text')).trim();
+    if (!text) return;
+    const kind = data.get('kind') as Note['kind'];
+    const id = form.dataset.id!;
+    this.notes!.change((thinking) => {
+      const note = thinking.notes.find((n) => n.id === id)!;
+      note.kind = kind;
+      note.text = text;
+      note.group = kind === 'alternative' ? String(data.get('group')).trim() : '';
+      note.updated = Date.now();
+    });
+    this.editing = null;
+    this.drawNotes();
+    this.focusNote(id);
+  }
+
+  private focusNote(id: string, act = 'edit-note'): void {
+    this.shadow.querySelector<HTMLElement>(`.mr-note[data-id="${CSS.escape(id)}"] [data-act="${act}"]`)?.focus();
+  }
+
+  private changeNote(id: string, change: (note: Note) => void): void {
+    this.notes!.change((thinking) => change(thinking.notes.find((note) => note.id === id)!));
+    this.drawNotes();
+  }
+
+  /** The reader has looked again at a changed section: the note is about it as it is now. */
+  private async reconfirm(id: string): Promise<void> {
+    const source = this.source!;
+    const anchor = this.notes!.thinking.notes.find((note) => note.id === id)!.anchor!;
+    // The section was just checked at this commit, and the document is cached.
+    const digest = await digestText(sectionText(await this.load(anchor.path), anchor.heading)!);
+    if (this.source !== source) return;
+    this.changeNote(id, (note) => {
+      note.anchor = { ...anchor, commit: source.commit, digest };
+    });
+    this.anchorStates.set(id, 'current');
+    this.drawNotes();
+    this.toast(`Reconfirmed at ${shortSha(source.commit)}. Save your notes to keep it.`);
+  }
+
+  private deleteNote(id: string): void {
+    this.notes!.change((thinking) => {
+      thinking.notes = thinking.notes.filter((note) => note.id !== id);
+      for (const note of thinking.notes) note.links = note.links.filter((link) => link !== id);
+    });
+    this.chosen.delete(id);
+    this.drawNotes();
+    this.toast('Note deleted. Your saved notes keep it until you save.');
+  }
+
+  private async afterStore(done: Promise<boolean>, success: string, then?: () => void): Promise<void> {
+    const ok = await done;
+    if (this.closed) return;
+    if (ok) {
+      then?.();
+      this.toast(success);
+    }
+    this.drawNotes();
+  }
+
+  // ---------------------------------------------------------------- export
+
+  private exportText(): string {
+    const source = this.source!;
+    const targets = this.targets();
+    const ctx: ExportContext = {
+      name: source.name,
+      ref: source.ref,
+      commit: source.commit,
+      date: new Date().toISOString().slice(0, 10),
+      link: (path, heading) => `${source.links.blob(path)}${heading ? `#${heading}` : ''}`,
+      describe: (id) => targets.find((target) => target.id === id)?.label ?? null,
+    };
+    const thinking = this.notes!.thinking;
+    return this.exportFormat === 'markdown' ? exportMarkdown(thinking, this.chosen, ctx) : exportMermaid(thinking, this.chosen, ctx);
+  }
+
+  private drawExport(): void {
+    const source = this.source!;
+    const notes = this.notes!.thinking.notes;
+    const chosen = notes.filter((note) => this.chosen.has(note.id)).length;
+    const text = chosen ? this.exportText() : '';
+    const issue = chosen ? source.newIssue(`Notes on ${source.name}`, text) : '';
+    this.q('.mr-repo-export').replaceChildren(
+      exportDialog({
+        format: this.exportFormat,
+        text,
+        chosen,
+        total: notes.length,
+        issue: issue.length <= MAX_ISSUE_URL ? issue : null,
+        platform: source.platform,
+      }),
+    );
+  }
+
+  private openExport(): void {
+    this.q('.mr-repo-export').hidden = false;
+    this.drawExport();
+    this.q('[data-act="close-export"]').focus();
+  }
+
+  private closeExport(): boolean {
+    const panel = this.q('.mr-repo-export');
+    if (panel.hidden) return false;
+    panel.hidden = true;
+    this.shadow.querySelector<HTMLElement>('[data-act="export"]')?.focus();
+    return true;
+  }
+
+  private downloadExport(): void {
+    const markdown = this.exportFormat === 'markdown';
+    const url = URL.createObjectURL(new Blob([this.exportText()], { type: markdown ? 'text/markdown' : 'text/plain' }));
+    const a = h('a');
+    a.href = url;
+    a.download = `${this.source!.name.replace(/[^\w.-]+/g, '-')}-notes.${markdown ? 'md' : 'mmd'}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  // ---------------------------------------------------------------- a review's project context
+
+  private async showReview(): Promise<void> {
+    this.closeMenus();
+    this.setView('review');
+    if (!this.index && !(await this.listed('review', this.q('.mr-repo-review'), 'show-review'))) return;
+    this.drawReview();
+    this.autoIndex();
+  }
+
+  /** Documents read so far that link to a path: each with the links that connect them, flagged, never judged. */
+  private relatedTo(path: string): ReviewRelated[] {
+    const index = this.index!;
+    const found = new Map<string, ReviewRelated>();
+    for (const doc of index.docs.values()) {
+      if (doc.path === path) continue;
+      for (const link of doc.links) {
+        if (link.path === null || (link.path !== path && index.documentAt(link.path) !== path)) continue;
+        const { kind } = classify(doc, this.corrections);
+        const entry = found.get(doc.path) ?? {
+          path: doc.path,
+          title: doc.title,
+          kind: kind === 'other' ? null : KIND_NAMES[kind],
+          flag: this.changed.has(doc.path) ? 'changed' : 'worth-checking',
+          evidence: [],
+        };
+        entry.evidence.push({ path: doc.path, line: link.line, text: link.text || link.href });
+        found.set(doc.path, entry);
+      }
+    }
+    return [...found.values()].sort((a, b) => Number(a.flag > b.flag) - Number(a.flag < b.flag) || a.title.localeCompare(b.title, 'en', { numeric: true }));
+  }
+
+  private drawReview(): void {
+    const review = this.review!;
+    const index = this.index!;
+    const source = this.source!;
+    const status = h('div', 'mr-review-status');
+    status.append(this.indexStatus());
+    const configs = new Set(this.listing!.configs.files.map((file) => file.path));
+    if ([...this.changed].some((path) => configs.has(path))) status.append(configStatus(this.configState()));
+    this.q('.mr-repo-review').replaceChildren(
+      reviewView({
+        title: review.title,
+        revision: `its ${review.revision}, ${review.ref} @ ${shortSha(source.commit)}`,
+        status,
+        chapters: review.chapters.map((chapter) => ({
+          title: chapter.title,
+          files: chapter.paths.map((path) => ({
+            path,
+            changedDoc: index.documentAt(path) === path,
+            related: this.relatedTo(path),
+            declares: (this.configs.get(path)?.items ?? []).slice(0, 12).map((item) => item.name),
+          })),
+        })),
+      }),
+    );
   }
 
   // ---------------------------------------------------------------- chrome
@@ -988,8 +1621,11 @@ class RepoReader {
     const view = target.closest<HTMLElement>('[data-view]');
     if (view) {
       if (view.dataset.view === 'map') void this.showMap();
+      else if (view.dataset.view === 'notes') this.showNotes();
+      else if (view.dataset.view === 'review') void this.showReview();
       else if (this.path && this.rendered?.content.isConnected) this.setView('read');
       else if (this.path) void this.open(this.path, { push: false });
+      else this.start();
       return;
     }
     const el = target.closest<HTMLElement>('[data-act]');
@@ -1004,6 +1640,8 @@ class RepoReader {
       return;
     }
     const path = el.dataset.path;
+    const id = el.dataset.id!;
+    const notes = this.notes!;
     switch (el.dataset.act) {
       case 'close':
         this.close();
@@ -1055,7 +1693,7 @@ class RepoReader {
         this.stopIndexing();
         return;
       case 'retry-list':
-        if (this.source!.start.folder && !this.path) this.setSource(this.source!);
+        if (this.source!.start.folder && !this.path) this.start();
         else this.toggleDocs(true);
         return;
       case 'heading':
@@ -1079,6 +1717,145 @@ class RepoReader {
       case 'close-zoom':
         this.closeZoom();
         return;
+      // ---- map lenses
+      case 'lens':
+        this.lens = el.dataset.lens as 'documents' | LensName;
+        this.entityFocus = null;
+        this.drawMap();
+        this.q(`[data-act="lens"][data-lens="${this.lens}"]`).focus();
+        return;
+      case 'entity':
+        this.entityFocus = id;
+        this.drawMap();
+        this.q('.mr-map-title').focus();
+        return;
+      case 'doc-map':
+        this.lens = 'documents';
+        this.focus = path!;
+        this.drawMap();
+        this.q('.mr-map-title').focus();
+        return;
+      case 'read-configs':
+        return void this.readConfigs();
+      case 'remove-entity':
+        notes.change((thinking) => {
+          thinking.entities = thinking.entities.filter((entity) => entity.id !== id);
+          thinking.relations = thinking.relations.filter((relation) => relation.from !== id && relation.to !== id);
+          for (const note of thinking.notes) note.links = note.links.filter((link) => link !== id);
+        });
+        this.entityFocus = null;
+        this.drawMap();
+        return;
+      case 'remove-relation': {
+        const { from, to, label } = el.dataset;
+        notes.change((thinking) => {
+          thinking.relations = thinking.relations.filter((relation) => relation.from !== from || relation.to !== to || relation.label !== label);
+        });
+        this.drawMap();
+        return;
+      }
+      case 'dismiss-since':
+        this.previous = null;
+        this.drawMap();
+        return;
+      // ---- notes
+      case 'view-notes':
+        this.showNotes();
+        return;
+      case 'note-here':
+        this.showNotes();
+        this.q('form[data-act="add-note"] textarea').focus();
+        return;
+      case 'save-notes':
+        return void this.afterStore(notes.save(), 'Notes saved in this browser.');
+      case 'delete-notes':
+        this.confirmDelete = true;
+        this.drawNotes();
+        this.q('[data-act="confirm-delete-notes"]').focus();
+        return;
+      case 'confirm-delete-notes':
+        this.confirmDelete = false;
+        return void this.afterStore(notes.deleteAll(), 'Your notes for this repository are deleted.', () => {
+          this.chosen.clear();
+          this.anchorStates.clear();
+          this.applyCorrections();
+        });
+      case 'cancel-delete-notes':
+        this.confirmDelete = false;
+        this.drawNotes();
+        this.q('[data-act="delete-notes"]').focus();
+        return;
+      case 'recover':
+        notes.recover();
+        this.applyCorrections();
+        this.drawNotes();
+        this.toast('Your unsaved notes are back. Save to keep them.');
+        void this.checkAnchors();
+        return;
+      case 'discard-draft':
+        return void this.afterStore(notes.discard(), 'Unsaved notes discarded.');
+      case 'reconfirm':
+        return void this.reconfirm(id);
+      case 'detach':
+        this.anchorStates.delete(id);
+        this.changeNote(id, (note) => {
+          note.anchor = null;
+        });
+        return;
+      case 'connect':
+        this.connecting = id;
+        this.drawNotes();
+        this.q('[data-act="connect-note"]').focus();
+        return;
+      case 'cancel-connect':
+        this.connecting = null;
+        this.drawNotes();
+        this.focusNote(id, 'connect');
+        return;
+      case 'disconnect':
+        this.changeNote(id, (note) => {
+          note.links = note.links.filter((link) => link !== el.dataset.link);
+        });
+        return;
+      case 'edit-note':
+        this.editing = id;
+        this.drawNotes();
+        this.q('form[data-act="save-note"] textarea').focus();
+        return;
+      case 'cancel-edit': {
+        const editing = this.editing!;
+        this.editing = null;
+        this.drawNotes();
+        this.focusNote(editing);
+        return;
+      }
+      case 'delete-note':
+        this.deleteNote(id);
+        return;
+      // ---- export
+      case 'export':
+        this.openExport();
+        return;
+      case 'close-export':
+        this.closeExport();
+        return;
+      case 'export-format':
+        this.exportFormat = el.dataset.format as 'markdown' | 'mermaid';
+        this.drawExport();
+        this.q(`[data-act="export-format"][data-format="${this.exportFormat}"]`).focus();
+        return;
+      case 'copy-export':
+        void navigator.clipboard.writeText(this.exportText()).then(
+          () => this.toast('Copied. Paste it where you choose.'),
+          () => this.toast('Galley could not copy. Select the text and copy it instead.'),
+        );
+        return;
+      case 'download-export':
+        this.downloadExport();
+        return;
+      // ---- review
+      case 'show-review':
+        return void this.showReview();
       case 'smaller':
       case 'larger':
         this.update({ size: Math.min(TEXT_SIZES.length - 1, Math.max(0, this.settings.size + (el.dataset.act === 'larger' ? 1 : -1))) });
@@ -1087,12 +1864,66 @@ class RepoReader {
   }
 
   private onChange(e: Event): void {
-    const el = e.target as HTMLInputElement | HTMLSelectElement;
-    const box = el.closest('.mr-map-kind');
-    if (!box) return;
-    const select = box.querySelector<HTMLSelectElement>('[data-act="kind"]')!;
-    const all = box.querySelector<HTMLInputElement>('[data-act="kind-folder"]');
-    this.setKind(select.dataset.path!, select.value as DocKind, Boolean(all?.checked));
+    const el = e.target as HTMLInputElement;
+    const id = el.dataset.id!;
+    switch (el.dataset.act) {
+      case 'kind':
+      case 'kind-folder': {
+        const box = el.closest('.mr-map-kind')!;
+        const select = box.querySelector<HTMLSelectElement>('[data-act="kind"]')!;
+        const all = box.querySelector<HTMLInputElement>('[data-act="kind-folder"]');
+        this.setKind(select.dataset.path!, select.value as DocKind, Boolean(all?.checked));
+        return;
+      }
+      case 'entity-kind': {
+        // The reader's own proposal changes; a declared or documented type stays visible beside theirs.
+        const kind = el.value;
+        this.notes!.change((thinking) => {
+          const proposed = thinking.entities.find((entity) => entity.id === id);
+          if (proposed) proposed.kind = kind;
+          else
+            thinking.entityKinds = [
+              ...thinking.entityKinds.filter(([entity]) => entity !== id),
+              ...(kind === el.dataset.original ? [] : [[id, kind] as [string, string]]),
+            ];
+        });
+        this.drawMap();
+        this.q('[data-act="entity-kind"]').focus();
+        return;
+      }
+      case 'choose-note':
+        if (el.checked) this.chosen.add(id);
+        else this.chosen.delete(id);
+        return;
+      case 'connect-note': {
+        const to = el.value;
+        this.connecting = null;
+        this.changeNote(id, (note) => {
+          note.links.push(to);
+        });
+        this.focusNote(id, 'connect');
+        return;
+      }
+    }
+  }
+
+  private onSubmit(e: SubmitEvent): void {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    switch (form.dataset.act) {
+      case 'propose-entity':
+        this.proposeEntity(form);
+        return;
+      case 'propose-relation':
+        this.proposeRelation(form);
+        return;
+      case 'add-note':
+        void this.addNote(form);
+        return;
+      case 'save-note':
+        this.saveNote(form);
+        return;
+    }
   }
 
   private readonly shield = (e: Event) => {
@@ -1106,7 +1937,7 @@ class RepoReader {
   private onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       e.preventDefault();
-      if (this.closeZoom() || this.closeMenus()) {
+      if (this.closeExport() || this.closeZoom() || this.closeMenus()) {
         this.root.focus({ preventScroll: true });
         return;
       }
@@ -1128,6 +1959,10 @@ class RepoReader {
       e.preventDefault();
       if (this.view === 'map') this.q<HTMLElement>('[data-view="read"]').click();
       else void this.showMap();
+    } else if (e.key === 'n' || e.key === 'N') {
+      e.preventDefault();
+      if (this.view === 'notes') this.q<HTMLElement>('[data-view="read"]').click();
+      else this.showNotes();
     }
   }
 
