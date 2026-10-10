@@ -148,6 +148,8 @@ it('GitHub offers source files after docs without fetching them until requested,
       return response([
         { filename: 'src/main.ts', status: 'modified', changes: 2, patch: codePatch, raw_url: '' },
         { filename: 'image.png', status: 'added', changes: 0, raw_url: '' },
+        { filename: 'assets/new.bin', previous_filename: 'assets/old.bin', status: 'renamed', changes: 0, raw_url: '' },
+        { filename: 'unchanged.png', status: 'unchanged', changes: 0, raw_url: '' },
         { filename: 'README.md', status: 'modified', changes: 2, patch, raw_url: '' },
         { filename: 'src/renamed.unknown', previous_filename: 'src/old.py', status: 'renamed', changes: 0, raw_url: '' },
       ]);
@@ -159,6 +161,10 @@ it('GitHub offers source files after docs without fetching them until requested,
   );
   expect(source.docs.map((doc) => doc.path)).toStrictEqual(['README.md']);
   expect(source.codeDocs!.map((doc) => doc.path)).toStrictEqual(['src/main.ts', 'src/renamed.unknown']);
+  expect(source.otherFiles).toEqual([
+    { path: 'image.png', oldPath: 'image.png', status: 'added' },
+    { path: 'assets/new.bin', oldPath: 'assets/old.bin', status: 'renamed' },
+  ]);
   expect(rawReads).toBe(0);
   expect(await source.load(source.codeDocs![0])).toStrictEqual({ base: 'const value = 1;\n', head: 'const value = 2;\n' });
   expect(rawReads).toBe(1);

@@ -37,6 +37,24 @@ function shared(a: string, b: string): number {
   return count;
 }
 
+/** The same name and nearest-folder evidence used by both file order and review chapters. */
+export function testPartners(docs: DocRef[]): Map<DocRef, DocRef> {
+  const code = docs.filter((doc) => doc.kind === 'code' && !quietPath(doc));
+  const sources = code.filter((doc) => testedName(pathOf(doc)) === null);
+  const partners = new Map<DocRef, DocRef>();
+  for (const test of code) {
+    const subject = testedName(pathOf(test));
+    if (subject === null) continue;
+    const candidates = sources.filter((doc) => stem(pathOf(doc)) === subject);
+    if (!candidates.length) continue;
+    partners.set(
+      test,
+      candidates.reduce((best, doc) => (shared(pathOf(doc), pathOf(test)) > shared(pathOf(best), pathOf(test)) ? doc : best)),
+    );
+  }
+  return partners;
+}
+
 /**
  * The order a reviewer would read a request in: documents first, then the code, each file followed by
  * its tests, and last the files most reviewers skip (lockfiles, generated or vendored code). Within each
@@ -46,17 +64,16 @@ export function readingOrder(docs: DocRef[]): DocRef[] {
   const skippable = docs.filter((doc) => quietPath(doc));
   const rest = docs.filter((doc) => !quietPath(doc));
   const code = rest.filter((doc) => doc.kind === 'code');
-  const tests = new Map(code.flatMap((doc) => (testedName(pathOf(doc)) === null ? [] : [[doc, testedName(pathOf(doc))!] as const])));
-  const sources = code.filter((doc) => !tests.has(doc));
+  const sources = code.filter((doc) => testedName(pathOf(doc)) === null);
+  const partners = testPartners(rest);
   const after = new Map<DocRef, DocRef[]>();
   const unpaired: DocRef[] = [];
-  for (const [test, subject] of tests) {
-    const candidates = sources.filter((doc) => stem(pathOf(doc)) === subject);
-    if (!candidates.length) {
+  for (const test of code.filter((doc) => testedName(pathOf(doc)) !== null)) {
+    const partner = partners.get(test);
+    if (!partner) {
       unpaired.push(test);
       continue;
     }
-    const partner = candidates.reduce((best, doc) => (shared(pathOf(doc), pathOf(test)) > shared(pathOf(best), pathOf(test)) ? doc : best));
     after.set(partner, [...(after.get(partner) ?? []), test]);
   }
   return [...rest.filter((doc) => doc.kind !== 'code'), ...sources.flatMap((doc) => [doc, ...(after.get(doc) ?? [])]), ...unpaired, ...skippable];

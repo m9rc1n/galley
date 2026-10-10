@@ -15,6 +15,7 @@ import { startDemoServer } from '../scripts/serve.mjs';
 import { checkCodeComments, checkSpecs } from './specs.mjs';
 import { checkLargeReview } from './large.mjs';
 import { checkFilesLayout } from './files.mjs';
+import { checkChapters } from './chapters.mjs';
 
 function contrast(first, second) {
   const luminance = (colour) =>
@@ -1040,8 +1041,9 @@ try {
   await checkCodeComments(browser, demoUrl, screenshots);
   await checkLargeReview(browser, demoUrl, screenshots);
   await checkFilesLayout(browser, demoUrl, screenshots);
+  await checkChapters(browser, demoUrl, screenshots);
   console.log(
-    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, nineteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description.',
+    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, nineteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description, editable review chapters, complete file maps, chapter keyboard focus and mobile layouts.',
   );
 } finally {
   await browser.close();

@@ -1,7 +1,7 @@
 // The demo runs the real reader against sample files, so it can be tried without the extension.
 // The page itself imitates a merge request: the raw diff reviewers read today, and the Read button.
 //   ?closed  start closed   ?doc=N  start at file N   ?code-only / ?diagram-error  exercise fallbacks
-//   ?spec  a test file   ?comments  code comments   ?large  folded files, moved code and a map of changed declarations
+//   ?spec  a test file   ?comments  code comments   ?large  folded files and moved code   ?chapters  mixed review map
 import { structuredPatch } from 'diff';
 import type { DocRef, ReviewSource, Thread } from '../src/platforms/types.ts';
 import { Launcher } from '../src/ui/launcher.ts';
@@ -67,8 +67,23 @@ const source: ReviewSource = {
       'Closes #311.',
     ].join('\n'),
   },
-  docs: params.has('large') ? largeDocs : params.has('code-only') || params.has('spec') || params.has('comments') ? [] : docs,
-  codeDocs: params.has('large') ? largeCode : params.has('spec') ? [spec] : params.has('comments') ? [notes] : codeDocs,
+  docs: params.has('chapters')
+    ? [...docs, ...largeDocs]
+    : params.has('large')
+      ? largeDocs
+      : params.has('code-only') || params.has('spec') || params.has('comments')
+        ? []
+        : docs,
+  codeDocs: params.has('chapters')
+    ? [...codeDocs, ...largeCode, spec]
+    : params.has('large')
+      ? largeCode
+      : params.has('spec')
+        ? [spec]
+        : params.has('comments')
+          ? [notes]
+          : codeDocs,
+  otherFiles: params.has('chapters') ? [{ path: 'assets/review.png', oldPath: 'assets/review.png', status: 'added' }] : [],
   load: contents,
   async prepareComment(target) {
     return {

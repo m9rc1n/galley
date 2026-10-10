@@ -2791,6 +2791,227 @@
   z-index: 40;
 }
 
+/* A quiet route alongside the full file list. Chapter changes never replace the document nodes. */
+.mr-chapter-route {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0 0 32px;
+  padding: 12px 0;
+  color: var(--muted);
+  font: 400 13px / 1.5 var(--sans);
+}
+.mr-chapter-route-text {
+  flex: 1;
+  min-width: 100px;
+  overflow-wrap: anywhere;
+}
+.mr-chapters {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  font: 400 14px / 1.5 var(--sans);
+}
+.mr-root.chapters-open {
+  overflow: hidden;
+}
+.mr-chapters-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+.mr-chapters-panel {
+  position: absolute;
+  top: 64px;
+  right: 16px;
+  box-sizing: border-box;
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100% - 80px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+.mr-chapters-header,
+.mr-chapters-tools,
+.mr-chapter-edit-order {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mr-chapters-header {
+  justify-content: space-between;
+}
+.mr-chapters-header h2 {
+  margin: 0;
+  font: 500 28px / 1.2 var(--serif);
+}
+.mr-chapters-intro,
+.mr-chapters-progress,
+.mr-chapter-reason,
+.mr-chapters-footer p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.mr-chapters-progress {
+  margin: 20px 0 10px;
+}
+.mr-chapter-button {
+  padding: 8px 12px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--accent);
+  background: var(--soft);
+  font: 500 13px / 1.4 var(--sans);
+  cursor: pointer;
+}
+.mr-chapter-button:hover,
+.mr-chapter-button[aria-pressed="true"] {
+  background: var(--selected-bg);
+}
+.mr-chapter-button:disabled {
+  color: var(--muted);
+  background: transparent;
+  cursor: default;
+}
+.mr-chapters-content {
+  margin-top: 24px;
+}
+.mr-chapter {
+  margin: 0 0 12px;
+}
+.mr-chapter summary {
+  padding: 12px 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.mr-chapter-title {
+  font-weight: 600;
+}
+.mr-chapter-progress {
+  display: block;
+  margin-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.mr-chapter-body {
+  padding: 0 0 16px 18px;
+}
+.mr-chapter-reason {
+  margin: 0 0 12px;
+}
+.mr-chapter-introduction {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mr-chapter-files {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.mr-chapter-file {
+  margin: 0 0 4px;
+  border-radius: 8px;
+}
+.mr-chapter-file.is-current {
+  background: var(--selected-bg);
+}
+.mr-chapter-file-link {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.mr-chapter-file-link:hover {
+  background: var(--soft);
+}
+.mr-chapter-path {
+  font: 400 13px / 1.5 var(--mono);
+  overflow-wrap: anywhere;
+}
+.mr-chapter-file-state,
+.mr-chapter-file-link small {
+  color: var(--muted);
+  font: 400 12px / 1.4 var(--sans);
+  overflow-wrap: anywhere;
+}
+.mr-chapter-body label,
+.mr-chapter-assignment label {
+  display: block;
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.mr-chapters input,
+.mr-chapters textarea,
+.mr-chapters select {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px solid var(--control-rule);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 14px / 1.5 var(--sans);
+}
+.mr-chapters textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.mr-chapter-assignment {
+  margin: 24px 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--soft);
+}
+.mr-chapters-footer {
+  margin-top: 24px;
+}
+.mr-chapters-footer > button {
+  margin: 0 8px 8px 0;
+}
+.mr-chapters-feedback {
+  color: var(--accent);
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .mr-chapters-panel {
+    inset: 0;
+    width: 100%;
+    max-height: 100%;
+    padding: 20px;
+    border-radius: 0;
+  }
+  .mr-chapter-button,
+  .mr-chapter summary {
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+  .mr-chapters-toggle {
+    min-height: 44px;
+  }
+}
+
 .mr-settings-backdrop {
   position: absolute;
   inset: 0;

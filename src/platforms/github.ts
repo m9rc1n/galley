@@ -156,6 +156,14 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
     }));
   const docs = all.filter((doc) => doc.kind !== 'code');
   const codeDocs = all.filter((doc) => doc.kind === 'code');
+  const readable = new Set(all.map((doc) => doc.path));
+  const otherFiles = files
+    .filter((file) => !readable.has(file.filename) && file.status !== 'unchanged')
+    .map((file) => ({
+      path: file.filename,
+      oldPath: file.previous_filename ?? file.filename,
+      status: mapStatus(file.status),
+    }));
 
   const replyFor = (id: number): Thread['reply'] =>
     !Number.isSafeInteger(id) || id < 1
@@ -201,6 +209,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
     diffUrl: `${repoUrl}/pull/${ctx.number}/files`,
     docs,
     codeDocs,
+    otherFiles,
     viewed: hasToken ? githubViewed(ctx, github, all, headSha, pr.base.sha) : undefined,
     async load(ref) {
       const { file } = ref as GitHubDoc;

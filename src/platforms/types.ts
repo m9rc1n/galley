@@ -75,6 +75,8 @@ export interface ReviewSource {
   docs: DocRef[];
   /** Optional text source files, appended after documents when enabled. */
   codeDocs?: DocRef[];
+  /** Changed formats the reader cannot render; chapter maps still account for them. */
+  otherFiles?: DocRef[];
   load(doc: DocRef): Promise<DocContents>;
   links(doc: DocRef): RepoLinks;
   /** Native platform review progress, if the current authentication supports it. */

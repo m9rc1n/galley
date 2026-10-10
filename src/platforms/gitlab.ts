@@ -84,6 +84,14 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
     }));
   const docs = all.filter((doc) => doc.kind !== 'code');
   const codeDocs = all.filter((doc) => doc.kind === 'code');
+  const readable = new Set(all.map((doc) => doc.path));
+  const otherFiles = diffs
+    .filter((diff) => !readable.has(diff.new_path))
+    .map((diff) => ({
+      path: diff.new_path,
+      oldPath: diff.old_path,
+      status: status(diff),
+    }));
 
   const replyFor = (id: string | undefined): Thread['reply'] =>
     !id
@@ -126,6 +134,7 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
     diffUrl: `${webBase}/-/merge_requests/${ctx.iid}/diffs`,
     docs,
     codeDocs,
+    otherFiles,
     async load(doc) {
       // base_sha is the merge base: exactly what GitLab's own diff compares against.
       const [base, head] = await Promise.all([
