@@ -277,18 +277,24 @@ const REPO_DOCS = [
   'docs/rfcs/0042-reading-first-reviews.md',
   'docs/runbooks/deploy.md',
 ];
+/** Configuration the infrastructure view reads, on request, from the same handbook. */
+const REPO_CONFIGS = ['.github/workflows/deploy.yml', 'docker-compose.yml', 'infra/main.tf', 'k8s/reviews.yaml'];
 const start = params.get('repo') ?? '';
 const repository: RepositorySource = {
   platform: 'GitHub',
+  id: 'github:https://github.com/acme/handbook',
   name: 'acme/handbook',
   ref: 'main',
   commit: '4f2c9e1a7b3d5c8e0f6a2b4d9c1e3f5a7b8c0d2e',
+  pinned: false,
   start: { path: start, folder: !start.endsWith('.md') },
   url: location.href,
-  discover: async () => ({ docs: REPO_DOCS.map((path) => ({ path })), limits: [] }),
+  discover: async () => ({ docs: REPO_DOCS.map((path) => ({ path })), limits: [], configs: { files: REPO_CONFIGS.map((path) => ({ path })), limits: [] } }),
   load: (path) => text(`samples/repo/${path}`),
   links: { raw: (path) => `samples/repo/${path}`, blob: (path) => `samples/repo/${path}` },
   refresh: async () => repository,
+  // The demo has no issue tracker; the form would open on the sample's own (imaginary) site.
+  newIssue: (title, body) => `https://github.com/acme/handbook/issues/new?${new URLSearchParams({ title, body })}`,
 };
 
 const open = () => {

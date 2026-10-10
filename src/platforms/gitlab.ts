@@ -2,10 +2,13 @@ import { commentContext, diffRange, gitlabThreads, requireBody, validateTarget, 
 import { encodePath, isMarkdownPath, isCodePath } from '../core/paths.ts';
 import type { GitLabContext } from './detect.ts';
 import { getJson, getText, HttpError } from './http.ts';
-import { ReaderError, type DocRef, type DocStatus, type ReviewSource, type Thread } from './types.ts';
+import { gitlabRepositoryAt } from './gitlab-repo.ts';
+import { ReaderError, type DocRef, type DocStatus, type RepositorySource, type ReviewProject, type ReviewSource, type Thread } from './types.ts';
 
 interface MergeRequest {
   title: string;
+  source_branch?: string;
+  target_branch?: string;
   description?: string | null;
   author?: { username: string; name?: string | null } | null;
   diff_refs: { base_sha: string; head_sha: string; start_sha: string } | null;
@@ -121,9 +124,25 @@ export async function loadGitLab(ctx: GitLabContext): Promise<ReviewSource> {
           }
         };
 
+  const project: ReviewProject = {
+    // base_sha is the merge base, the version the review's diff compares against.
+    base: { ref: mr.target_branch ?? refs.base_sha.slice(0, 7), commit: refs.base_sha },
+    head: { ref: mr.source_branch ?? refs.head_sha.slice(0, 7), commit: refs.head_sha },
+    open(revision) {
+      const source: RepositorySource = gitlabRepositoryAt(ctx, {
+        ...project[revision],
+        pinned: true,
+        start: { path: '', folder: true },
+        refresh: async () => source,
+      });
+      return source;
+    },
+  };
+
   return {
     title: mr.title,
     subtitle: `${ctx.projectPath} · !${ctx.iid}`,
+    project,
     overview: {
       kind: 'Merge request',
       title: mr.title,

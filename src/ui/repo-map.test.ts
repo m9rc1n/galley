@@ -1,9 +1,10 @@
 import { expect, it, vi } from 'vitest';
+import type { RepoDiscovery } from '../core/discovery.ts';
 import { INDEX_BATCH } from '../core/docindex.ts';
 import { MAX_DOCUMENT_CHARS } from '../core/limits.ts';
 import { ReaderError } from '../platforms/types.ts';
 import { deferred } from '../testing/reader.ts';
-import { handbook, repoHarness, repository, words } from '../testing/repo.ts';
+import { handbook, listing, repoHarness, repository, words } from '../testing/repo.ts';
 
 const drawn = vi.hoisted(() => ({ renderDiagrams: vi.fn(), highlightCode: vi.fn(async () => {}) }));
 vi.mock('./diagrams.ts', async (original) => ({ ...(await original<typeof import('./diagrams.ts')>()), renderDiagrams: drawn.renderDiagrams }));
@@ -70,7 +71,7 @@ it('links the map cannot follow are listed with the link that makes them', async
     'section line 3: “also-missing” is not a section of a.md.',
   ]);
   ui.close();
-  vi.mocked(source.discover).mockResolvedValue({ docs: [{ path: 'a.md' }, { path: 'b.md' }], limits: ['GitHub listed only part of docs/.'] });
+  vi.mocked(source.discover).mockResolvedValue(listing(['a.md', 'b.md'], ['GitHub listed only part of docs/.']));
   await ui.open(source);
   await showMap();
   expect(ui.text('.mr-map-problems li')).toBe('gone line 3: gone.md is not among the listed documents, which are incomplete.');
@@ -96,6 +97,7 @@ it('a large repository is read for the map in bounded passes that can be stopped
         .map((path) => ({ path })),
     ],
     limits: [],
+    configs: { files: [], limits: [] },
   }));
   await ui.open(source);
   ui.click('[data-view="map"]');
@@ -234,13 +236,13 @@ it('a large outline opens only the folders around the current document', async (
 });
 
 it('the list says when the repository is still being listed, has no documents, or could not be listed', async () => {
-  const listing = deferred<{ docs: Array<{ path: string }>; limits: string[] }>();
+  const pending = deferred<RepoDiscovery>();
   const source = repository(handbook, { start: { path: 'README.md', folder: false } });
-  vi.mocked(source.discover).mockReturnValueOnce(listing.promise).mockRejectedValueOnce(new Error('offline'));
+  vi.mocked(source.discover).mockReturnValueOnce(pending.promise).mockRejectedValueOnce(new Error('offline'));
   await ui.open(source);
   ui.click('[data-act="docs"]');
   expect(ui.text('.mr-repo-outline')).toBe('Listing documents…');
-  listing.reject(new Error('offline'));
+  pending.reject(new Error('offline'));
   await vi.waitFor(() => expect(ui.text('.mr-repo-outline')).toBe('Galley could not list this repository. Try again'));
   ui.press('Try again');
   await vi.waitFor(() => expect(ui.text('.mr-repo-outline')).toBe('Galley could not list this repository. Try again'));
@@ -269,20 +271,20 @@ it('a listing that fails in the map can be tried again; the read view is where i
   expect(ui.text('.mr-lead')).toBe('ADR 1: Use Markdown');
   // Leaving the map before the listing arrives keeps the reader in the document.
   ui.close();
-  const listing = deferred<{ docs: Array<{ path: string }>; limits: string[] }>();
+  const pending = deferred<RepoDiscovery>();
   const slow = repository(handbook, { start: { path: decision, folder: false } });
-  vi.mocked(slow.discover).mockReturnValueOnce(listing.promise);
+  vi.mocked(slow.discover).mockReturnValueOnce(pending.promise);
   await ui.open(slow);
   ui.click('[data-view="map"]');
   ui.click('[data-view="read"]');
-  listing.reject(new Error('offline'));
-  await listing.promise.catch(() => {});
+  pending.reject(new Error('offline'));
+  await pending.promise.catch(() => {});
   expect(ui.q('.mr-repo-map').hidden).toBe(true);
-  const second = deferred<{ docs: Array<{ path: string }>; limits: string[] }>();
+  const second = deferred<RepoDiscovery>();
   vi.mocked(slow.discover).mockReturnValueOnce(second.promise);
   ui.click('[data-view="map"]');
   ui.click('[data-view="read"]');
-  second.resolve({ docs: [{ path: decision }], limits: [] });
+  second.resolve(listing([decision]));
   await second.promise;
   expect(ui.q('.mr-repo-map').hidden).toBe(true);
   // Without a document open, Read has nothing to show.
@@ -385,7 +387,7 @@ it('a newer commit stops a pass reading for the map; a check answered after clos
 });
 
 it('a commit page is pinned: there is nothing newer to check', async () => {
-  await ui.open(repository(handbook, { ref: 'c0ffee1' }));
+  await ui.open(repository(handbook, { ref: 'c0ffee1', pinned: true }));
   const refresh = ui.q<HTMLButtonElement>('[data-act="refresh"]');
   expect(refresh.disabled).toBe(true);
   expect(refresh.title).toBe('Reading commit c0ffee1234567890abcdef1234567890abcdef12');
@@ -418,14 +420,14 @@ it('a reader closed while documents are read for the map stops reading', async (
 });
 
 it('the map can be closed while the listing is on its way', async () => {
-  const listing = deferred<{ docs: Array<{ path: string }>; limits: string[] }>();
+  const pending = deferred<RepoDiscovery>();
   const source = repository(handbook, { start: { path: 'README.md', folder: false } });
-  vi.mocked(source.discover).mockReturnValueOnce(listing.promise);
+  vi.mocked(source.discover).mockReturnValueOnce(pending.promise);
   await ui.open(source);
   ui.click('[data-view="map"]');
   ui.close();
-  listing.resolve({ docs: [{ path: 'README.md' }], limits: [] });
-  await listing.promise;
+  pending.resolve(listing(['README.md']));
+  await pending.promise;
   expect(document.querySelector('#galley-repo-reader')).toBeNull();
 });
 
@@ -443,16 +445,16 @@ it('evidence without link text or a section is still named, and opens where the 
 
 it('the documents list names what the listing could not cover', async () => {
   const source = repository();
-  vi.mocked(source.discover).mockResolvedValue({ docs: [{ path: 'README.md' }], limits: ['This repository is too large for GitHub to list in one go.'] });
+  vi.mocked(source.discover).mockResolvedValue(listing(['README.md'], ['This repository is too large for GitHub to list in one go.']));
   await ui.open(source);
   ui.click('[data-act="docs"]');
   expect(ui.text('.mr-repo-notes')).toBe('This repository is too large for GitHub to list in one go.');
 });
 
 it('a listing for an older commit is dropped when the reader has moved to a newer one', async () => {
-  const listing = deferred<{ docs: Array<{ path: string }>; limits: string[] }>();
+  const pending = deferred<RepoDiscovery>();
   const source = repository(handbook, { start: { path: 'README.md', folder: false }, ref: null });
-  vi.mocked(source.discover).mockReturnValueOnce(listing.promise);
+  vi.mocked(source.discover).mockReturnValueOnce(pending.promise);
   await ui.open(source);
   ui.click('[data-act="docs"]');
   ui.key('Escape');
@@ -462,8 +464,8 @@ it('a listing for an older commit is dropped when the reader has moved to a newe
   vi.mocked(source.refresh).mockResolvedValueOnce(moved);
   ui.click('[data-act="refresh"]');
   await vi.waitFor(() => expect(ui.text('.mr-repo-commit-label')).toBe('beef000'));
-  listing.resolve({ docs: [{ path: 'stale.md' }], limits: [] });
-  await listing.promise;
+  pending.resolve(listing(['stale.md']));
+  await pending.promise;
   ui.click('[data-act="docs"]');
   await vi.waitFor(() => expect(ui.all('.mr-repo-outline .mr-menu-item').map((b) => b.dataset.path)).toStrictEqual(Object.keys(handbook)));
 });

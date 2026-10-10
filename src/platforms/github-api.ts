@@ -31,11 +31,15 @@ const safeDecode = (value: string) => {
   }
 };
 
-/** Reading a repository's documents: one ref resolved to its commit, and the file tree at a commit. */
+/** The file tree at a commit: what a repository page, or a review opening its project docs, lists. */
+function treeRead(resource: string, search: URLSearchParams): boolean {
+  return /^git\/trees\/[^/]+$/.test(resource) && [...search.keys()].every((key) => key === 'recursive');
+}
+
+/** Reading a repository's documents from its page: one ref resolved to its commit, and the file tree. */
 function repositoryRead(resource: string, search: URLSearchParams): boolean {
-  const keys = [...search.keys()];
-  if (resource === 'commits') return keys.every((key) => key === 'sha' || key === 'per_page');
-  return /^git\/trees\/[^/]+$/.test(resource) && keys.every((key) => key === 'recursive');
+  if (resource === 'commits') return [...search.keys()].every((key) => key === 'sha' || key === 'per_page');
+  return treeRead(resource, search);
 }
 
 /**
@@ -94,8 +98,9 @@ export function allowedRequest(origin: string, page: string | null, url: string,
   if (method === 'GET') {
     if (repository) return repositoryRead(resource, target.searchParams);
     if (/^pulls\/\d+(?:\/files|\/comments)?$/.test(resource) || /^compare\/[^/]+$/.test(resource)) return true;
-    // Tests call without a page, and may use every endpoint; a pull request page never reads trees.
-    return !page && repositoryRead(resource, target.searchParams);
+    // A pull request page lists its repository's tree for Project docs; it never resolves other refs.
+    // Tests call without a page, and may use every endpoint.
+    return page ? treeRead(resource, target.searchParams) : repositoryRead(resource, target.searchParams);
   }
   if (method === 'POST') return !repository && /^pulls\/\d+\/comments$/.test(resource) && !target.search;
   return false;

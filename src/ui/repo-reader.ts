@@ -305,8 +305,8 @@ class RepoReader {
     const refresh = this.q('[data-act="refresh"]');
     refresh.hidden = false;
     this.q('.mr-repo-commit-label').textContent = at;
-    // A commit never moves; a branch or tag can be checked again.
-    const pinned = source.ref !== null && source.commit.startsWith(source.ref);
+    // A commit, or a review's base or head, never moves; a branch or tag can be checked again.
+    const pinned = source.pinned;
     refresh.toggleAttribute('disabled', pinned);
     refresh.title = pinned
       ? `Reading commit ${source.commit}`

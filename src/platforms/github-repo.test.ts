@@ -28,16 +28,35 @@ it('a repository page reads the default branch at one commit, listing its Markdo
     if (url === `${api}/commits?per_page=1`) return jsonResponse([{ sha: head }]);
     if (url === `${api}/git/trees/c1?recursive=1`)
       return jsonResponse({
-        tree: [blob('README.md', 120), { path: 'docs', type: 'tree' }, blob('docs/adr/0001-use-markdown.md'), blob('src/app.ts')],
+        tree: [
+          blob('README.md', 120),
+          { path: 'docs', type: 'tree' },
+          blob('docs/adr/0001-use-markdown.md'),
+          blob('src/app.ts'),
+          blob('docker-compose.yml', 300),
+        ],
         truncated: false,
       });
     if (url === 'https://github.com/acme/handbook/raw/c1/docs/adr/0001-use-markdown.md') return new Response('# Use Markdown');
     return new Response('', { status: 500 });
   });
   const source = await load(context('root'));
-  expect(source).toMatchObject({ platform: 'GitHub', name: 'acme/handbook', ref: null, commit: 'c1', start: { path: '', folder: true } });
+  expect(source).toMatchObject({
+    platform: 'GitHub',
+    id: 'github:https://github.com/acme/handbook',
+    name: 'acme/handbook',
+    ref: null,
+    commit: 'c1',
+    pinned: false,
+    start: { path: '', folder: true },
+  });
+  expect(source.newIssue('Notes', 'Body & more')).toBe('https://github.com/acme/handbook/issues/new?title=Notes&body=Body+%26+more');
   expect(source.url).toBe('https://github.com/acme/handbook/tree/c1');
-  expect(await source.discover()).toStrictEqual({ docs: [{ path: 'README.md', size: 120 }, { path: 'docs/adr/0001-use-markdown.md' }], limits: [] });
+  expect(await source.discover()).toStrictEqual({
+    docs: [{ path: 'README.md', size: 120 }, { path: 'docs/adr/0001-use-markdown.md' }],
+    limits: [],
+    configs: { files: [{ path: 'docker-compose.yml', size: 300 }], limits: [] },
+  });
   expect(await source.load('docs/adr/0001-use-markdown.md')).toBe('# Use Markdown');
   expect(source.links.raw('img/a b.png')).toBe('https://github.com/acme/handbook/raw/c1/img/a%20b.png');
   expect(source.links.blob('docs/x.md')).toBe('https://github.com/acme/handbook/blob/c1/docs/x.md');
@@ -60,7 +79,7 @@ it('a branch with slashes is found by trying the shortest ref first', async () =
     return jsonResponse({}, 500);
   });
   const folder = await load(context('tree', ['release', '2.0', 'docs', 'adr']));
-  expect(folder).toMatchObject({ ref: 'release/2.0', commit: 'c9', start: { path: 'docs/adr', folder: true } });
+  expect(folder).toMatchObject({ ref: 'release/2.0', commit: 'c9', pinned: false, start: { path: 'docs/adr', folder: true } });
   expect(tried).toHaveLength(2);
   mockFetch((url) => (url.includes('sha=main&') ? jsonResponse({ message: 'No commit found' }, 422) : jsonResponse([{ sha: 'c3' }])));
   const file = await load(context('blob', ['main', 'v2', 'docs', 'guide.md']));
@@ -75,14 +94,19 @@ it('a tree too large for one listing is listed again by documentation folder, an
       return jsonResponse({
         tree: [
           blob('README.md'),
+          blob('.gitlab-ci.yml'),
           { path: 'docs', type: 'tree', sha: 't-docs' },
           { path: 'adr', type: 'tree', sha: 't-adr' },
           { path: 'lib', type: 'tree', sha: 't-lib' },
+          { path: 'k8s', type: 'tree', sha: 't-k8s' },
+          { path: '.github', type: 'tree', sha: 't-gh' },
         ],
         truncated: false,
       });
     if (url === `${api}/git/trees/t-docs?recursive=1`) return jsonResponse({ tree: [blob('guide.md'), { path: 'img', type: 'tree' }], truncated: true });
     if (url === `${api}/git/trees/t-adr?recursive=1`) return jsonResponse({ tree: [blob('0001.md')], truncated: false });
+    if (url === `${api}/git/trees/t-gh?recursive=1`) return jsonResponse({ tree: [blob('workflows/ci.yml')], truncated: false });
+    if (url === `${api}/git/trees/t-k8s?recursive=1`) return jsonResponse({ tree: [blob('api.yaml')], truncated: true });
     return jsonResponse({}, 500);
   });
   const source = await load(context('root'));
@@ -92,13 +116,19 @@ it('a tree too large for one listing is listed again by documentation folder, an
       'This repository is too large for GitHub to list in one go. Top-level files and docs/, adr/ are listed in full; other documents may be missing.',
       'GitHub listed only part of docs/.',
     ],
+    configs: {
+      files: [{ path: '.github/workflows/ci.yml' }, { path: '.gitlab-ci.yml' }, { path: 'k8s/api.yaml' }],
+      limits: ['Only configuration at the top level and .github/, k8s/ is listed; other files may be missing.', 'GitHub listed only part of k8s/.'],
+    },
   });
   mockFetch((url) => {
     if (url.includes('/commits?')) return jsonResponse([{ sha: 'c1' }]);
     return jsonResponse({ tree: [blob('README.md')], truncated: url.endsWith('recursive=1') });
   });
   const plain = await load(context('root'));
-  expect((await plain.discover()).limits).toStrictEqual(['This repository is too large for GitHub to list in one go. other documents may be missing.']);
+  const partial = await plain.discover();
+  expect(partial.limits).toStrictEqual(['This repository is too large for GitHub to list in one go. other documents may be missing.']);
+  expect(partial.configs.limits).toStrictEqual(['Only configuration at the top level is listed; other files may be missing.']);
 });
 
 it('explains a repository, branch or document that cannot be read, with or without a token', async () => {
@@ -131,4 +161,10 @@ it('explains a repository, branch or document that cannot be read, with or witho
   });
   await expect(source.load('gone.md')).rejects.toThrow('This document is not in the repository at this commit.');
   await expect(source.load('locked.md')).rejects.toThrow('GitHub returned an error (403).');
+});
+
+it('a commit page is pinned: there is nothing newer to read', async () => {
+  mockFetch(() => jsonResponse([{ sha: 'abc1234def' }]));
+  const source = await load(context('tree', ['abc1234', 'docs']));
+  expect(source).toMatchObject({ ref: 'abc1234', commit: 'abc1234def', pinned: true });
 });

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, vi } from 'vitest';
+import type { RepoDiscovery } from '../core/discovery.ts';
 import { ReaderError, type RepositorySource } from '../platforms/types.ts';
 import { openRepository, type RepoReaderHandle } from '../ui/repo-reader.ts';
 
@@ -11,16 +12,29 @@ export const handbook: Record<string, string> = {
     '---\ntype: spec\ndescription: How documents are read\n---\n\n# Reading\n\n## Goals\n\nRead [the decision](../adr/0001-use-markdown.md).',
 };
 
+/** A listing of these documents, complete unless `limits` says otherwise, and with no configuration. */
+export function listing(docs: string[], limits: string[] = [], configs: string[] = []): RepoDiscovery {
+  return { docs: docs.map((path) => ({ path })), limits, configs: { files: configs.map((path) => ({ path })), limits: [] } };
+}
+
 /** A repository read at one commit, from files in memory. Missing files fail the way the platforms say. */
 export function repository(files: Record<string, string> = handbook, patch: Partial<RepositorySource> = {}): RepositorySource {
   const source: RepositorySource = {
     platform: 'GitHub',
+    id: 'github:https://github.com/acme/handbook',
     name: 'acme/handbook',
     ref: 'main',
     commit: 'c0ffee1234567890abcdef1234567890abcdef12',
+    pinned: false,
     start: { path: '', folder: true },
     url: 'https://github.com/acme/handbook/tree/c0ffee1',
-    discover: vi.fn(async () => ({ docs: Object.keys(files).map((path) => ({ path })), limits: [] })),
+    discover: vi.fn(async () =>
+      listing(
+        Object.keys(files).filter((path) => path.endsWith('.md')),
+        [],
+        Object.keys(files).filter((path) => !path.endsWith('.md')),
+      ),
+    ),
     load: vi.fn(async (path: string) => {
       if (!(path in files))
         throw new ReaderError('This document is not in the repository at this commit.', 'The link may point to a file that was moved or removed.');
@@ -28,6 +42,7 @@ export function repository(files: Record<string, string> = handbook, patch: Part
     }),
     links: { raw: (path) => `https://github.com/acme/handbook/raw/c0ffee1/${path}`, blob: (path) => `https://github.com/acme/handbook/blob/c0ffee1/${path}` },
     refresh: vi.fn(async () => source),
+    newIssue: (title, body) => `https://github.com/acme/handbook/issues/new?${new URLSearchParams({ title, body })}`,
     ...patch,
   };
   return source;

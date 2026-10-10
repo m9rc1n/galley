@@ -1,4 +1,4 @@
-import { collectDocs, docRoots, type TreeEntry } from '../core/discovery.ts';
+import { collectDocs, configRoots, docRoots, type TreeEntry } from '../core/discovery.ts';
 import { encodePath } from '../core/paths.ts';
 import { refCandidates, type GitLabRepoContext } from './detect.ts';
 import { getJson, getText, HttpError } from './http.ts';
@@ -6,7 +6,7 @@ import { ReaderError, type RepositorySource } from './types.ts';
 
 /** Pages of 100 entries for the whole tree; a repository larger than this is listed by folder. */
 const TREE_PAGES = 20;
-/** Pages for each documentation folder listed on its own. */
+/** Pages for each documentation or configuration folder listed on its own. */
 const FOLDER_PAGES = 5;
 
 function explain(err: unknown): Error {
@@ -20,18 +20,103 @@ function explain(err: unknown): Error {
   return new ReaderError(`GitLab returned an error (${err.status}).`, 'Try again in a moment.');
 }
 
-/** A GitLab project's documents at one commit, read with the browser session like merge requests. */
-export async function loadGitLabRepository(ctx: GitLabRepoContext): Promise<RepositorySource> {
-  const api = `${ctx.origin}${ctx.prefix}/api/v4/projects/${ctx.projectId ?? encodeURIComponent(ctx.projectPath)}`;
-  const webBase = `${ctx.origin}${ctx.prefix}/${ctx.projectPath}`;
-  const json = async <T>(url: string) => {
-    try {
-      return await getJson<T>(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-    } catch (err) {
-      throw explain(err);
-    }
-  };
+/** Where a GitLab project lives: its site, any sub-path install, and its path or id. */
+export interface GitLabProject {
+  origin: string;
+  prefix: string;
+  projectPath: string;
+  projectId: string | null;
+}
 
+interface Snapshot {
+  ref: string | null;
+  commit: string;
+  start: RepositorySource['start'];
+  pinned: boolean;
+  refresh(): Promise<RepositorySource>;
+}
+
+const apiOf = (where: GitLabProject) => `${where.origin}${where.prefix}/api/v4/projects/${where.projectId ?? encodeURIComponent(where.projectPath)}`;
+
+/** A GitLab project's documents at one commit, read with the browser session like merge requests. */
+export function gitlabRepositoryAt(where: GitLabProject, at: Snapshot): RepositorySource {
+  const api = apiOf(where);
+  const webBase = `${where.origin}${where.prefix}/${where.projectPath}`;
+  const { commit } = at;
+  /** Recursive listing of one folder ('' for all), at most `pages` pages of 100. */
+  const list = async (folder: string, pages: number, recursive = true) => {
+    const entries: TreeEntry[] = [];
+    for (let page = 1; page <= pages; page++) {
+      const query = new URLSearchParams({ ...(folder ? { path: folder } : {}), ...(recursive ? { recursive: 'true' } : {}), per_page: '100', ref: commit });
+      let data: TreeEntry[];
+      let headers: Headers;
+      try {
+        ({ data, headers } = await getJson<TreeEntry[]>(`${api}/repository/tree?${query}&page=${page}`, {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        }));
+      } catch (err) {
+        throw explain(err);
+      }
+      entries.push(...data);
+      if (!headers.get('x-next-page')) return { entries, complete: true };
+    }
+    return { entries, complete: false };
+  };
+  return {
+    platform: 'GitLab',
+    id: `gitlab:${webBase}`,
+    name: where.projectPath,
+    ref: at.ref,
+    commit,
+    pinned: at.pinned,
+    start: at.start,
+    url: `${webBase}/-/tree/${commit}`,
+    async discover() {
+      const limits: string[] = [];
+      const configLimits: string[] = [];
+      const whole = await list('', TREE_PAGES);
+      const entries = whole.entries;
+      if (!whole.complete) {
+        const root = await list('', 1, false);
+        entries.push(...root.entries);
+        const folders = docRoots(root.entries);
+        const configFolders = configRoots(root.entries);
+        for (const folder of [...folders, ...configFolders]) {
+          const sub = await list(folder.path, FOLDER_PAGES);
+          entries.push(...sub.entries);
+          if (!sub.complete) (folders.includes(folder) ? limits : configLimits).push(`Only part of ${folder.path}/ is listed.`);
+        }
+        const listed = folders.length
+          ? `${folders.map((folder) => `${folder.path}/`).join(', ')} ${folders.length === 1 ? 'is' : 'are'} listed separately; `
+          : '';
+        limits.unshift(`This repository has more files than Galley lists at once. ${listed}other documents may be missing.`);
+        const configListed = configFolders.length ? ` and ${configFolders.map((folder) => `${folder.path}/`).join(', ')}` : '';
+        configLimits.unshift(`Only configuration at the top level${configListed} is listed; other files may be missing.`);
+      }
+      return collectDocs(entries, limits, configLimits);
+    },
+    async load(file) {
+      try {
+        return await getText(`${api}/repository/files/${encodeURIComponent(file)}/raw?ref=${commit}`);
+      } catch (err) {
+        if (err instanceof HttpError && err.status === 404)
+          throw new ReaderError('This document is not in the repository at this commit.', 'The link may point to a file that was moved or removed.');
+        throw explain(err);
+      }
+    },
+    links: {
+      raw: (file) => `${webBase}/-/raw/${commit}/${encodePath(file)}`,
+      blob: (file) => `${webBase}/-/blob/${commit}/${encodePath(file)}`,
+    },
+    refresh: at.refresh,
+    newIssue: (title, body) => `${webBase}/-/issues/new?${new URLSearchParams({ 'issue[title]': title, 'issue[description]': body })}`,
+  };
+}
+
+/** The project page's branch, tag or commit, resolved to one commit. */
+export async function loadGitLabRepository(ctx: GitLabRepoContext): Promise<RepositorySource> {
+  const api = apiOf(ctx);
   // The shortest ref GitLab knows wins, as in GitLab's own pages; HEAD is the default branch.
   let resolved: { ref: string | null; path: string; commit: string } | null = null;
   for (const candidate of refCandidates(ctx)) {
@@ -55,59 +140,11 @@ export async function loadGitLabRepository(ctx: GitLabRepoContext): Promise<Repo
         : 'Make sure you are signed in and can see this project.',
     );
   const { ref, path, commit } = resolved;
-
-  /** Recursive listing of one folder ('' for all), at most `pages` pages of 100. */
-  const list = async (folder: string, pages: number, recursive = true) => {
-    const entries: TreeEntry[] = [];
-    for (let page = 1; page <= pages; page++) {
-      const query = new URLSearchParams({ ...(folder ? { path: folder } : {}), ...(recursive ? { recursive: 'true' } : {}), per_page: '100', ref: commit });
-      const { data, headers } = await json<TreeEntry[]>(`${api}/repository/tree?${query}&page=${page}`);
-      entries.push(...data);
-      if (!headers.get('x-next-page')) return { entries, complete: true };
-    }
-    return { entries, complete: false };
-  };
-
-  return {
-    platform: 'GitLab',
-    name: ctx.projectPath,
+  return gitlabRepositoryAt(ctx, {
     ref,
     commit,
+    pinned: ref !== null && commit.startsWith(ref),
     start: { path, folder: ctx.view !== 'blob' },
-    url: `${webBase}/-/tree/${commit}`,
-    async discover() {
-      const limits: string[] = [];
-      const whole = await list('', TREE_PAGES);
-      const entries = whole.entries;
-      if (!whole.complete) {
-        const root = await list('', 1, false);
-        entries.push(...root.entries);
-        const folders = docRoots(root.entries);
-        for (const folder of folders) {
-          const sub = await list(folder.path, FOLDER_PAGES);
-          entries.push(...sub.entries);
-          if (!sub.complete) limits.push(`Only part of ${folder.path}/ is listed.`);
-        }
-        const listed = folders.length
-          ? `${folders.map((folder) => `${folder.path}/`).join(', ')} ${folders.length === 1 ? 'is' : 'are'} listed separately; `
-          : '';
-        limits.unshift(`This repository has more files than Galley lists at once. ${listed}other documents may be missing.`);
-      }
-      return collectDocs(entries, limits);
-    },
-    async load(file) {
-      try {
-        return await getText(`${api}/repository/files/${encodeURIComponent(file)}/raw?ref=${commit}`);
-      } catch (err) {
-        if (err instanceof HttpError && err.status === 404)
-          throw new ReaderError('This document is not in the repository at this commit.', 'The link may point to a file that was moved or removed.');
-        throw explain(err);
-      }
-    },
-    links: {
-      raw: (file) => `${webBase}/-/raw/${commit}/${encodePath(file)}`,
-      blob: (file) => `${webBase}/-/blob/${commit}/${encodePath(file)}`,
-    },
     refresh: () => loadGitLabRepository(ctx),
-  };
+  });
 }
