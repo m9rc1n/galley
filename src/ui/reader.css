@@ -2403,7 +2403,7 @@
 }
 
 /* Light washes down from the whole top edge: teal, violet and rose blend with the palette's accent.
-   The broad glow stays anchored to the screen, gently brightening and fading until reading begins. */
+   The broad glow stays anchored to the screen, becoming a faint hint once reading moves down the page. */
 .mr-topbar {
   --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
   --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 10%), transparent);
@@ -2438,10 +2438,11 @@
   content: none;
   animation: none;
 }
-.mr-topbar.is-scrolled::before,
+.mr-topbar.is-scrolled::before {
+  opacity: 0.22;
+}
 .mr-topbar.is-scrolled::after {
-  opacity: 0;
-  animation-play-state: paused;
+  opacity: 0.04;
 }
 @keyframes mr-aurora-glow {
   from {

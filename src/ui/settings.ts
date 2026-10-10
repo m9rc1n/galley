@@ -43,7 +43,7 @@ export type Density = (typeof DENSITIES)[number];
 export interface Settings {
   theme: Theme;
   appearance: Appearance;
-  /** A soft glow across the top edge of a review, fading as reading begins. */
+  /** A soft glow across the top edge of a review, becoming faint while scrolling. */
   topGlow: boolean;
   font: (typeof FONTS)[number];
   /** Index into TEXT_SIZES. */

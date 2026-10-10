@@ -704,6 +704,28 @@ try {
   });
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-file-btn').dataset.path === 'README.md');
   assert.equal(await inspect(() => Math.round(document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar').getBoundingClientRect().top)), 0);
+  await page.waitForFunction(() => {
+    const bar = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar');
+    return ['::before', '::after'].every((pseudo) => {
+      const opacity = Number(getComputedStyle(bar, pseudo).opacity);
+      return opacity > 0 && opacity <= 0.25;
+    });
+  });
+  const scrolledGlow = await inspect(() => {
+    const bar = document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-topbar');
+    return {
+      border: getComputedStyle(bar).borderBottomColor,
+      layers: ['::before', '::after'].map((pseudo) => {
+        const style = getComputedStyle(bar, pseudo);
+        return { opacity: Number(style.opacity), animation: style.animationPlayState };
+      }),
+    };
+  });
+  assert.ok(
+    scrolledGlow.layers.every((layer) => layer.opacity > 0 && layer.opacity <= 0.25 && layer.animation === 'running'),
+    'The top glow stays as a faint hint while scrolling',
+  );
+  assert.equal(scrolledGlow.border, 'rgba(0, 0, 0, 0)');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').dataset.doc), '1');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-viewed').getAttribute('aria-pressed') === 'true');
