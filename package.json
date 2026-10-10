@@ -1,6 +1,6 @@
 {
   "name": "galley",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "Galley helps teams understand GitHub pull requests and GitLab merge requests with readable documents and code, edits shown in context, and comments beside the text. Free and open source.",
   "license": "GPL-3.0-or-later",
