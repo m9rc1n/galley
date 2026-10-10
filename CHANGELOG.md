@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/m9rc1n/galley/compare/v0.10.0...v0.11.0) (2026-10-10)
+
+
+### Features
+
+* **content:** offer Read docs on repository pages ([a7b4d94](https://github.com/m9rc1n/galley/commit/a7b4d946ec958edb1d842f93f89222b5d096b5d4)), closes [#49](https://github.com/m9rc1n/galley/issues/49)
+* **platforms:** open a review's repository at its base or head, and list configuration ([9755d4c](https://github.com/m9rc1n/galley/commit/9755d4c5587ff165d470ed4a0310e77fd6934f85)), closes [#49](https://github.com/m9rc1n/galley/issues/49)
+* **reader:** read a repository's docs at one commit, with a project map, private notes and Project docs from reviews ([d3722f7](https://github.com/m9rc1n/galley/commit/d3722f7d769c7a7efb144364f578e02d4cd223f9))
+* **reader:** read repository docs and explore them on a project map ([7728518](https://github.com/m9rc1n/galley/commit/77285182d7fe0185a302d56fe71d3390ecf51af6)), closes [#49](https://github.com/m9rc1n/galley/issues/49)
+* **repo:** architecture, infrastructure and decision views, private notes, and project docs from a review ([b75c60c](https://github.com/m9rc1n/galley/commit/b75c60cdea947cce437bbcdff2866eaccff19cb8))
+* **repo:** sample configuration in the demo, and room on phones for the project views ([04f6d54](https://github.com/m9rc1n/galley/commit/04f6d5446f2f25f7ff19bf87fad38d3716a090f4))
+* **scripts:** report what the repository reader would show for a local checkout ([ae4eae8](https://github.com/m9rc1n/galley/commit/ae4eae8aea0180819c86341235141781b04a0255)), closes [#49](https://github.com/m9rc1n/galley/issues/49)
+
+
+### Bug Fixes
+
+* **reader:** keep Option+arrows for the search box, and name what hiding Read docs hides ([563a77e](https://github.com/m9rc1n/galley/commit/563a77e8101b80f2a83d5ac20cfc990f5fb7af7b)), closes [#49](https://github.com/m9rc1n/galley/issues/49)
+* **repo:** decide anchor states from each note's anchor when the check ends ([51afa2c](https://github.com/m9rc1n/galley/commit/51afa2c9bfa5aaca60a94de16bdd611226c87e95)), closes [#49](https://github.com/m9rc1n/galley/issues/49)
+
 ## [0.10.0](https://github.com/m9rc1n/galley/compare/v0.9.0...v0.10.0) (2026-10-10)
 
 
