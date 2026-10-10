@@ -111,6 +111,16 @@ button.secondary {
   color: var(--fg);
 }
 
+#reader button,
+#settings {
+  min-height: 44px;
+}
+
+#settings {
+  display: block;
+  margin-bottom: 12px;
+}
+
 form {
   display: flex;
   gap: 8px;

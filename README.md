@@ -34,6 +34,8 @@ Your team gets more context for its feedback, using the GitHub or GitLab workflo
 
 Between reviews, press **Read docs** on a repository, folder or Markdown file to read the project's own documentation at one commit. Follow links between specs, decisions and guides without losing your place, and open the **Map** to see which documents link to the one you are reading, with each link as evidence. Switch the map to **Architecture**, **Infrastructure** or **Decisions** for what the configuration declares and what the decision records state, keep private **Notes** you save only when you choose, and from a review open **Project docs** at its base or head.
 
+Prefer a clear platform page? In the toolbar popup, choose **Settings…** and turn off **Read button on the page**. Open with **Read this review** or **Read docs** in the popup, or <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd> (changeable in your browser's extension shortcuts). With the page button off, Galley fetches files only when you ask.
+
 ## Before / after
 
 <p align="center">

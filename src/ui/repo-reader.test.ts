@@ -322,7 +322,7 @@ it('external images wait for a click, one at a time or all together, unless the 
   ui.click('[data-act="settings"]');
   ui.click('[data-setting="images"] [data-value="load"]');
   expect(ui.q<HTMLImageElement>('.mr-content img').src).toBe('https://img.example/1.png');
-  expect(JSON.parse(localStorage.getItem('galley:settings')!).images).toBe('load');
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!).images).toBe('load'));
 });
 
 it('reading settings: appearance, text size and the review palette, kept with the review settings', async () => {
@@ -431,7 +431,7 @@ it('settings are the review reader’s sheet: the same Reading tab, a Keys tab, 
   ui.click('[data-act="top-glow"]');
   expect(ui.q('.mr-root').classList).toContain('no-top-glow');
   expect(ui.q('[data-act="top-glow"]').getAttribute('aria-checked')).toBe('false');
-  expect(JSON.parse(localStorage.getItem('galley:settings')!)).toMatchObject({ theme: 'sage', font: 'serif', topGlow: false });
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!)).toMatchObject({ theme: 'sage', font: 'serif', topGlow: false }));
 
   // Tabs: by click, and by arrows that wrap, Home and End.
   ui.click('[data-settings-tab="keys"]');

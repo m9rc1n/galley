@@ -21,6 +21,10 @@
     }
   },
   "permissions": ["storage", "scripting", "activeTab"],
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "commands": {
+    "read-page": { "description": "Read this page in Galley", "suggested_key": { "default": "Alt+Shift+R" } }
+  },
   "host_permissions": ["https://github.com/*", "https://gitlab.com/*"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "content_scripts": [

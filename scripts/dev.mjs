@@ -72,6 +72,8 @@ async function writeStatic() {
   await writeFile(`${out}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
   await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
   await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
+  await cp(`${root}src/options/options.html`, `${out}/options.html`);
+  await cp(`${root}src/options/options.css`, `${out}/options.css`);
   await cp(`${root}src/ui/diagram-frame.html`, `${out}/diagram-frame.html`);
   await cp(`${root}src/ui/highlight-frame.html`, `${out}/highlight-frame.html`);
   for (const font of ['Newsreader', 'DM-Sans']) await cp(`${root}src/ui/fonts/${font}-OFL.txt`, `${out}/${font}-OFL.txt`);
@@ -84,6 +86,7 @@ const done = {
     send('content');
   },
   popup: () => console.log(`${time()}  popup rebuilt → reopen the popup to see it`),
+  options: () => console.log(`${time()}  settings rebuilt → reload the settings page to see it`),
   worker: () => console.log(`${time()}  dev worker rebuilt → ${NEEDS_MANUAL_RELOAD}`),
 };
 const timers = {};
@@ -132,6 +135,7 @@ if (standalone) {
   await esbuild.build({ ...options('src/ui/highlight-frame.ts', 'highlight-frame.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/content/main.ts', 'content.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/popup/popup.ts', 'popup.js'), logLevel: 'error' });
+  await esbuild.build({ ...options('src/options/options.ts', 'options.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/background/worker.ts', 'background.js'), logLevel: 'error' });
   const zip = `${root}dist/galley-chrome-dev-${pkg.version}.zip`;
   await rm(zip, { force: true });
@@ -148,6 +152,7 @@ for (const [entry, file, kind] of [
   ['src/ui/highlight-frame.ts', 'highlight-frame.js', 'content'],
   ['src/content/main.ts', 'content.js', 'content'],
   ['src/popup/popup.ts', 'popup.js', 'popup'],
+  ['src/options/options.ts', 'options.js', 'options'],
   ['src/dev/reload.ts', 'dev-reload.js', 'worker'],
 ]) {
   const ctx = await esbuild.context({ ...options(entry, file), plugins: [notify(kind)] });
@@ -157,6 +162,9 @@ for (const [entry, file, kind] of [
 // Popup markup, styles and the manifest are copied rather than bundled; watch them too.
 watch(`${root}src/popup`, (_, name) => {
   if (name && /\.(html|css)$/.test(name)) writeStatic().then(done.popup, console.error);
+});
+watch(`${root}src/options`, (_, name) => {
+  if (name && /\.(html|css)$/.test(name)) writeStatic().then(done.options, console.error);
 });
 watch(`${root}src/manifest.json`, () => {
   writeStatic().then(() => console.log(`${time()}  manifest changed → ${NEEDS_MANUAL_RELOAD}`), console.error);

@@ -2,6 +2,7 @@
 // Content scripts ask for specific API calls; the token never enters the page's renderer.
 import { allowedRequest, fetchGitHub, FORWARDED_HEADERS, type ApiMessage, type ApiReply } from '../platforms/github-api.ts';
 import { restoreSites } from '../platforms/sites.ts';
+import { OPEN_READER, READ_COMMAND } from '../platforms/page-actions.ts';
 import { getToken, migrateTokens } from '../platforms/tokens.ts';
 
 async function handle(message: ApiMessage, sender: chrome.runtime.MessageSender): Promise<ApiReply | { has: boolean }> {
@@ -41,4 +42,16 @@ chrome.runtime.onStartup.addListener(restore);
 
 migrateTokens().catch(() => {
   // Tokens stay where they were and are migrated on the next start.
+});
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== READ_COMMAND) return;
+  void chrome.tabs
+    .query({ active: true, currentWindow: true })
+    .then(([tab]) => {
+      if (tab?.id !== undefined) return chrome.tabs.sendMessage(tab.id, { type: OPEN_READER });
+    })
+    .catch(() => {
+      // No content script on this page: the shortcut leaves it alone.
+    });
 });

@@ -8,7 +8,8 @@ let saved: string | null;
 let granted: boolean;
 let registered: boolean;
 const api = {
-  tabs: { query: vi.fn() },
+  tabs: { query: vi.fn(), sendMessage: vi.fn() },
+  runtime: { openOptionsPage: vi.fn() },
   permissions: { contains: vi.fn(), request: vi.fn(), remove: vi.fn() },
   scripting: { getRegisteredContentScripts: vi.fn(), registerContentScripts: vi.fn(), unregisterContentScripts: vi.fn(), executeScript: vi.fn() },
 };
@@ -26,6 +27,9 @@ beforeEach(() => {
     saved = value;
   });
   api.tabs.query.mockResolvedValue([{ id: 7, url: 'https://github.com/team/repo/pull/1' }]);
+  api.tabs.sendMessage.mockRejectedValue(new Error('No content script'));
+  api.runtime.openOptionsPage.mockResolvedValue(undefined);
+  vi.spyOn(window, 'close').mockImplementation(() => {});
   api.permissions.contains.mockImplementation(async () => granted);
   api.permissions.request.mockImplementation(async () => {
     granted = true;
@@ -185,4 +189,41 @@ it('shows the site even when saved tokens cannot be migrated', async () => {
   tokens.migrateTokens.mockRejectedValue(new Error('storage unavailable'));
   await open();
   expect(q('#site').textContent).not.toBe('');
+});
+
+it('offers Read this review first, names it without listing files, and closes the popup after opening', async () => {
+  const state = { kind: 'review', label: 'Pull request #1 in team/repo' };
+  api.tabs.sendMessage.mockResolvedValue(state);
+  await open();
+  expect(q('#reader').hidden).toBe(false);
+  expect(q('#reader button').textContent).toBe('Read this review');
+  expect(q('#reader').textContent).toContain(state.label);
+  expect(api.tabs.sendMessage).toHaveBeenCalledExactlyOnceWith(7, { type: 'galley:page-state' });
+  expect(fetch).not.toHaveBeenCalled();
+  q('#reader button').click();
+  await vi.waitFor(() => expect(window.close).toHaveBeenCalledOnce());
+  expect(api.tabs.sendMessage).toHaveBeenLastCalledWith(7, { type: 'galley:open-reader' });
+  q('#settings').click();
+  expect(api.runtime.openOptionsPage).toHaveBeenCalledOnce();
+});
+
+it('offers Read docs for a repository and reports when it becomes unavailable or cannot be reached', async () => {
+  api.tabs.sendMessage.mockResolvedValue({ kind: 'repository', label: 'group/project' });
+  await open('https://gitlab.com/group/project');
+  expect(q('#reader button').textContent).toBe('Read docs');
+  api.tabs.sendMessage.mockResolvedValueOnce({ kind: 'unavailable', label: 'Galley is off here.' });
+  q('#reader button').click();
+  await vi.waitFor(() => expect(q('#reader').textContent).toContain('Galley is off here.'));
+  expect(window.close).not.toHaveBeenCalled();
+  api.tabs.sendMessage.mockRejectedValueOnce(new Error('Tab closed'));
+  q('#reader button').click();
+  await vi.waitFor(() => expect(q('#reader').textContent).toContain('Reload the page'));
+  expect(q<HTMLButtonElement>('#reader button').disabled).toBe(false);
+});
+
+it('explains why a page is unavailable instead of offering a read action', async () => {
+  api.tabs.sendMessage.mockResolvedValue({ kind: 'unavailable', label: 'Your settings could not be read.' });
+  await open();
+  expect(q('#reader').textContent).toContain('could not be read');
+  expect(q('#reader button')).toBeNull();
 });

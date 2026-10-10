@@ -41,6 +41,8 @@ export type Layout = (typeof LAYOUTS)[number];
 export type Density = (typeof DENSITIES)[number];
 
 export interface Settings {
+  /** Show a Read button on the page; otherwise wait for the toolbar or extension shortcut. */
+  readButton: boolean;
   theme: Theme;
   appearance: Appearance;
   /** A soft glow across the top edge of a review, becoming gentler while scrolling. */
@@ -72,6 +74,7 @@ export interface Settings {
 export const TEXT_SIZES = [17, 18, 20, 22, 24];
 
 export const DEFAULT_SETTINGS: Settings = {
+  readButton: true,
   theme: 'sage',
   appearance: 'auto',
   topGlow: true,
@@ -91,43 +94,53 @@ export const DEFAULT_SETTINGS: Settings = {
   overview: false,
 };
 
-const SETTINGS_KEY = 'galley:settings';
+export const SETTINGS_KEY = 'galley:settings';
 
 /** chrome.storage.local in the extension; localStorage in the demo page. */
-function extensionStorage(): chrome.storage.StorageArea | null {
+function extensionStorage(strict: boolean): chrome.storage.StorageArea | null {
   try {
     return globalThis.chrome?.storage?.local ?? null;
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     return null;
   }
 }
 
-export async function readStored<T>(key: string): Promise<T | null> {
-  const area = extensionStorage();
+export async function readStored<T>(key: string, strict = false): Promise<T | null> {
+  const area = extensionStorage(strict);
   try {
     if (area) return ((await area.get(key))[key] as T) ?? null;
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     return null;
   }
 }
 
-export async function writeStored(key: string, value: unknown): Promise<void> {
-  const area = extensionStorage();
+export async function writeStored(key: string, value: unknown, strict = false): Promise<void> {
+  const area = extensionStorage(strict);
   try {
     if (area) await area.set({ [key]: value });
     else localStorage.setItem(key, JSON.stringify(value));
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     // Settings are a convenience; failing to persist them is not worth surfacing.
   }
 }
 
-export async function loadSettings(): Promise<Settings> {
+let settingsWrites: Promise<void> = Promise.resolve();
+
+export async function loadSettings(strict = false): Promise<Settings> {
+  await settingsWrites;
+  return readSettings(strict);
+}
+
+async function readSettings(strict: boolean): Promise<Settings> {
   // Earlier versions used one setting for both colour and brightness. Preserve that choice.
   // Retired card-style choices do not carry forward; comment cards always use shaded surfaces.
   const { comments: _comments, ...saved } =
-    (await readStored<Partial<Omit<Settings, 'theme'>> & { theme?: Theme | Appearance; comments?: unknown }>(SETTINGS_KEY)) ?? {};
+    (await readStored<Partial<Omit<Settings, 'theme'>> & { theme?: Theme | Appearance; comments?: unknown }>(SETTINGS_KEY, strict)) ?? {};
   const theme = THEMES.find((theme) => theme === saved.theme) ?? DEFAULT_SETTINGS.theme;
   const legacyAppearance = saved.theme === 'dark' ? 'dark' : saved.theme === 'light' || saved.theme === 'sepia' ? 'light' : 'auto';
   const appearance = APPEARANCES.find((appearance) => appearance === saved.appearance) ?? legacyAppearance;
@@ -146,6 +159,7 @@ export async function loadSettings(): Promise<Settings> {
     codeComments,
     layout,
     density,
+    readButton: saved.readButton !== false,
     overview: saved.overview === true,
     topGlow: saved.topGlow !== false,
     signs: saved.signs !== false,
@@ -154,6 +168,22 @@ export async function loadSettings(): Promise<Settings> {
   };
 }
 
-export function saveSettings(settings: Settings): Promise<void> {
-  return writeStored(SETTINGS_KEY, settings);
+export function saveSettings(settings: Settings, strict = false): Promise<void> {
+  return writeStored(SETTINGS_KEY, settings, strict);
+}
+
+/** Save only what this control changed, so an open reader cannot overwrite a newer toolbar choice. */
+export function updateSettings(patch: Partial<Settings>, strict = false): Promise<Settings> {
+  const updating = settingsWrites.then(async () => {
+    const settings = { ...(await readSettings(strict)), ...patch };
+    await saveSettings(settings, strict);
+    return settings;
+  });
+  // Quick successive changes must each merge with the preceding saved choice.
+  // A failed write must not prevent the next attempt.
+  settingsWrites = updating.then(
+    () => {},
+    () => {},
+  );
+  return updating;
 }

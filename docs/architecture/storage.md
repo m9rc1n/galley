@@ -6,7 +6,7 @@ Everything Galley keeps, where, and for how long. [PRIVACY.md](../../PRIVACY.md)
 
 | What | Where | Key | Contents | Lifetime | Code |
 | --- | --- | --- | --- | --- | --- |
-| Reading settings | `chrome.storage.local` | `galley:settings` | The `Settings` object: palette, appearance, typeface, size, layout, density, review options | Until changed or uninstalled | `src/ui/settings.ts` |
+| Reader and opening settings | `chrome.storage.local` | `galley:settings` | The `Settings` object: page-button choice, palette, appearance, typeface, size, layout, density, review options | Until changed or uninstalled | `src/ui/settings.ts` |
 | Viewed progress (no token, or GitLab) | `chrome.storage.local` | `galley:viewed:<sha256>` | `true`; the key is a SHA-256 of the review address, file paths, status and both versions' contents | Until unmarked or uninstalled; a changed file gets a new key | `src/ui/viewed.ts` |
 | Reading positions | `chrome.storage.local` | `galley:positions` | Per review fingerprint: a fingerprint of the file path, a scroll offset, a time | The 50 most recent reviews | `src/ui/positions.ts` |
 | Repository notes | `chrome.storage.local` | `galley:project:<sha256>`; the key is a SHA-256 of the repository's address | The reader's saved notes, proposed components and connections, and the types they set, plus a draft of unsaved changes. Each anchored note keeps its document's path, title and heading as a label, the commit and a SHA-256 of the section | Until deleted with **Delete all notes…** or uninstalled; written only on Save, and as a draft for recovery | `src/ui/project-store.ts` ([ADR 0028](../adr/0028-private-project-notes.md)) |
