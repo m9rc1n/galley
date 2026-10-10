@@ -22,6 +22,7 @@ function project(): ReviewProject {
 it('a review without its repository offers no project docs', async () => {
   await ui.open(review());
   expect(ui.q('[data-act="project"]').hidden).toBe(true);
+  expect(ui.q('.mr-files-project')).toBe(null);
 });
 
 it('Project docs opens the repository at the review’s head or base over the review, and closing it comes back to the review as it was', async () => {
@@ -56,6 +57,15 @@ it('Project docs opens the repository at the review’s head or base over the re
   expect(document.querySelector('#galley-repo-reader')).toBe(null);
   expect(document.querySelector('#galley-reader')).not.toBe(null);
   expect(ui.shadow().activeElement).toBe(toggle);
+
+  // The files menu offers the same choices, for phones with no room for the button.
+  ui.click('[data-act="files"]');
+  expect([...ui.q('.mr-files').querySelectorAll('[data-act="project-open"]')].map((item) => (item as HTMLElement).dataset.revision)).toStrictEqual([
+    'head',
+    'base',
+  ]);
+  expect(ui.q('.mr-files-project').textContent).toBe('Project docs');
+  ui.key('Escape');
 
   // The base is the other choice; closing the review closes the docs over it too.
   ui.click('[data-act="project"]');

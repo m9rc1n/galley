@@ -91,7 +91,7 @@ const TEMPLATE = `
       <button class="mr-btn mr-file-btn" data-act="docs" aria-haspopup="dialog" aria-expanded="false" title="Documents (/)"><span class="mr-file-name">Documents</span>${icons.chevronDown}</button>
     </div>
     <div class="mr-tb-right">
-      <div class="mr-seg mr-repo-views" role="group" aria-label="View"><button data-view="review" aria-pressed="false" hidden>This review</button><button data-view="read" aria-pressed="true">Read</button><button data-view="map" aria-pressed="false" title="Map (M)">Map</button><button data-view="notes" aria-pressed="false" title="Your notes (N)">Notes</button></div>
+      <div class="mr-seg mr-repo-views" role="group" aria-label="View"><button data-view="review" aria-pressed="false" aria-label="This review" hidden>${icons.review}<span>This review</span></button><button data-view="read" aria-pressed="true" aria-label="Read">${icons.book}<span>Read</span></button><button data-view="map" aria-pressed="false" aria-label="Map" title="Map (M)">${icons.map}<span>Map</span></button><button data-view="notes" aria-pressed="false" aria-label="Notes" title="Your notes (N)">${icons.note}<span>Notes</span></button></div>
       <button class="mr-btn mr-repo-commit" data-act="refresh" hidden>${icons.refresh}<span class="mr-repo-commit-label"></span></button>
       <button class="mr-btn mr-icon-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
     </div>

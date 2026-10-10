@@ -167,7 +167,7 @@ const TEMPLATE = `
       </button>
     </div>
     <div class="mr-tb-right">
-      <button type="button" class="mr-btn mr-project-btn" data-act="project" hidden aria-haspopup="menu" aria-expanded="false" title="Read the repository’s docs at this review’s base or head">Project docs</button>
+      <button type="button" class="mr-btn mr-project-btn" data-act="project" hidden aria-haspopup="menu" aria-expanded="false" title="Read the repository’s docs at this review’s base or head" aria-label="Project docs">${icons.book}<span class="mr-project-label">Project docs</span></button>
       <button type="button" class="mr-btn mr-chapters-toggle" hidden aria-haspopup="dialog" aria-expanded="false">Chapters</button>
       <button class="mr-btn mr-icon-btn mr-viewed" data-act="viewed" aria-pressed="false" disabled hidden>${icons.viewed}</button>
       <button class="mr-btn mr-icon-btn" data-act="settings" aria-haspopup="dialog" aria-expanded="false" title="Reading settings" aria-label="Reading settings">${icons.settings}</button>
@@ -1257,6 +1257,12 @@ class Reader {
       }
       menu.append(item);
     });
+    // Phones have no room for Project docs in the top bar; it is here instead.
+    if (this.source!.project) {
+      const head = h('p', 'mr-files-project', 'Project docs');
+      head.setAttribute('role', 'presentation');
+      menu.append(head, ...this.projectItems(this.source!.project));
+    }
     this.updateActiveViewed();
     if (this.settings.layout === 'files') this.buildToc(this.rendered);
   }
@@ -1306,6 +1312,14 @@ class Reader {
   /** Project docs: the repository behind the review, at its base or its head, read over the review (RFC 0049). */
   private offerProject(project: ReviewProject): void {
     this.shadow.querySelector<HTMLElement>('[data-act="project"]')!.hidden = false;
+    this.el.project.replaceChildren(
+      h('p', 'mr-project-intro', 'Read the repository’s docs and map at one side of this review. Close them to come back here, where you were.'),
+      ...this.projectItems(project),
+    );
+  }
+
+  /** The two sides of the review to read the project's docs at: in the Project docs menu, and in the files menu. */
+  private projectItems(project: ReviewProject): HTMLElement[] {
     const item = (revision: 'base' | 'head', title: string) => {
       const at = project[revision];
       const b = h('button', 'mr-menu-item');
@@ -1318,11 +1332,7 @@ class Reader {
       b.append(name);
       return b;
     };
-    this.el.project.replaceChildren(
-      h('p', 'mr-project-intro', 'Read the repository’s docs and map at one side of this review. Close them to come back here, where you were.'),
-      item('head', 'As this change leaves them'),
-      item('base', 'Before this change'),
-    );
+    return [item('head', 'As this change leaves them'), item('base', 'Before this change')];
   }
 
   private openProject(revision: 'base' | 'head'): void {

@@ -2693,7 +2693,12 @@
   width: min(460px, calc(100vw - 24px));
 }
 
-/* Project docs: the repository's docs at one side of the review, opened over it. */
+/* Project docs: the repository's docs at one side of the review, opened over it. Phones keep the icon. */
+.mr-project-btn .mr-icon {
+  width: 17px;
+  height: 17px;
+}
+
 .mr-project {
   right: 12px;
   width: min(360px, calc(100vw - 24px));
@@ -2703,6 +2708,22 @@
   margin: 6px 10px 8px;
   color: var(--muted);
   font: 13px / 1.45 var(--sans);
+}
+
+.mr-files-project {
+  margin: 6px 0 2px;
+  padding: 10px 12px 4px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font: 600 12px / 1.4 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 380px) {
+  .mr-project-btn {
+    display: none;
+  }
 }
 
 .mr-files-head {
@@ -3022,6 +3043,10 @@
   .mr-chapters-toggle,
   .mr-project-btn {
     min-height: 44px;
+  }
+
+  .mr-project-label {
+    display: none;
   }
 }
 

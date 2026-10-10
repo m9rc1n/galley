@@ -44,6 +44,13 @@
   margin-right: 4px;
 }
 
+/* Words on wide screens; on phones the views keep their icons and give the document name room. */
+.mr-repo-views .mr-icon {
+  display: none;
+  width: 17px;
+  height: 17px;
+}
+
 /* ------------------------------------------------------------------ documents and settings menus */
 
 .mr-repo-docs {
@@ -642,6 +649,7 @@
 .mr-notes input:not([type="checkbox"], [type="radio"]),
 .mr-notes textarea {
   box-sizing: border-box;
+  max-width: 100%;
   min-height: 36px;
   padding: 6px 10px;
   border: 1px solid var(--control-rule);
@@ -699,6 +707,10 @@
   display: none;
 }
 
+.mr-notes-head > .mr-repo-quiet {
+  margin: 0;
+}
+
 .mr-notes-head .mr-actions,
 .mr-notes-confirm,
 .mr-notes-recover {
@@ -723,6 +735,7 @@
 
 .mr-note-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin: 24px 0 36px;
   padding: 18px;
@@ -739,6 +752,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -762,6 +776,7 @@
 .mr-note-group,
 .mr-note-anchor {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   color: var(--muted);
   font-size: 13px;
@@ -814,6 +829,7 @@
 
 .mr-note.is-editing {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -1074,7 +1090,17 @@
   }
 
   .mr-repo-views button {
-    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 9px;
+  }
+
+  .mr-repo-views button > span {
+    display: none;
+  }
+
+  .mr-repo-views .mr-icon {
+    display: block;
   }
 
   .mr-repo .mr-brand {

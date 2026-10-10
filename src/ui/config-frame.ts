@@ -17,7 +17,11 @@ class Reader {
   readonly links: DeclaredLink[] = [];
   readonly notes: string[] = [];
   private readonly seen = new Set<string>();
-  constructor(private readonly lines: LineCounter) {}
+  private readonly lines: LineCounter;
+  // Plain fields rather than parameter properties, so Node can load this file as it is (scripts/repo-report.mjs).
+  constructor(lines: LineCounter) {
+    this.lines = lines;
+  }
 
   /** Every node read from the file carries its source range. */
   line(node: Node): number {

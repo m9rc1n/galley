@@ -3,7 +3,8 @@ import { join } from 'node:path';
 
 /**
  * The repository reader on the demo handbook (?repo): reading at one commit, following links and coming
- * back to the same paragraph, the documents list, the project map with its evidence, and phone layouts.
+ * back to the same paragraph, the documents list, the project map with its evidence, configuration read
+ * on request for the architecture view, the reader's notes, and phone layouts.
  */
 export async function checkRepository(browser, demoUrl, screenshots) {
   const page = await browser.newPage();
@@ -180,6 +181,57 @@ export async function checkRepository(browser, demoUrl, screenshots) {
   await settled();
   assert.equal(await inspect(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelector('.mr-root').scrollWidth > innerWidth), false);
   await page.screenshot({ path: join(screenshots, 'repo-read-mobile.png') });
+
+  // Architecture: configuration is read only when asked, in its own sandboxed frame, and never called running.
+  await page.setViewport({ width: 1440, height: 1000 });
+  await page.keyboard.press('m');
+  await click('[data-act="lens"]', 'Architecture');
+  await click('[data-act="read-configs"]');
+  await page.waitForFunction(() =>
+    /^Read 4 of 4/.test(document.querySelector('#galley-repo-reader').shadowRoot.querySelector('.mr-lens-configs p')?.textContent ?? ''),
+  );
+  const lens = await inspect(() => {
+    const s = document.querySelector('#galley-repo-reader').shadowRoot;
+    return {
+      services: [...s.querySelectorAll('.mr-lens-list .mr-lens-entity')]
+        .filter((b) => b.querySelector('.mr-origin').textContent === 'Declared in configuration')
+        .map((b) => b.querySelector('.mr-lens-name').textContent),
+      caveat: s.querySelector('.mr-lens-caveat').textContent,
+      frame: s.querySelector('iframe[src*="config-frame"]')?.getAttribute('sandbox'),
+    };
+  });
+  assert.deepEqual(lens, {
+    services: ['queue', 'renderer', 'store', 'webhook'],
+    caveat: 'Declared means what these files ask for at 4f2c9e1, not what is running.',
+    frame: 'allow-scripts',
+  });
+  await page.screenshot({ path: join(screenshots, 'repo-architecture-desktop.png') });
+
+  // Notes: written here, kept only when saved, and shown as the reader's own.
+  await page.keyboard.press('n');
+  await inspect(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelector('form[data-act="add-note"] textarea').focus());
+  await page.keyboard.type('Why a queue and not direct calls?');
+  await click('form[data-act="add-note"] button[type="submit"]');
+  await page.waitForFunction(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelectorAll('article.mr-note').length === 1);
+  await click('[data-act="save-notes"]');
+  await page.waitForFunction(() =>
+    /^Saved /.test(document.querySelector('#galley-repo-reader').shadowRoot.querySelector('.mr-notes-state')?.textContent ?? ''),
+  );
+  await page.screenshot({ path: join(screenshots, 'repo-notes-desktop.png') });
+  await page.setViewport({ width: 390, height: 844 });
+  const notesPhone = await inspect(() => {
+    const s = document.querySelector('#galley-repo-reader').shadowRoot;
+    return {
+      // Anything past the right edge, named, so a failure says what to fix.
+      wide: [...s.querySelectorAll('.mr-root *')]
+        .filter((el) => el.getBoundingClientRect().right > innerWidth + 1)
+        .map((el) => `${el.tagName} ${el.className}`),
+      name: s.querySelector('.mr-file-name').getBoundingClientRect().width,
+    };
+  });
+  assert.deepEqual(notesPhone.wide, []);
+  assert.ok(notesPhone.name > 60, `The document name needs room on a phone, had ${notesPhone.name}px`);
+  await page.screenshot({ path: join(screenshots, 'repo-notes-mobile.png') });
 
   await page.keyboard.press('Escape');
   assert.equal(await inspect(() => document.querySelector('#galley-repo-reader')), null);

@@ -158,7 +158,11 @@ export function mentionLine(name: string, text: string): number {
 class Builder {
   readonly entities = new Map<string, Entity>();
   readonly relations: Relation[] = [];
-  constructor(private readonly kinds: Map<string, string>) {}
+  private readonly kinds: Map<string, string>;
+  // Plain fields rather than parameter properties, so Node can load this file as it is (scripts/repo-report.mjs).
+  constructor(kinds: Map<string, string>) {
+    this.kinds = kinds;
+  }
 
   entity(id: string, init: Omit<Entity, 'id' | 'evidence' | 'notes' | 'correctedFrom'>, evidence?: Evidence): Entity {
     let entity = this.entities.get(id);
@@ -241,9 +245,12 @@ function systemView(lens: 'architecture' | 'infrastructure', input: Architecture
       const line = mentionLine(entity.name, text);
       if (!line || suggestions >= MAX_SUGGESTIONS) continue;
       suggestions++;
-      build.relation(entity.id, documentEntity(build, input, path).id, 'named in', 'suggested', [
-        { path, line, quote: text.split('\n')[line - 1].trim().slice(0, 160) },
-      ]);
+      // The words as a reader sees them: without the marks that make a line a heading, list item or quote.
+      const quote = text
+        .split('\n')
+        [line - 1].replace(/^\s*(?:#{1,6}|[-*+>]|\d+[.)])\s+/, '')
+        .trim();
+      build.relation(entity.id, documentEntity(build, input, path).id, 'named in', 'suggested', [{ path, line, quote: quote.slice(0, 160) }]);
     }
   }
   return build.done();

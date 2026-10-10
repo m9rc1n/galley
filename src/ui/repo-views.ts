@@ -348,7 +348,7 @@ function textArea(value: string): HTMLTextAreaElement {
 }
 
 function groupInput(value: string, groups: string[]): HTMLElement {
-  const label = h('label', 'mr-note-group', 'Question these alternatives answer ');
+  const label = h('label', 'mr-note-group', 'For alternatives: the question they answer ');
   const input = h('input');
   input.name = 'group';
   input.maxLength = 200;

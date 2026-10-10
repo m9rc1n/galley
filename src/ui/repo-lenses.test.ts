@@ -113,7 +113,7 @@ it('infrastructure: workflows, jobs and environments in order, and a reference t
     'needs build',
     'needs lint',
     'deploys to production',
-    'named in Architecture Documented Unverified suggestion docs/architecture/system.md, line 5 ## Deploy',
+    'named in Architecture Documented Unverified suggestion docs/architecture/system.md, line 5 Deploy',
   ]);
   // The documents lens is one click away, as it was.
   lens('documents');
