@@ -1,5 +1,5 @@
 ---
-status: Proposed
+status: Accepted
 date: 2026-10-10
 deciders: [m9rc1n]
 rfcs: [49]

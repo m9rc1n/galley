@@ -1,7 +1,8 @@
 import { expect, it, vi } from 'vitest';
 import { emptyThinking, MAX_LINKS, MAX_NOTES, type Note } from '../core/notes.ts';
 import { handbook, repoHarness, repository, words } from '../testing/repo.ts';
-import { projectKey } from './project-store.ts';
+import { deferred } from '../testing/reader.ts';
+import { ProjectNotes, projectKey } from './project-store.ts';
 
 const drawn = vi.hoisted(() => ({ renderDiagrams: vi.fn(), highlightCode: vi.fn(async () => {}) }));
 vi.mock('./diagrams.ts', async (original) => ({ ...(await original<typeof import('./diagrams.ts')>()), renderDiagrams: drawn.renderDiagrams }));
@@ -540,4 +541,29 @@ it('a connection to something not read in this session is left out of the export
   ui.press('Export…');
   expect(ui.q('.mr-export-preview').textContent).toContain('- **Idea** (proposal): Scale the web service\n');
   expect(ui.q('.mr-export-preview').textContent).not.toContain('Tentatively connected');
+});
+
+it('notes that storage returns after the reader closed are not drawn into it', async () => {
+  // Storage answers only when the test says so, after the reader has closed.
+  const answer = deferred<Record<string, unknown>>();
+  const get = vi.fn(() => answer.promise);
+  const set = vi.fn(async () => {});
+  vi.stubGlobal('chrome', { storage: { local: { get, set, remove: vi.fn(async () => {}) } } });
+  const loads: Array<Promise<void>> = [];
+  const load = ProjectNotes.prototype.load;
+  vi.spyOn(ProjectNotes.prototype, 'load').mockImplementation(function (this: ProjectNotes) {
+    const loading = load.call(this);
+    loads.push(loading);
+    return loading;
+  });
+  await ui.open(repository());
+  await vi.waitFor(() => expect(get).toHaveBeenCalled());
+  ui.close();
+  answer.resolve({});
+  // The reader's own handler is first in line for the answer; by the time this test resumes, it has run.
+  await loads[0];
+  expect(document.querySelector('#galley-repo-reader')).toBe(null);
+  // Nothing was written either: there were no changes to keep.
+  expect(set).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });

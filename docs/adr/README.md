@@ -86,11 +86,11 @@ Generated from the ADR files by `npm run docs:index`; do not edit by hand.
 | [0021](0021-suggested-order-and-folded-files.md) | Suggest a reading order and fold files most reviewers skip, always reversibly | Accepted | 2026-10-09 | [0036](../rfcs/0036-review-chapters.md), [0040](../rfcs/0040-thoughtful-finish.md), [0045](../rfcs/0045-search-across-a-review.md) |
 | [0022](0022-review-chapters-from-evidence.md) | Group review chapters from explainable evidence, editable for the session only | Accepted | 2026-10-09 | [0036](../rfcs/0036-review-chapters.md) |
 | [0023](0023-pull-request-demos-on-github-pages.md) | Publish temporary pull request demos on GitHub Pages from a default-branch publisher | Accepted | 2026-10-09 | — |
-| [0024](0024-read-a-repository-at-one-commit.md) | Read a repository at one resolved commit, as a snapshot that refreshes only when asked | Proposed | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
-| [0025](0025-repository-reads-in-the-token-allowlist.md) | Let the token worker resolve a ref and list the tree of the repository in the tab, and nothing more | Proposed | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
-| [0026](0026-an-evidence-only-project-map.md) | Draw the project map only from evidence, say where each part comes from, and keep the reader's corrections beside the source | Proposed | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
-| [0027](0027-read-configuration-statically.md) | Read configuration files statically, on request, in a sandboxed frame, and never call it running infrastructure | Proposed | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
-| [0028](0028-private-project-notes.md) | Keep the reader's project notes on the device only when they save, recover drafts, and share only through an export they preview | Proposed | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
+| [0024](0024-read-a-repository-at-one-commit.md) | Read a repository at one resolved commit, as a snapshot that refreshes only when asked | Accepted | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
+| [0025](0025-repository-reads-in-the-token-allowlist.md) | Let the token worker resolve a ref and list the tree of the repository in the tab, and nothing more | Accepted | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
+| [0026](0026-an-evidence-only-project-map.md) | Draw the project map only from evidence, say where each part comes from, and keep the reader's corrections beside the source | Accepted | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
+| [0027](0027-read-configuration-statically.md) | Read configuration files statically, on request, in a sandboxed frame, and never call it running infrastructure | Accepted | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
+| [0028](0028-private-project-notes.md) | Keep the reader's project notes on the device only when they save, recover drafts, and share only through an export they preview | Accepted | 2026-10-10 | [0049](../rfcs/0049-repository-docs-and-project-maps.md) |
 <!-- adr-index:end -->
 
 ## By area
