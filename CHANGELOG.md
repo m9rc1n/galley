@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.0](https://github.com/m9rc1n/galley/compare/v0.11.0...v0.12.0) (2026-10-10)
+
+
+### Features
+
+* **reader:** open reviews and docs from the toolbar or shortcut ([f44e974](https://github.com/m9rc1n/galley/commit/f44e9749a692adc85af55706b8e3c000358c0e4d))
+* **reader:** open reviews and docs from the toolbar or shortcut ([7af41cd](https://github.com/m9rc1n/galley/commit/7af41cd3d23c6c2c751c6a8aaa10a43056edbe05))
+
+
+### Bug Fixes
+
+* **popup:** give toolbar actions and text more room ([b7ccc51](https://github.com/m9rc1n/galley/commit/b7ccc51b64cb8377d5ec9c311515965217ff9890))
+
 ## [0.11.0](https://github.com/m9rc1n/galley/compare/v0.10.0...v0.11.0) (2026-10-10)
 
 
