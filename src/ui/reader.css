@@ -996,8 +996,9 @@
 }
 
 .mr-content li {
-  margin-top: var(--item-gap, 0.55em);
+  margin-top: var(--item-gap, 0.75em);
   padding-left: 0.2em;
+  line-height: var(--list-leading, 1.42);
 }
 
 .mr-content li::marker {
@@ -4413,9 +4414,10 @@
    smaller screens. Proportions stay the same, so it works at every text size and with every layout. */
 .mr-root[data-density="compact"] {
   --leading: 1.46;
+  --list-leading: 1.35;
   --block-gap: 0.9em;
   --heading-gap: 1.35em;
-  --item-gap: 0.25em;
+  --item-gap: 0.4em;
 }
 .mr-root[data-density="compact"] .mr-main {
   padding-top: 56px;
