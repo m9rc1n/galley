@@ -207,10 +207,10 @@ it('offers Read this review first, names it without listing files, and closes th
   expect(api.runtime.openOptionsPage).toHaveBeenCalledOnce();
 });
 
-it('offers Read docs for a repository and reports when it becomes unavailable or cannot be reached', async () => {
+it('offers Read the project for a repository and reports when it becomes unavailable or cannot be reached', async () => {
   api.tabs.sendMessage.mockResolvedValue({ kind: 'repository', label: 'group/project' });
   await open('https://gitlab.com/group/project');
-  expect(q('#reader button').textContent).toBe('Read docs');
+  expect(q('#reader button').textContent).toBe('Read the project');
   api.tabs.sendMessage.mockResolvedValueOnce({ kind: 'unavailable', label: 'Galley is off here.' });
   q('#reader button').click();
   await vi.waitFor(() => expect(q('#reader').textContent).toContain('Galley is off here.'));

@@ -27,7 +27,7 @@ Use 5–8 readers, new teammates and experienced reviewers. Install the extensio
 3. Explain one component boundary: what talks to what, and where that is stated.
 4. Locate the deployment evidence for one service, and say whether it shows what is running.
 5. Write down one open question as a note, close the reader, come back, and find it again.
-6. From a merge request in that repository, open Project docs and say which documents the change might affect.
+6. From a merge request in that repository, open Project library and say which documents the change might affect.
 
 Run the same tasks with the provider's own navigation as a comparison, alternating which comes first.
 

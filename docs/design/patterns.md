@@ -17,7 +17,7 @@ How the reader's controls behave, so a new feature feels like the rest. Each pat
 
 Settings rows follow one shape: a label with an optional `small` explanation on the left, the control on the right (`.mr-set-row`). `setRow(label, control, explain)` builds one and names the control by its label, so a row works the same in the settings sheet, the export sheet, a form or a card.
 
-Both readers build these controls with the helpers in `src/ui/dom.ts` (`chip`, `setRow`, `switchButton`, `selectField`, `textField`, `option`), and share the settings sheet from `src/ui/settings-sheet.ts`: its markup, its Reading tab, tab focus and the palette carousel.
+Both readers build these controls with the helpers in `src/ui/dom.ts` (`chip`, `setRow`, `switchButton`, `selectField`, `textField`, `option`), and share the settings sheet from `src/ui/settings-sheet.ts`: its markup, its Reading tab, tab focus and the palette carousel. `layout-controls.ts` builds both Layout panels from one vocabulary, with only supported choices and context-specific previews. Its `LibraryLayout` state starts in Focus and stays in the library session; it never enters saved review settings. Each component has adjacent tests, and the reader integration tests cover navigation and return to a review.
 
 ## Actions and events
 

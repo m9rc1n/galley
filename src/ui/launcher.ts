@@ -42,7 +42,7 @@ const CSS = `
 `;
 
 /**
- * The floating "Read" button shown on pull/merge requests that change markdown files, and "Read docs"
+ * The floating "Read" button shown on pull/merge requests that change markdown files, and "Read the project"
  * on repository pages, where nothing is fetched until it is chosen, so it has no count (`null`).
  */
 export class Launcher {
@@ -59,7 +59,7 @@ export class Launcher {
     // biome-ignore lint/plugin: the bundled stylesheet, bundled icons and fixed markup; no page content.
     shadow.innerHTML = `<style>${CSS}</style><div class="wrap${__GALLEY_DEV__ ? ' dev' : ''}"><button class="launch">${icons.book}<span class="label"></span>${dev}<span class="count"></span></button><button class="dismiss" aria-label="Hide for this page" title="Hide for this page">×</button></div>`;
     const launch = shadow.querySelector<HTMLButtonElement>('.launch')!;
-    shadow.querySelector('.label')!.textContent = count === null ? 'Read docs' : 'Read';
+    shadow.querySelector('.label')!.textContent = count === null ? 'Read the project' : 'Read';
     shadow.querySelector('.count')!.textContent = error ? '!' : count === null ? '' : String(count);
     launch.classList.toggle('is-error', error);
     launch.title = error

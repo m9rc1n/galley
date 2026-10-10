@@ -47,11 +47,11 @@ it('offers an error launcher whose click opens details and whose count cannot co
   expect(open).toHaveBeenCalledOnce();
 });
 
-it('offers repository pages a Read docs button with no count, since nothing is fetched before it is chosen', () => {
+it('offers repository pages a Read the project button with no count, since nothing is fetched before it is chosen', () => {
   const launcher = new Launcher(),
     open = vi.fn();
   launcher.show('repo', null, open);
-  expect(button('.label').textContent).toBe('Read docs');
+  expect(button('.label').textContent).toBe('Read the project');
   expect(button('.count').textContent).toBe('');
   expect(button().title).toBe('Read this repository’s documents in Galley');
   expect(button('.dismiss').getAttribute('aria-label')).toBe('Hide for this repository');

@@ -25,11 +25,13 @@ it('a review without its repository offers no project docs', async () => {
   expect(ui.q('.mr-files-project')).toBe(null);
 });
 
-it('Project docs opens the repository at the review’s head or base over the review, and closing it comes back to the review as it was', async () => {
+it('Project library opens the repository at the review’s head or base over the review, and closing it comes back to the review as it was', async () => {
   const behind = project();
   await ui.open(review({ project: behind }));
   const toggle = ui.q('[data-act="project"]');
   expect(toggle.hidden).toBe(false);
+  expect(toggle.getAttribute('aria-label')).toBe('Project library');
+  expect(ui.q('.mr-project-label').textContent).toBe('Library');
   ui.click('[data-act="project"]');
   expect(ui.q('.mr-project').hidden).toBe(false);
   expect(toggle.getAttribute('aria-expanded')).toBe('true');
@@ -64,7 +66,7 @@ it('Project docs opens the repository at the review’s head or base over the re
     'head',
     'base',
   ]);
-  expect(ui.q('.mr-files-project').textContent).toBe('Project docs');
+  expect(ui.q('.mr-files-project').textContent).toBe('Project library');
   ui.key('Escape');
 
   // The base is the other choice; closing the review closes the docs over it too.
@@ -74,4 +76,37 @@ it('Project docs opens the repository at the review’s head or base over the re
   await vi.waitFor(() => expect(repoShadow()?.querySelector('.mr-review-context .mr-subtitle')?.textContent).toContain('at its base, main @ ba5e000'));
   ui.close();
   expect(document.querySelector('#galley-repo-reader')).toBe(null);
+});
+
+it('a library layout choice leaves the review layout, paragraph, folds, Viewed and comment draft intact', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ layout: 'review' }));
+  await ui.open(review({ project: project() }));
+  await ui.readyViewed();
+  await ui.commentOn();
+  ui.input('Check the rationale before posting');
+  ui.q('.mr-root').scrollTop = 460;
+  const before = {
+    layout: ui.q('.mr-root').dataset.layout,
+    viewed: ui.q('.mr-viewed').getAttribute('aria-pressed'),
+    folds: [...ui.shadow().querySelectorAll('[data-act="fold"]')].map((el) => el.getAttribute('aria-checked')),
+  };
+  expect(before.layout).toBe('review');
+  ui.click('[data-act="project"]');
+  ui.click('[data-act="project-open"][data-revision="head"]');
+  await vi.waitFor(() => expect(repoShadow()?.querySelector('.mr-review-context h1')?.textContent).toBe('This review'));
+  const library = repoShadow()!;
+  expect(library.querySelector<HTMLElement>('.mr-root')!.dataset.layout).toBe('focus');
+  library.querySelector<HTMLElement>('[data-setting="layout"] [data-value="wide"]')!.click();
+  expect(library.querySelector<HTMLElement>('.mr-root')!.dataset.layout).toBe('wide');
+  expect(JSON.parse(localStorage.getItem('galley:settings')!).layout).toBe('review');
+  library
+    .querySelector<HTMLElement>('.mr-root')!
+    .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }));
+  expect(repoShadow()).toBeNull();
+  expect(ui.q('.mr-root').dataset.layout).toBe(before.layout);
+  expect(ui.q('.mr-root').scrollTop).toBe(460);
+  expect(ui.q('.mr-viewed').getAttribute('aria-pressed')).toBe(before.viewed);
+  expect([...ui.shadow().querySelectorAll('[data-act="fold"]')].map((el) => el.getAttribute('aria-checked'))).toEqual(before.folds);
+  expect(ui.q<HTMLTextAreaElement>('.mr-composer textarea').value).toBe('Check the rationale before posting');
+  expect(ui.shadow().activeElement).toBe(ui.q('[data-act="project"]'));
 });

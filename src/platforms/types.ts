@@ -91,7 +91,7 @@ export interface ReviewSource {
   loadThreads?(): Promise<Thread[]>;
   /** Its title and description, shown as the first document when the reader chooses (Review settings). */
   overview?: ReviewOverview;
-  /** The repository's own docs at the review's base or head, opened over the review (Project docs). */
+  /** The repository's own docs at the review's base or head, opened over the review (Project library). */
   project?: ReviewProject;
 }
 

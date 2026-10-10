@@ -3,6 +3,42 @@
    the project map and its lenses, the reader's notes and their export, and a review's project context.
    Nothing here styles a change; a repository is read as it is. */
 
+.mr-root.mr-repo[data-layout="focus"] {
+  --measure-max: 680px;
+}
+
+/* A library has article contents but no review-conversation column. Keep even margins around text. */
+@media (min-width: 1280px) {
+  .mr-root.mr-repo {
+    --rail-min: 0px;
+    --rail-max: 0px;
+    --rail-gap: 0px;
+    --shift: 0px;
+    --measure: min(var(--measure-max), calc(100vw - 2 * var(--edge) - 2 * (var(--toc-width) + var(--toc-gap))));
+    --text-left: calc((100vw - var(--measure)) / 2);
+  }
+}
+
+.is-library.mr-layout-preview {
+  justify-content: center;
+}
+
+.is-library.mr-layout-preview .c {
+  margin-left: 0;
+}
+
+.is-library.mr-layout-preview .t {
+  flex-basis: 54%;
+}
+
+[data-value="focus"] .is-library.mr-layout-preview .t {
+  flex-basis: 62%;
+}
+
+[data-value="wide"] .is-library.mr-layout-preview .t {
+  flex-basis: 70%;
+}
+
 .mr-repo-history {
   display: inline-flex;
   gap: 2px;

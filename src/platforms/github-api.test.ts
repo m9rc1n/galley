@@ -80,7 +80,7 @@ it('a repository page may only resolve a ref and list the tree of that repositor
   no(`${api}/commits?per_page=1`, 'GET', undefined, 'https://github.com/settings/profile');
 });
 
-it('a pull request page may list its own repository’s tree for Project docs, and resolve no refs', () => {
+it('a pull request page may list its own repository’s tree for Project library, and resolve no refs', () => {
   const ok = (url: string) => allowedRequest('https://github.com', page, url, 'GET');
   expect(ok(`${api}/git/trees/headsha?recursive=1`)).toBe(true);
   expect(ok(`${api}/git/trees/subtree`)).toBe(true);

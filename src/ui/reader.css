@@ -1191,7 +1191,8 @@
   text-align: center;
 }
 
-.mr-content figure img {
+.mr-content figure img,
+.mr-content figure .mr-image-frame {
   display: block;
   margin: 0 auto;
 }
@@ -2704,7 +2705,7 @@
   width: min(460px, calc(100vw - 24px));
 }
 
-/* Project docs: the repository's docs at one side of the review, opened over it. Phones keep the icon. */
+/* Project library: the repository's docs at one side of the review, opened over it. Phones keep the icon. */
 .mr-project-btn .mr-icon {
   width: 17px;
   height: 17px;

@@ -41,7 +41,7 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 ## Content from other websites
 
-Documents and comments can embed images hosted on other websites. Galley does not load those images by default: each shows the website it comes from and a Load button. Images hosted on the GitHub or GitLab site you are reviewing load normally. If you press Load, or choose to always load external images in reading settings, your browser fetches them from where they are hosted, and those hosts can see your IP address, as with any web page. Galley never sends the address of the page you are reading with these requests.
+Documents and comments can embed images hosted on other websites. Galley does not load those images by default: each shows the website it comes from and a Load button. Images hosted on the GitHub or GitLab site you are reviewing load normally. If you press Load, or choose to always load external images in reading settings, your browser fetches them from where they are hosted, and those hosts can see your IP address, as with any web page. Galley never sends the address of the page you are reading with these requests. If the platform blocks a consented image, Galley displays it in an isolated image frame. This frame can load only images; it cannot read the page, Galley’s storage or your token.
 
 ## Your choices
 

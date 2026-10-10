@@ -17,8 +17,11 @@ Describe the benefit before the visual metaphor. The book-proof origin of Galley
 | Use | Meaning |
 | --- | --- |
 | Review | A GitHub pull request or GitLab merge request |
-| Read this review / Read docs | Toolbar actions for the current review or repository |
+| Read this review / Read the project | Toolbar actions for the current review or repository |
 | Read button on the page | The extension setting that shows or hides both page buttons |
+| Project library / Library | The repository's readable material at the selected commit; Library is the compact label |
+| Chapters | A reading order through related files in a review |
+| Contents | Headings inside the current article |
 | Documents | Markdown files shown as readable articles |
 | Code files | Supported source and configuration files; enabled in Reading settings → Review |
 | Edits in context | Changed words in sentences, table edits in cells, or changed code with nearby lines |

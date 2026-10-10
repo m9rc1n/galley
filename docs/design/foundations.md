@@ -135,6 +135,8 @@ Code is the exception: source files run to 120 characters (`--code-width`, `--co
 | Focus | `focus` | No contents; text 720px centred; comments below their paragraphs |
 | Fit to screen | `fit` | The Balanced composition for 1,440px, scaled by `--fit` |
 
+Project library shares **Focus**, **Balanced** and **Wide text** through `layout-controls.ts`. Focus and Balanced use a 680px maximum article measure; Wide text uses 920px, constrained by equal space for the contents rail on both sides. `repo.css` centres the article without reserving a comments column. Focus hides the rail; at widths below 1,280px every layout uses one column. Its layout is session-scoped, independent of the review's saved layout.
+
 **Density** (`data-density`: `comfortable` or `compact`) changes rhythm, title sizes and card padding, never proportions, so it works with every layout and size.
 
 ## Elevation and stacking

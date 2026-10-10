@@ -1,4 +1,5 @@
 import { languageOf, lineEl, lineify, registerCode } from './code.ts';
+import { withImageFallback } from './image.ts';
 import { mermaidSource, prepareDiagram, type Diagram } from './diagrams.ts';
 import { boundedDiff } from '../core/limits.ts';
 import DOMPurify from 'dompurify';
@@ -434,6 +435,7 @@ function decorate(doc: Document, root: HTMLElement, input: RenderInput): { repla
   const replacements = new Map<HTMLElement, HTMLElement>();
   let held = 0;
   for (const img of root.querySelectorAll('img')) {
+    withImageFallback(img);
     img.loading = 'lazy';
     img.decoding = 'async';
     img.referrerPolicy = 'no-referrer';
@@ -506,6 +508,7 @@ export function renderSnippet(doc: Document, markdown: string, origin: string, i
     a.setAttribute('rel', 'noopener noreferrer');
   }
   for (const img of frag.querySelectorAll('img')) {
+    withImageFallback(img);
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
     const remote = img.dataset.mrSrc;

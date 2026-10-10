@@ -76,6 +76,7 @@ async function writeStatic() {
   await cp(`${root}src/options/options.css`, `${out}/options.css`);
   await cp(`${root}src/ui/diagram-frame.html`, `${out}/diagram-frame.html`);
   await cp(`${root}src/ui/highlight-frame.html`, `${out}/highlight-frame.html`);
+  await cp(`${root}src/ui/image-frame.html`, `${out}/image-frame.html`);
   for (const font of ['Newsreader', 'DM-Sans']) await cp(`${root}src/ui/fonts/${font}-OFL.txt`, `${out}/${font}-OFL.txt`);
 }
 
@@ -133,6 +134,7 @@ const options = (entry, file) => ({
 if (standalone) {
   await esbuild.build({ ...options('src/ui/diagram-frame.ts', 'diagram-frame.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/ui/highlight-frame.ts', 'highlight-frame.js'), logLevel: 'error' });
+  await esbuild.build({ ...options('src/ui/image-frame.ts', 'image-frame.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/content/main.ts', 'content.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/popup/popup.ts', 'popup.js'), logLevel: 'error' });
   await esbuild.build({ ...options('src/options/options.ts', 'options.js'), logLevel: 'error' });
@@ -150,6 +152,7 @@ if (standalone) {
 for (const [entry, file, kind] of [
   ['src/ui/diagram-frame.ts', 'diagram-frame.js', 'content'],
   ['src/ui/highlight-frame.ts', 'highlight-frame.js', 'content'],
+  ['src/ui/image-frame.ts', 'image-frame.js', 'content'],
   ['src/content/main.ts', 'content.js', 'content'],
   ['src/popup/popup.ts', 'popup.js', 'popup'],
   ['src/options/options.ts', 'options.js', 'options'],

@@ -6,11 +6,12 @@
 
 <p align="center"><em>Understand changes. Review in peace.</em><br><sub>Clearer code and document reviews for teams on GitHub and GitLab.</sub></p>
 
+<!-- Codecov still keeps the repository record under m9rc1n after the GitHub move to m9sh. -->
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic"><img src="https://img.shields.io/chrome-web-store/v/ccmihhdpegbhbijhahdanmcbbpoeneic?style=flat-square&color=243e32&label=chrome%20web%20store" alt="Chrome Web Store"></a>
-  <a href="https://github.com/m9rc1n/galley/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/m9rc1n/galley/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
+  <a href="https://github.com/m9sh/galley/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/m9sh/galley/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
   <a href="https://codecov.io/gh/m9rc1n/galley"><img src="https://img.shields.io/codecov/c/github/m9rc1n/galley?style=flat-square&color=243e32&label=coverage" alt="Coverage"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/m9rc1n/galley?style=flat-square&color=243e32" alt="License: GPL-3.0-or-later"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/m9sh/galley?style=flat-square&color=243e32" alt="License: GPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/servers-0-243e32?style=flat-square" alt="Servers: 0">
 </p>
 
@@ -20,8 +21,8 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/galley-markdown-reader-fo/ccmihhdpegbhbijhahdanmcbbpoeneic"><strong>Add to Chrome</strong></a> ·
-  <a href="https://m9rc1n.github.io/galley/demo/">Try the live demo</a> ·
-  <a href="https://m9rc1n.github.io/galley/">Website</a>
+  <a href="https://m9sh.github.io/galley/demo/">Try the live demo</a> ·
+  <a href="https://m9sh.github.io/galley/">Website</a>
 </p>
 
 ---
@@ -32,9 +33,9 @@ Press **Read** on a GitHub pull request or GitLab merge request. Documents open 
 
 Your team gets more context for its feedback, using the GitHub or GitLab workflow it already knows.
 
-Between reviews, press **Read docs** on a repository, folder or Markdown file to read the project's own documentation at one commit. Follow links between specs, decisions and guides without losing your place, and open the **Map** to see which documents link to the one you are reading, with each link as evidence. Switch the map to **Architecture**, **Infrastructure** or **Decisions** for what the configuration declares and what the decision records state, keep private **Notes** you save only when you choose, and from a review open **Project docs** at its base or head.
+Between reviews, press **Read the project** on a repository, folder or Markdown file to read the project's own documentation at one commit. Follow links between specs, decisions and guides without losing your place, and open the **Map** to see which documents link to the one you are reading, with each link as evidence. Switch the map to **Architecture**, **Infrastructure** or **Decisions** for what the configuration declares and what the decision records state, keep private **Notes** you save only when you choose, and from a review open **Project library** at its base or head. Library reading starts in Focus; choose Balanced or Wide text in **Reading settings → Layout**, or cycle them with <kbd>L</kbd>, without changing the review's layout.
 
-Prefer a clear platform page? In the toolbar popup, choose **Settings…** and turn off **Read button on the page**. Open with **Read this review** or **Read docs** in the popup, or <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd> (changeable in your browser's extension shortcuts). With the page button off, Galley fetches files only when you ask.
+Prefer a clear platform page? In the toolbar popup, choose **Settings…** and turn off **Read button on the page**. Open with **Read this review** or **Read the project** in the popup, or <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd> (changeable in your browser's extension shortcuts). With the page button off, Galley fetches files only when you ask.
 
 ## Before / after
 
@@ -77,8 +78,8 @@ No Galley account needed. Private repositories and self-hosted sites have a few 
 
 - **Private GitHub repositories** need a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with read-only *Contents* and *Pull requests* access, pasted into the Galley popup. Commenting also needs *Pull requests: read and write*. The token stays in extension storage that web pages cannot read.
 - **GitLab** uses your signed-in session. Self-managed GitLab and GitHub Enterprise Server are enabled one domain at a time from the popup.
-- **Want to look first?** The [live demo](https://m9rc1n.github.io/galley/demo/) runs the real reader on a sample merge request in your browser.
-- **Firefox** builds are attached to every [release](https://github.com/m9rc1n/galley/releases); the add-ons listing is not published yet. Building from source is in [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Want to look first?** The [live demo](https://m9sh.github.io/galley/demo/) runs the real reader on a sample merge request in your browser.
+- **Firefox** builds are attached to every [release](https://github.com/m9sh/galley/releases); the add-ons listing is not published yet. Building from source is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The [user guide](docs/GUIDE.md) covers every setting, token and platform detail. Everything else, from architecture and design decisions to proposals and how-to guides, starts at [docs/README.md](docs/README.md).
 
@@ -100,7 +101,7 @@ The [user guide](docs/GUIDE.md) covers every setting, token and platform detail.
 | <kbd>,</kbd> · <kbd>?</kbd> | Settings · these shortcuts |
 | <kbd>Esc</kbd> | Close the innermost thing, and finally the reader. Drafts are kept. |
 
-Reading repository docs: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>M</kbd> map, <kbd>N</kbd> notes, <kbd>,</kbd> settings, <kbd>?</kbd> these keys.
+Reading Project library: <kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd> back and forward, <kbd>/</kbd> find a document, <kbd>L</kbd> next reading layout, <kbd>M</kbd> map, <kbd>N</kbd> notes, <kbd>,</kbd> settings, <kbd>?</kbd> these keys.
 
 ## FAQ
 
@@ -146,17 +147,17 @@ The [privacy policy](PRIVACY.md) has the details. Security reports go through [S
 1. **Conversation in the margin.** Resolve threads from the reader.
 2. **Review flow.** Approve or request changes without leaving it.
 3. **Richer rendering.** Math, issue and user references.
-4. **Project understanding.** Architecture and infrastructure views, private notes on the map, and project docs beside a review ([RFC #49](https://github.com/m9rc1n/galley/issues/49)).
+4. **Project understanding.** Architecture and infrastructure views, private notes on the map, and project docs beside a review ([RFC #49](https://github.com/m9sh/galley/issues/49)).
 5. **Distribution.** A Firefox Add-ons listing.
 
 ## Contributing
 
-Tell us what makes your reviews harder: a long document, missing context, an accessibility barrier, a conversation that is hard to follow. [Issues](https://github.com/m9rc1n/galley/issues) and pull requests shape the project. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup, architecture and contribution guidelines, [PUBLISHING.md](PUBLISHING.md) the store release steps, and [store/ARTWORK.md](store/ARTWORK.md) how every image in this README is made. Larger ideas start as [RFCs](docs/rfcs/README.md); the decisions behind the code are in the [architecture decision records](docs/adr/README.md).
+Tell us what makes your reviews harder: a long document, missing context, an accessibility barrier, a conversation that is hard to follow. [Issues](https://github.com/m9sh/galley/issues) and pull requests shape the project. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup, architecture and contribution guidelines, [PUBLISHING.md](PUBLISHING.md) the store release steps, and [store/ARTWORK.md](store/ARTWORK.md) how every image in this README is made. Larger ideas start as [RFCs](docs/rfcs/README.md); the decisions behind the code are in the [architecture decision records](docs/adr/README.md).
 
 ## License
 
 [GPL-3.0-or-later](LICENSE) © Marcin Urbanski. Free to use, study, change and share. If you distribute a modified version, publish its source under the same license. The licences of the bundled libraries ship in `THIRD_PARTY_NOTICES.txt` inside every build. Releases up to and including 0.4.1 were published under MIT and stay available under it.
 
-**Commercial license.** Building Galley into a closed-source product, or shipping a modified version without its source? A separate commercial license is available: [open an issue](https://github.com/m9rc1n/galley/issues/new/choose) titled "Commercial license", leave your contact details out, and you'll get a private way to talk.
+**Commercial license.** Building Galley into a closed-source product, or shipping a modified version without its source? A separate commercial license is available: [open an issue](https://github.com/m9sh/galley/issues/new/choose) titled "Commercial license", leave your contact details out, and you'll get a private way to talk.
 
 <p align="center"><sub>Understand changes. Review in peace.</sub></p>

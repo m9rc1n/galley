@@ -43,7 +43,7 @@ async function renderReader(tabId: number | undefined): Promise<void> {
     section.append(status);
     return;
   }
-  const read = el('button', state.kind === 'review' ? 'Read this review' : 'Read docs');
+  const read = el('button', state.kind === 'review' ? 'Read this review' : 'Read the project');
   read.addEventListener('click', async () => {
     read.disabled = true;
     try {

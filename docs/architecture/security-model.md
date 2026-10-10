@@ -51,9 +51,10 @@ flowchart LR
 | --- | --- | --- |
 | Content → DOM | `sanitize()` in `src/ui/render.ts`; the Biome rule `lint/no-unsanitized-html.grit` bans other HTML sinks | `render.test.ts`, `render-edges.test.ts`, `core/edges.test.ts` |
 | Content → Galley's own markup | Per-render nonce on block ids; class allowlist; no `data-*` from content; `user-content-` id prefix | `render.test.ts` |
-| Content → network | Only `<img>` may fetch, and external ones wait for consent; `srcset`, media, CSS and SVG references are removed | `render.test.ts`, `reader.test.ts` |
+| Content → network | Only `<img>` may fetch, and external ones wait for consent; `srcset`, media, CSS and SVG references are removed | `render.test.ts`, `reader.test.ts`, `image.test.ts`, `image-frame.test.ts`, `e2e/opening.mjs` |
 | Content → links | Relative links decoded before resolving dot segments; thread and "View on" links limited to the review origin | `core/paths.test.ts`, `core/edges.test.ts` |
 | Content → reviewer's comment | Path and quote posted as code; quote capped at 1,000 characters | `platforms/comments.test.ts` |
+| Consented image → fallback | Image-only opaque frame, `default-src 'none'` with HTTP(S) images only; URL and reply-size validation, one image per frame, no extension APIs; engine frames retain their own network-blocking meta CSP ([ADR 0029](../adr/0029-consented-images-in-an-isolated-frame.md)) | `image.test.ts`, `image-frame.test.ts`, `e2e/opening.mjs` |
 | Content → engines | Sandbox frames: opaque origin, CSP `default-src 'none'`, one request at a time, watchdog, input caps; replies validated | `sandbox.test.ts`, `*-frame.test.ts`, `e2e/reader.mjs` |
 | Content → execution | Test files, declarations and configuration files are parsed, never run; YAML aliases are never expanded, includes never followed ([ADR 0027](../adr/0027-read-configuration-statically.md)) | `spec-frame.test.ts`, `config-frame.test.ts` |
 | Page → token | Tokens in extension IndexedDB; only the worker attaches them; the build fails if token code reaches `content.js` or a frame | `worker.test.ts`, `tokens.test.ts`, `scripts/build.mjs` |

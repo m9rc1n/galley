@@ -35,12 +35,12 @@ export async function checkRepository(browser, demoUrl, screenshots) {
   ]);
   await page.goto(`${demoUrl}/?closed&repo`, { waitUntil: 'networkidle0' });
   await inspect(() => localStorage.setItem('galley:settings', JSON.stringify({ theme: 'sage', appearance: 'light' })));
-  // A repository page offers Read docs, with no count: nothing is fetched until it is chosen.
+  // A repository page offers Read the project, with no count: nothing is fetched until it is chosen.
   const launcher = await inspect(() => {
     const s = document.querySelector('#galley-launcher').shadowRoot;
     return { label: s.querySelector('.label').textContent, count: getComputedStyle(s.querySelector('.count')).display };
   });
-  assert.deepEqual(launcher, { label: 'Read docs', count: 'none' });
+  assert.deepEqual(launcher, { label: 'Read the project', count: 'none' });
   await inspect(() => document.querySelector('#galley-launcher').shadowRoot.querySelector('.launch').click());
   await settled();
   assert.equal(await title(), 'Acme Handbook');
@@ -60,6 +60,70 @@ export async function checkRepository(browser, demoUrl, screenshots) {
   await settled();
   assert.equal(await title(), 'Architecture overview');
   await page.waitForFunction(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelector('.mr-diagram-view')?.dataset.state === 'ready');
+  // Focus is a centred article; layouts arrange the library without reserving discussion space.
+  const geometry = () =>
+    inspect(() => {
+      const s = document.querySelector('#galley-repo-reader').shadowRoot;
+      const article = s.querySelector('.mr-article').getBoundingClientRect();
+      return {
+        layout: s.querySelector('.mr-root').dataset.layout,
+        width: article.width,
+        centre: (article.left + article.right) / 2,
+        toc: getComputedStyle(s.querySelector('.mr-toc')).display,
+        overflow: s.querySelector('.mr-root').scrollWidth > innerWidth,
+      };
+    });
+  const chooseLayout = async (layout) => {
+    await click('[data-act="settings"]');
+    await click('[data-settings-tab="layout"]');
+    await click(`[data-setting="layout"] [data-value="${layout}"]`);
+    await click('.mr-settings-heading [data-act="close-settings"]');
+  };
+  assert.deepEqual(await geometry(), { layout: 'focus', width: 680, centre: 720, toc: 'none', overflow: false });
+  await page.screenshot({ path: join(screenshots, 'repo-focus-desktop.png') });
+  await click('[data-act="settings"]');
+  await click('[data-settings-tab="layout"]');
+  await page.screenshot({ path: join(screenshots, 'repo-layout-settings-desktop.png') });
+  await click('.mr-settings-heading [data-act="close-settings"]');
+  for (const appearance of ['light', 'dark']) {
+    await click('[data-act="settings"]');
+    await click('[data-settings-tab="reading"]');
+    await click(`[data-setting="appearance"] [data-value="${appearance}"]`);
+    if (appearance === 'dark') await click('[data-act="larger"]');
+    await click('[data-settings-tab="layout"]');
+    await click(`[data-setting="density"] [data-value="${appearance === 'dark' ? 'compact' : 'comfortable'}"]`);
+    await click('.mr-settings-heading [data-act="close-settings"]');
+    for (const width of [1440, 1280, 390, 320]) {
+      await page.setViewport({ width, height: width < 760 ? 844 : 1000 });
+      await inspect(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelector('.mr-root').scrollTo({ top: 0 }));
+      for (const layout of ['focus', 'balanced', 'wide']) {
+        await chooseLayout(layout);
+        const measured = await geometry();
+        assert.equal(measured.overflow, false, `${layout} at ${width}px (${appearance}) must stay within the window`);
+        assert.ok(Math.abs(measured.centre - width / 2) < 1, `${layout} at ${width}px must centre the article: ${JSON.stringify(measured)}`);
+        assert.equal(measured.toc, width >= 1280 && layout !== 'focus' ? 'block' : 'none');
+        if (width === 1440) assert.equal(measured.width, layout === 'wide' ? 880 : 680);
+        if (width === 1440 || (layout === 'focus' && width < 760)) {
+          await page.screenshot({ path: join(screenshots, `repo-${layout}-${width}-${appearance}.png`) });
+        }
+      }
+      if (width === 390) {
+        await click('[data-act="settings"]');
+        await click('[data-settings-tab="layout"]');
+        await page.screenshot({ path: join(screenshots, `repo-layout-settings-mobile-${appearance}.png`) });
+        await click('.mr-settings-heading [data-act="close-settings"]');
+      }
+    }
+  }
+  await page.setViewport({ width: 1440, height: 1000 });
+  await click('[data-act="settings"]');
+  await click('[data-settings-tab="reading"]');
+  await click('[data-setting="appearance"] [data-value="light"]');
+  await click('[data-act="smaller"]');
+  await click('[data-settings-tab="layout"]');
+  await click('[data-setting="density"] [data-value="comfortable"]');
+  await click('.mr-settings-heading [data-act="close-settings"]');
+  await chooseLayout('balanced');
   const overview = await inspect(() => {
     const s = document.querySelector('#galley-repo-reader').shadowRoot;
     const toc = s.querySelector('.mr-toc').getBoundingClientRect();
@@ -73,16 +137,40 @@ export async function checkRepository(browser, demoUrl, screenshots) {
   assert.deepEqual(overview, { toc: ['Receiving changes', 'Rendering', 'Operating it'], tocLeftOfText: true, back: false });
   await page.screenshot({ path: join(screenshots, 'repo-read-desktop.png') });
 
+  // A shorter window leaves room below the bookmark: a document's end can clamp any scroll position.
+  await page.setViewport({ width: 1440, height: 600 });
   // Back returns to the paragraph the reader left, not to the top.
   await click('.mr-content a', 'RFC 0042');
   await settled();
-  const left = await inspect(() => {
+  let left = await inspect(() => {
     const s = document.querySelector('#galley-repo-reader').shadowRoot;
     const root = s.querySelector('.mr-root');
     const design = [...s.querySelectorAll('.mr-content p')].find((p) => p.textContent.startsWith('Documents are rendered'));
     root.scrollTo({ top: root.scrollTop + design.getBoundingClientRect().top - 300 });
     return design.getBoundingClientRect().top;
   });
+  const bookmark = await inspect(() => {
+    const blocks = [...document.querySelector('#galley-repo-reader').shadowRoot.querySelectorAll('.mr-content [data-mr-u]')];
+    const first = blocks.find((block) => block.getBoundingClientRect().bottom > 72);
+    return { id: first.dataset.mrU, top: first.getBoundingClientRect().top };
+  });
+  await chooseLayout('wide');
+  const afterLayout = await inspect(
+    (bookmark) =>
+      [...document.querySelector('#galley-repo-reader').shadowRoot.querySelectorAll('.mr-content [data-mr-u]')]
+        .find((block) => block.dataset.mrU === bookmark.id)
+        .getBoundingClientRect().top,
+    bookmark,
+  );
+  assert.ok(Math.abs(afterLayout - bookmark.top) < 4, `Layout should preserve the first visible block at ${bookmark.top}px, found ${afterLayout}px`);
+  await chooseLayout('balanced');
+  // Later paragraphs can reflow; Back must restore where this paragraph is when its link is followed.
+  left = await inspect(
+    () =>
+      [...document.querySelector('#galley-repo-reader').shadowRoot.querySelectorAll('.mr-content p')]
+        .find((p) => p.textContent.startsWith('Documents are rendered'))
+        .getBoundingClientRect().top,
+  );
   await click('.mr-content a', 'ADR 0007');
   await settled();
   assert.equal(await title(), 'ADR 0007: Render Markdown in the browser');
