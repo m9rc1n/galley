@@ -2,10 +2,12 @@
 // The page itself imitates a merge request: the raw diff reviewers read today, and the Read button.
 //   ?closed  start closed   ?doc=N  start at file N   ?code-only / ?diagram-error  exercise fallbacks
 //   ?spec  a test file   ?comments  code comments   ?large  folded files and moved code   ?chapters  mixed review map
+//   ?repo  read a sample repository's docs, as from a repository page   ?repo=docs/adr/0003-queue-for-reviews.md  from one document
 import { structuredPatch } from 'diff';
-import type { DocRef, ReviewSource, Thread } from '../src/platforms/types.ts';
+import type { DocRef, RepositorySource, ReviewSource, Thread } from '../src/platforms/types.ts';
 import { Launcher } from '../src/ui/launcher.ts';
 import { openReader } from '../src/ui/reader.ts';
+import { openRepository } from '../src/ui/repo-reader.ts';
 import { loadSettings, saveSettings } from '../src/ui/settings.ts';
 
 const params = new URLSearchParams(location.search);
@@ -263,7 +265,37 @@ async function drawDiff(): Promise<void> {
   }
 }
 
+/** A small handbook: decisions, a proposal, an architecture note and a runbook that link to each other. */
+const REPO_DOCS = [
+  'README.md',
+  'docs/README.md',
+  'docs/adr/0001-record-decisions.md',
+  'docs/adr/0003-queue-for-reviews.md',
+  'docs/adr/0007-render-markdown-in-the-browser.md',
+  'docs/architecture/overview.md',
+  'docs/guides/writing-docs.md',
+  'docs/rfcs/0042-reading-first-reviews.md',
+  'docs/runbooks/deploy.md',
+];
+const start = params.get('repo') ?? '';
+const repository: RepositorySource = {
+  platform: 'GitHub',
+  name: 'acme/handbook',
+  ref: 'main',
+  commit: '4f2c9e1a7b3d5c8e0f6a2b4d9c1e3f5a7b8c0d2e',
+  start: { path: start, folder: !start.endsWith('.md') },
+  url: location.href,
+  discover: async () => ({ docs: REPO_DOCS.map((path) => ({ path })), limits: [] }),
+  load: (path) => text(`samples/repo/${path}`),
+  links: { raw: (path) => `samples/repo/${path}`, blob: (path) => `samples/repo/${path}` },
+  refresh: async () => repository,
+};
+
 const open = () => {
+  if (params.has('repo')) {
+    openRepository(repository);
+    return;
+  }
   const show = () => openReader(source, { start: Number(params.get('doc') ?? 0) });
   if (params.has('spec') || params.has('comments'))
     void loadSettings().then(async (settings) => {
@@ -272,6 +304,6 @@ const open = () => {
     });
   else show();
 };
-new Launcher().show('demo', source.docs.length || source.codeDocs!.length, open);
+new Launcher().show('demo', params.has('repo') ? null : source.docs.length || source.codeDocs!.length, open);
 void drawDiff();
 if (!params.has('closed')) open();

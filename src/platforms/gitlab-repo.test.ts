@@ -7,6 +7,7 @@ const api = 'https://git.acme.dev/gitlab/api/v4/projects/group%2Fsub%2Fproject';
 const context = (view: GitLabRepoContext['view'], rest: string[] = [], projectId: string | null = null): GitLabRepoContext => ({
   platform: 'gitlab',
   key: 'k',
+  repository: 'r',
   origin: 'https://git.acme.dev',
   prefix: '/gitlab',
   projectPath: 'group/sub/project',

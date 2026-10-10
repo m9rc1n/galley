@@ -1,16 +1,17 @@
-import { detectContext, type PageContext } from '../platforms/detect.ts';
-import { loadSource } from '../platforms/index.ts';
+import { detectContext, detectRepository, type PageContext, type RepoContext } from '../platforms/detect.ts';
+import { loadRepository, loadSource } from '../platforms/index.ts';
 import { TOKENS_CHANGED, type TokensChanged } from '../platforms/token-signal.ts';
 import type { ReviewSource } from '../platforms/types.ts';
 import { Launcher } from '../ui/launcher.ts';
 import { openReader } from '../ui/reader.ts';
+import { openRepository } from '../ui/repo-reader.ts';
 
 const LOADED = '__galleyLoaded';
 
 function start(): void {
   const launcher = new Launcher();
   const sources = new Map<string, Promise<ReviewSource>>();
-  let current: PageContext | null = null;
+  let current: PageContext | RepoContext | null = null;
   let href = '';
 
   const sourceFor = (ctx: PageContext, fresh = false): Promise<ReviewSource> => {
@@ -51,7 +52,7 @@ function start(): void {
 
   const refresh = () => {
     href = location.href;
-    const ctx = detectContext(location, document);
+    const ctx = detectContext(location, document) ?? detectRepository(location, document);
     if (!ctx) {
       current = null;
       launcher.hide();
@@ -63,7 +64,10 @@ function start(): void {
     }
     current = ctx;
     launcher.hide();
-    present(ctx);
+    // A repository page is read on request only: nothing is fetched until Read docs is chosen.
+    // Hiding the button there hides it for the whole repository.
+    if ('view' in ctx) launcher.show(ctx.repository, null, () => openRepository(loadRepository(ctx)));
+    else present(ctx);
   };
 
   refresh();

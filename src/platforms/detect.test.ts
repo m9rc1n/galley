@@ -39,6 +39,7 @@ it('GitHub repositories, their folders and their Markdown files are starting poi
   expect(github('/acme/handbook')).toStrictEqual({
     platform: 'github',
     key: 'repo:github:https://github.com/acme/handbook/root/',
+    repository: 'repo:github:https://github.com/acme/handbook',
     origin: 'https://github.com',
     apiBase: 'https://api.github.com',
     owner: 'acme',
@@ -69,6 +70,7 @@ it('GitLab projects in nested groups and sub-path installs, from the page’s ow
   expect(detectRepository({ origin: 'https://git.acme.dev', pathname: '/gitlab/group/sub/project' }, doc)).toStrictEqual({
     platform: 'gitlab',
     key: 'repo:gitlab:https://git.acme.dev/gitlab/group/sub/project/root/',
+    repository: 'repo:gitlab:https://git.acme.dev/gitlab/group/sub/project',
     origin: 'https://git.acme.dev',
     prefix: '/gitlab',
     projectPath: 'group/sub/project',

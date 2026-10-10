@@ -9,6 +9,7 @@ const api = 'https://api.github.com/repos/acme/handbook';
 const context = (view: GitHubRepoContext['view'], rest: string[] = []): GitHubRepoContext => ({
   platform: 'github',
   key: 'k',
+  repository: 'r',
   origin: 'https://github.com',
   apiBase: 'https://api.github.com',
   owner: 'acme',

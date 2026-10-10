@@ -39,13 +39,23 @@ it('reads repositories the same way: GitHub through the worker, GitLab with the 
   const github: RepoContext = {
     platform: 'github',
     key: 'gh',
+    repository: 'gh',
     origin: 'https://github.com',
     apiBase: 'https://api.github.com',
     owner: 'a',
     repo: 'b',
     ...where,
   };
-  const gitlab: RepoContext = { platform: 'gitlab', key: 'gl', origin: 'https://gitlab.com', prefix: '', projectPath: 'a/b', projectId: null, ...where };
+  const gitlab: RepoContext = {
+    platform: 'gitlab',
+    key: 'gl',
+    repository: 'gl',
+    origin: 'https://gitlab.com',
+    prefix: '',
+    projectPath: 'a/b',
+    projectId: null,
+    ...where,
+  };
   const api = { request: vi.fn() };
   mocks.background.mockReturnValue(api);
   mocks.githubRepo.mockResolvedValue({ name: 'GitHub' });

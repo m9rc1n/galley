@@ -1,13 +1,24 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { PageContext } from '../platforms/detect.ts';
+import type { PageContext, RepoContext } from '../platforms/detect.ts';
 import { TOKENS_CHANGED } from '../platforms/token-signal.ts';
 import type { ReviewSource } from '../platforms/types.ts';
 import { deferred } from '../testing/reader.ts';
 
-const mocks = vi.hoisted(() => ({ detectContext: vi.fn(), loadSource: vi.fn(), openReader: vi.fn(), show: vi.fn(), hide: vi.fn(), reattach: vi.fn() }));
-vi.mock('../platforms/detect.ts', () => ({ detectContext: mocks.detectContext }));
-vi.mock('../platforms/index.ts', () => ({ loadSource: mocks.loadSource }));
+const mocks = vi.hoisted(() => ({
+  detectContext: vi.fn(),
+  detectRepository: vi.fn(),
+  loadSource: vi.fn(),
+  loadRepository: vi.fn(),
+  openReader: vi.fn(),
+  openRepository: vi.fn(),
+  show: vi.fn(),
+  hide: vi.fn(),
+  reattach: vi.fn(),
+}));
+vi.mock('../platforms/detect.ts', () => ({ detectContext: mocks.detectContext, detectRepository: mocks.detectRepository }));
+vi.mock('../platforms/index.ts', () => ({ loadSource: mocks.loadSource, loadRepository: mocks.loadRepository }));
 vi.mock('../ui/reader.ts', () => ({ openReader: mocks.openReader }));
+vi.mock('../ui/repo-reader.ts', () => ({ openRepository: mocks.openRepository }));
 vi.mock('../ui/launcher.ts', () => ({
   Launcher: class {
     show = mocks.show;
@@ -16,6 +27,7 @@ vi.mock('../ui/launcher.ts', () => ({
   },
 }));
 let context: PageContext | null;
+let repository: RepoContext | null;
 let storageChange: (changes: Record<string, unknown>) => void;
 const reviewContext = (number: number): PageContext => ({
   platform: 'github',
@@ -38,7 +50,9 @@ beforeEach(() => {
   delete (window as unknown as Record<string, unknown>).__galleyLoaded;
   history.replaceState(null, '', '/');
   context = reviewContext(1);
+  repository = null;
   mocks.detectContext.mockImplementation(() => context);
+  mocks.detectRepository.mockImplementation(() => repository);
   mocks.loadSource.mockResolvedValue(source());
   for (const fn of Object.values(mocks)) fn.mockClear();
   vi.stubGlobal('chrome', {
@@ -163,4 +177,35 @@ it('keeps the error launcher when the retry fails too, without an unhandled reje
   expect(mocks.openReader).toHaveBeenCalledOnce();
   expect(mocks.loadSource).toHaveBeenCalledTimes(2);
   expect(mocks.show).toHaveBeenCalledOnce();
+});
+
+it('offers repository pages Read docs without fetching anything until it is chosen', async () => {
+  context = null;
+  const page = (path: string): RepoContext => ({
+    platform: 'github',
+    key: `repo:${path}`,
+    repository: 'repo:team/repo',
+    origin: 'https://github.com',
+    apiBase: 'https://api.github.com',
+    owner: 'team',
+    repo: 'repo',
+    view: 'tree',
+    rest: ['main', path],
+  });
+  repository = page('docs');
+  const loading = Promise.resolve({ name: 'team/repo' });
+  mocks.loadRepository.mockReturnValue(loading);
+  await start();
+  expect(mocks.show).toHaveBeenCalledExactlyOnceWith('repo:team/repo', null, expect.any(Function));
+  expect(mocks.loadRepository).not.toHaveBeenCalled();
+  mocks.show.mock.calls[0][2]();
+  expect(mocks.loadRepository).toHaveBeenCalledExactlyOnceWith(repository);
+  expect(mocks.openRepository).toHaveBeenCalledExactlyOnceWith(loading);
+  // Another folder of the same repository is a new starting point, under the same dismissal.
+  repository = page('specs');
+  navigate();
+  expect(mocks.show).toHaveBeenLastCalledWith('repo:team/repo', null, expect.any(Function));
+  mocks.show.mock.lastCall![2]();
+  expect(mocks.loadRepository).toHaveBeenLastCalledWith(repository);
+  expect(mocks.loadSource).not.toHaveBeenCalled();
 });

@@ -20,6 +20,7 @@ const CSS = `
   display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box;
   border-radius: 999px; background: rgba(255, 255, 255, .17); font-size: 12px; font-variant-numeric: tabular-nums;
 }
+.count:empty { display: none; }
 .launch.is-error .count { background: #c4413a; }
 .wrap.dev { bottom: 80px; }
 .dev-tag {
@@ -40,12 +41,15 @@ const CSS = `
 @media (prefers-reduced-motion: reduce) { .wrap { animation: none; } .launch { transition: none; } }
 `;
 
-/** The floating "Read" button shown on pull/merge requests that change markdown files. */
+/**
+ * The floating "Read" button shown on pull/merge requests that change markdown files, and "Read docs"
+ * on repository pages, where nothing is fetched until it is chosen, so it has no count (`null`).
+ */
 export class Launcher {
   private host: HTMLElement | null = null;
   private dismissed = new Set<string>();
 
-  show(key: string, count: number, onOpen: () => void, error = false): void {
+  show(key: string, count: number | null, onOpen: () => void, error = false): void {
     if (this.dismissed.has(key)) return;
     this.hide();
     const host = document.createElement('div');
@@ -53,13 +57,16 @@ export class Launcher {
     const shadow = host.attachShadow({ mode: 'open' });
     const dev = __GALLEY_DEV__ ? '<span class="dev-tag">DEV</span>' : '';
     // biome-ignore lint/plugin: the bundled stylesheet, bundled icons and fixed markup; no page content.
-    shadow.innerHTML = `<style>${CSS}</style><div class="wrap${__GALLEY_DEV__ ? ' dev' : ''}"><button class="launch">${icons.book}<span>Read</span>${dev}<span class="count"></span></button><button class="dismiss" aria-label="Hide for this page" title="Hide for this page">×</button></div>`;
+    shadow.innerHTML = `<style>${CSS}</style><div class="wrap${__GALLEY_DEV__ ? ' dev' : ''}"><button class="launch">${icons.book}<span class="label"></span>${dev}<span class="count"></span></button><button class="dismiss" aria-label="Hide for this page" title="Hide for this page">×</button></div>`;
     const launch = shadow.querySelector<HTMLButtonElement>('.launch')!;
-    shadow.querySelector('.count')!.textContent = error ? '!' : String(count);
+    shadow.querySelector('.label')!.textContent = count === null ? 'Read docs' : 'Read';
+    shadow.querySelector('.count')!.textContent = error ? '!' : count === null ? '' : String(count);
     launch.classList.toggle('is-error', error);
     launch.title = error
       ? 'Galley could not load this review. Click to retry and see any setup details.'
-      : `Open ${count} changed file${count === 1 ? '' : 's'} in Galley`;
+      : count === null
+        ? 'Read this repository’s documents in Galley'
+        : `Open ${count} changed file${count === 1 ? '' : 's'} in Galley`;
     launch.addEventListener('click', onOpen);
     shadow.querySelector('.dismiss')!.addEventListener('click', () => {
       this.dismissed.add(key);

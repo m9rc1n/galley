@@ -34,7 +34,10 @@ export interface RepoLocation {
 
 export interface GitHubRepoContext extends RepoLocation {
   platform: 'github';
+  /** This page: the repository, the view and the path. */
   key: string;
+  /** The repository alone, whichever of its pages is open. */
+  repository: string;
   origin: string;
   apiBase: string;
   owner: string;
@@ -44,6 +47,7 @@ export interface GitHubRepoContext extends RepoLocation {
 export interface GitLabRepoContext extends RepoLocation {
   platform: 'gitlab';
   key: string;
+  repository: string;
   origin: string;
   prefix: string;
   projectPath: string;
@@ -110,6 +114,7 @@ export function detectRepository(loc: Pick<Location, 'origin' | 'pathname'>, doc
     return {
       platform: 'gitlab',
       key: `repo:gitlab:${loc.origin}${prefix}/${fullPath}/${where.view}/${where.rest.join('/')}`,
+      repository: `repo:gitlab:${loc.origin}${prefix}/${fullPath}`,
       origin: loc.origin,
       prefix,
       projectPath: fullPath,
@@ -125,6 +130,7 @@ export function detectRepository(loc: Pick<Location, 'origin' | 'pathname'>, doc
   return {
     platform: 'github',
     key: `repo:github:${loc.origin}/${gh[1]}/${gh[2]}/${where.view}/${where.rest.join('/')}`,
+    repository: `repo:github:${loc.origin}/${gh[1]}/${gh[2]}`,
     origin: loc.origin,
     apiBase: loc.origin === 'https://github.com' ? 'https://api.github.com' : `${loc.origin}/api/v3`,
     owner: gh[1],
