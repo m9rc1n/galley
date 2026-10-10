@@ -3,7 +3,7 @@ status: Accepted
 date: 2026-10-09
 recorded: 2026-10-10
 deciders: [m9rc1n]
-rfcs: [36]
+rfcs: [36, 55]
 tags: [review, large-reviews]
 ---
 
