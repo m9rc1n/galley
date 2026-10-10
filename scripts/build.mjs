@@ -52,9 +52,10 @@ const bundles = [
     globalName: '__galleyELK',
   },
   { name: 'highlight-frame', entryPoints: ['src/ui/highlight-frame.ts'], outfile: 'dist/.build/highlight-frame.js', shipped: true },
+  { name: 'spec-frame', entryPoints: ['src/ui/spec-frame.ts'], outfile: 'dist/.build/spec-frame.js', shipped: true },
   { name: 'demo', entryPoints: ['demo/main.ts'], outfile: 'demo/build/demo.js', shipped: false },
 ];
-const FRAMES = ['diagram-frame', 'highlight-frame'];
+const FRAMES = ['diagram-frame', 'highlight-frame', 'spec-frame'];
 const metafiles = new Map();
 
 /** License texts of every npm package that ends up inside the shipped bundles. */
@@ -83,7 +84,7 @@ async function thirdPartyNotices() {
 
 /** Token storage must only ever run in the popup and the background worker, never inside a web page. */
 function checkTokenIsolation() {
-  for (const name of ['content', 'diagram-frame', 'highlight-frame']) {
+  for (const name of ['content', ...FRAMES]) {
     const inputs = Object.keys(metafiles.get(name)?.inputs ?? {});
     const leak = inputs.find((input) => /src\/(platforms\/tokens|background\/)/.test(input));
     if (leak) throw new Error(`${name}.js must not include ${leak}: GitHub tokens would be reachable from the page.`);
@@ -129,7 +130,7 @@ async function assemble() {
       delete m.sandbox;
       delete m.content_security_policy;
       // addons.mozilla.org allows 45 characters; the Chrome name is longer.
-      m.name = 'Galley: Markdown for pull & merge requests';
+      m.name = 'Galley: Understand pull request changes';
       // data_collection_permissions needs Firefox 140 (Android 142); older versions would ignore it.
       m.browser_specific_settings = {
         gecko: { id: 'galley@m9rc1n.github.io', strict_min_version: '140.0', data_collection_permissions: { required: ['none'] } },

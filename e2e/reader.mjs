@@ -12,6 +12,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { startDemoServer } from '../scripts/serve.mjs';
+import { checkCodeComments, checkSpecs } from './specs.mjs';
+import { checkLargeReview } from './large.mjs';
 
 function contrast(first, second) {
   const luminance = (colour) =>
@@ -53,7 +55,11 @@ await mkdir(screenshots, { recursive: true });
 
 const server = process.env.DEMO_URL ? null : await startDemoServer(0);
 const demoUrl = process.env.DEMO_URL ?? `http://127.0.0.1:${server.address().port}`;
-const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox'] });
+// Headless Chrome on Linux reports no pointing device, so pages see a touch screen ((hover: none)) and the
+// mouse-only controls, such as Add a comment…, stay hidden. These checks are for a desktop with a mouse;
+// narrow and touch layouts are checked by viewport size.
+const MOUSE = '--blink-settings=primaryPointerType=4,availablePointerTypes=4,primaryHoverType=2,availableHoverTypes=2';
+const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox', MOUSE] });
 try {
   const page = await browser.newPage();
   const errors = [];
@@ -524,7 +530,22 @@ try {
   assert.ok(!/#ececff|#9370db/i.test(palette), 'Mermaid’s own lavender theme must not show through');
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-diagram-zoom').click());
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-lightbox').hidden), false);
+  // Enlarged, the diagram takes the window, then zooms in further; clicking the drawing keeps it open.
+  const enlarged = () =>
+    inspect(() => {
+      const s = document.querySelector('#galley-reader').shadowRoot;
+      return {
+        width: s.querySelector('.mr-lightbox img').getBoundingClientRect().width,
+        inline: s.querySelector('.mr-diagram-zoom img').getBoundingClientRect().width,
+      };
+    });
+  const fitted = await enlarged();
+  assert.ok(fitted.width > fitted.inline, JSON.stringify(fitted));
   await page.screenshot({ path: join(screenshots, 'galley-reader-diagram-enlarged.png') });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="zoom-in"]').click());
+  assert.ok((await enlarged()).width > fitted.width, 'Zooming in makes the diagram larger');
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-lightbox img').click());
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-lightbox').hidden), false);
   await page.keyboard.press('Escape');
   assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-lightbox').hidden), true);
   // Mermaid and highlight.js run in script-only sandboxed frames inside the reader, never in the page.
@@ -734,7 +755,10 @@ try {
   const backgrounds = { light: new Set(), dark: new Set() };
   const contrastReport = [],
     contrastFailures = [];
-  const palettes = ['paper', 'eink', 'cream', 'sepia', 'night', 'blush', 'sage', 'seafoam', 'slate', 'nord', 'dusk', 'contrast'];
+  const palettes = await inspect(() =>
+    [...document.querySelector('#galley-reader').shadowRoot.querySelectorAll('[data-setting="theme"] [data-value]')].map((button) => button.dataset.value),
+  );
+  assert.equal(palettes.length, 16);
   for (const theme of palettes) {
     await inspect(
       (theme) => document.querySelector('#galley-reader').shadowRoot.querySelector(`[data-setting="theme"] [data-value="${theme}"]`).click(),
@@ -761,7 +785,7 @@ try {
         const samples = [];
         const probe = document.createElement('div');
         root.append(probe);
-        for (const background of ['--bg', '--soft', '--code-bg', '--code-add', '--code-del', '--ins-band', '--del-bg']) {
+        for (const background of ['--bg', '--card', '--soft', '--code-bg', '--code-add', '--code-del', '--code-moved', '--ins-band', '--del-bg', '--add-bg']) {
           probe.style.backgroundColor = `var(${background})`;
           const bg = opaque(style.backgroundColor, getComputedStyle(probe).backgroundColor);
           const tokens = background.startsWith('--code')
@@ -780,7 +804,9 @@ try {
               ]
             : background === '--del-bg'
               ? ['--del']
-              : ['--fg', '--muted'];
+              : background === '--add-bg'
+                ? ['--add']
+                : ['--fg', '--muted'];
           for (const token of tokens) {
             probe.style.color = `var(${token})`;
             samples.push({ name: `${token} on ${background}`, fg: opaque(bg, getComputedStyle(probe).color), bg, minimum: 4.5 });
@@ -802,8 +828,21 @@ try {
         for (const selector of ['.mr-theme-name', '.mr-theme-caption', '.mr-theme-preview']) {
           samples.push({ name: `palette ${selector}`, fg: getComputedStyle(card.querySelector(selector)).color, bg: cardStyle.backgroundColor, minimum: 4.5 });
         }
+        const surfaces = {};
+        for (const token of ['card', 'soft', 'code-bg', 'rule', 'control-rule', 'accent']) {
+          probe.style.backgroundColor = `var(--${token})`;
+          surfaces[token] = opaque(style.backgroundColor, getComputedStyle(probe).backgroundColor);
+        }
+        const active = getComputedStyle(s.querySelector('[data-setting="appearance"] [aria-pressed="true"]'));
+        samples.push({
+          name: 'active appearance choice',
+          fg: opaque(style.backgroundColor, active.backgroundColor, active.color),
+          bg: opaque(style.backgroundColor, active.backgroundColor),
+          minimum: 4.5,
+        });
         probe.remove();
         return {
+          surfaces,
           theme: root.dataset.theme,
           dark: root.classList.contains('is-dark'),
           background: style.backgroundColor,
@@ -822,6 +861,14 @@ try {
       assert.equal(colours.previewBackground, colours.background, 'Palette cards must preview the actual page in the current appearance');
       assert.equal(colours.previewForeground, colours.foreground, 'Palette text must preview the actual reading colour');
       assert.equal(colours.selectedChecks, 1, 'Only the selected palette should have a checkmark');
+      if (appearance === 'dark') {
+        assert.ok(contrast(colours.surfaces.card, colours.background) >= 1.45, `${theme}: cards must stand apart from the page`);
+        assert.ok(contrast(colours.surfaces.soft, colours.background) >= 1.8, `${theme}: controls must stand apart from the page`);
+        assert.ok(contrast(colours.surfaces['code-bg'], colours.background) >= 1.15, `${theme}: code must have its own surface`);
+        // Decorative dividers stay quiet; the boundaries of editable controls retain 3:1 contrast.
+        assert.ok(contrast(colours.surfaces['control-rule'], colours.surfaces.card) >= 3, `${theme}: visible control borders`);
+        assert.ok(contrast(colours.surfaces.accent, colours.surfaces.card) >= 3, `${theme}: visible focus rings on cards`);
+      }
       assert.ok(contrast(colours.foreground, colours.background) >= 7, `${theme} ${appearance}: prose contrast`);
       assert.ok(contrast(colours.muted, colours.background) >= 4.5, `${theme} ${appearance}: interface contrast`);
       for (const sample of colours.samples) {
@@ -847,7 +894,7 @@ try {
     { name: 'prefers-reduced-motion', value: 'reduce' },
   ]);
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').classList.contains('is-dark'));
-  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').dataset.theme), 'contrast');
+  assert.equal(await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-root').dataset.theme), palettes.at(-1));
   for (const [font, family] of [
     ['galley', 'Galley Newsreader'],
     ['serif', 'Galley Newsreader'],
@@ -938,8 +985,11 @@ try {
   await page.waitForFunction(
     () => [...document.fonts].filter((face) => face.family.startsWith('Galley ')).length === 3 && [...document.fonts].every((face) => face.status === 'loaded'),
   );
+  await checkSpecs(browser, demoUrl, screenshots);
+  await checkCodeComments(browser, demoUrl, screenshots);
+  await checkLargeReview(browser, demoUrl, screenshots);
   console.log(
-    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, twelve light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, Escape layers, the optional request description.',
+    'Reader browser checks passed: contents/document/comment columns, wide source files, continuous files, filtering, margin threads, selection, editors beside their text, separate drafts, per-comment replies, posting, mobile editor, sixteen light/dark reading palettes in a carousel, text and syntax contrast, six typefaces including the Galley pairing, persisted choices, sticky top bar, settings focus, Viewed progress, Mermaid in the reading palette, enlarged diagrams, sandboxed renderers, source line comments in the comments column, readable test specifications, code comments as notes or as written, folded files, moved code, maps of changed declarations, Escape layers, the optional request description.',
   );
 } finally {
   await browser.close();

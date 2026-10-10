@@ -147,6 +147,23 @@ export interface CodeSource {
 }
 
 const sources = new WeakMap<HTMLElement, CodeSource>();
+export interface CommentLines {
+  base: Set<number>;
+  head: Set<number>;
+}
+const comments = new WeakMap<HTMLElement, CommentLines>();
+
+/** Only complete lines recognised as comments in both versions can become prose. */
+export function commentLines(container: HTMLElement): CommentLines | undefined {
+  return comments.get(container);
+}
+
+function isComment(line: DocumentFragment): boolean {
+  if (!line.querySelector('.hljs-comment')) return false;
+  const copy = line.cloneNode(true) as DocumentFragment;
+  for (const comment of copy.querySelectorAll('.hljs-comment')) comment.remove();
+  return !copy.textContent!.trim();
+}
 
 /** Remember the full text of each version, so tokens that span lines (comments, strings) colour correctly. */
 export function registerCode(container: HTMLElement, source: CodeSource): void {
@@ -240,6 +257,19 @@ export async function highlightCode(root: ParentNode): Promise<void> {
       // The highlighter stopped answering or was closed with the reader: the rest stays plain and readable.
       return;
     }
+    const classified: CommentLines = { base: new Set(), head: new Set() };
+    for (const [key, side] of [
+      ['b', 'base'],
+      ['h', 'head'],
+    ] as const) {
+      const text = source[side];
+      if (text === undefined || !versions[key]) continue;
+      const original = text.split('\n');
+      versions[key]!.forEach((line, index) => {
+        if (line.textContent === original[index] && isComment(line)) classified[side].add(index);
+      });
+    }
+    comments.set(container, classified);
     // Only replies whose text matches the line exactly are used, so a reply cannot change what is shown.
     for (const el of container.querySelectorAll<HTMLElement>('[data-line]')) {
       const [side, index] = el.dataset.line!.split(':');

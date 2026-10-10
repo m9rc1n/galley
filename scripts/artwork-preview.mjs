@@ -3,18 +3,11 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import MarkdownIt from 'markdown-it';
-import { ARTWORK, artworkHtml } from './artwork.mjs';
+import { ARTWORK, CAPTURES, artworkHtml } from './artwork.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const documents = new Set(['README.md', 'PRIVACY.md', 'SECURITY.md', 'CONTRIBUTING.md', 'PUBLISHING.md', 'LICENSE', 'store/LISTING.md', 'store/ARTWORK.md']);
-const images = new Set([
-  ...ARTWORK.map((art) => art.name),
-  'screenshot-1-changes.jpg',
-  'screenshot-2-entry.jpg',
-  'screenshot-3-tables.jpg',
-  'screenshot-4-clean-dark.jpg',
-  'screenshot-5-sepia-settings.jpg',
-]);
+const images = new Set([...ARTWORK.map((art) => art.name), ...CAPTURES]);
 const markdown = new MarkdownIt({ html: true });
 markdown.renderer.rules.heading_open = (tokens, index, options, _env, renderer) => {
   const title = tokens[index + 1]?.content ?? '';
@@ -88,12 +81,13 @@ const server = createServer(async (req, res) => {
       shell(
         'Galley — Mission & artwork',
         `<main>
-<header><div><h1>Make room for better reviews.</h1><p>A clearer mission for Galley.</p></div><a href="/readme">Read the new README →</a></header>
-<img class="hero" src="/store/assets/readme-hero-1600x640.png" alt="Galley's mission, illustrated by a readable change and a thoughtful review conversation">
-<p class="label">README hero · A typeset illustration of the review we want to make easier.</p>
+<header><div><h1>Understand changes. Review together.</h1><p>Clearer code and document reviews for teams on GitHub and GitLab.</p></div><a href="/readme">Read the README →</a></header>
+<img class="hero" src="/store/assets/readme-hero-1600x640.png" alt="Galley. Understand changes. Review together: the same review as a diff and as readable content with edits in context">
+<p class="label">README hero and store marquee · a typeset illustration, labelled as one.</p>
 <div class="grid"><div><img src="/store/assets/promo-small-440x280.jpg" alt="Galley small promotional tile"><p class="label">Store tile · 440 × 280</p></div>
-<div><h2>Clearer, calmer, more considerate.</h2><p>Reviews take attention. Galley makes space to understand a change and discuss it with the team.</p><p><strong>Built in the open.</strong> GPL-licensed, with source and limitations you can inspect.</p><p><strong>Private by default.</strong> Local rendering, no analytics and no Galley backend.</p><p><strong>Part of your workflow.</strong> Ordinary GitHub and GitLab review conversations.</p></div></div>
-<h2>The real reader</h2><img src="/store/assets/screenshot-1-changes.jpg" alt="The real Galley reader with document changes and review threads"><p class="label">Product screenshot · separate from the mission illustration.</p>
+<div><h2>Context for the change. Space for the discussion.</h2><p>Read documents and code, see edits in context, and discuss the details beside the relevant text.</p><p><strong>Built in the open.</strong> GPL-licensed, with source and limitations you can inspect.</p><p><strong>Private by default.</strong> Local rendering, no analytics and no Galley backend.</p><p><strong>Part of your workflow.</strong> Ordinary GitHub and GitLab review conversations.</p></div></div>
+<h2>Before and after</h2><img src="/store/assets/before-after-1600x640.jpg" alt="The same merge request as a diff and in Galley"><p class="label">README · two real captures of the demo.</p>
+<h2>The real reader</h2><img src="/store/assets/screenshot-1-read.jpg" alt="The real Galley reader with document changes and review threads"><p class="label">Store screenshot: a real reader capture under one line of copy.</p>
 </main>`,
       ),
     );

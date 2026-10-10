@@ -2,7 +2,7 @@
   "name": "galley",
   "version": "0.7.0",
   "private": true,
-  "description": "Make room for better reviews. A free, open-source browser extension that turns Markdown changes in GitHub pull requests and GitLab merge requests into clear, typeset articles you can discuss in place.",
+  "description": "Galley helps teams understand GitHub pull requests and GitLab merge requests with readable documents and code, edits shown in context, and comments beside the text. Free and open source.",
   "license": "GPL-3.0-or-later",
   "author": "Marcin Urbanski",
   "homepage": "https://github.com/m9rc1n/galley#readme",
@@ -45,6 +45,7 @@
     "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
   },
   "dependencies": {
+    "@babel/parser": "7.29.9",
     "diff": "^9.0.0",
     "dompurify": "^3.4.16",
     "highlight.js": "^11.12.0",

@@ -1,5 +1,22 @@
 /** Reading palettes, from neutral through warm to cool; each has a light and a dark version (reader.css). */
-export const THEMES = ['paper', 'eink', 'cream', 'sepia', 'night', 'blush', 'sage', 'seafoam', 'slate', 'nord', 'dusk', 'contrast'] as const;
+export const THEMES = [
+  'paper',
+  'eink',
+  'cream',
+  'sepia',
+  'night',
+  'blush',
+  'sage',
+  'seafoam',
+  'slate',
+  'nord',
+  'dusk',
+  'contrast',
+  'ocean',
+  'clay',
+  'orchid',
+  'graphite',
+] as const;
 /** galley pairs Newsreader headings with DM Sans text (reader.css); the others use one face throughout. */
 export const FONTS = ['galley', 'serif', 'sans', 'georgia', 'system', 'mono'] as const;
 export const APPEARANCES = ['auto', 'light', 'dark'] as const;
@@ -28,10 +45,16 @@ export interface Settings {
   mode: 'changes' | 'clean';
   scope: 'changed' | 'all';
   codeFiles: boolean;
+  /** Code lines: a + or − beside each added or removed line, as in a diff. Tints and margin bars stay either way. */
+  signs: boolean;
   /** External images in documents: wait for a click, or always load them. */
   images: 'ask' | 'load';
   /** Comment cards: set apart by a shadow and their own tone, or by an outline. */
   comments: 'shaded' | 'outlined';
+  /** Test files: a plan of suites and test cases to read, or the plain diff. */
+  tests: 'plan' | 'source';
+  /** Comments in code files: formatted notes, or the comment lines as written. */
+  codeComments: 'formatted' | 'source';
   layout: Layout;
   density: Density;
   /** Show the pull or merge request's own title and description as the first document. */
@@ -48,8 +71,11 @@ export const DEFAULT_SETTINGS: Settings = {
   mode: 'changes',
   scope: 'changed',
   codeFiles: false,
+  signs: true,
   images: 'ask',
   comments: 'shaded',
+  tests: 'plan',
+  codeComments: 'formatted',
   layout: 'balanced',
   density: 'comfortable',
   overview: false,
@@ -95,9 +121,24 @@ export async function loadSettings(): Promise<Settings> {
   const appearance = APPEARANCES.find((appearance) => appearance === saved.appearance) ?? legacyAppearance;
   const font = FONTS.find((font) => font === saved.font) ?? DEFAULT_SETTINGS.font;
   const comments = saved.comments === 'outlined' ? 'outlined' : 'shaded';
+  const tests = saved.tests === 'source' ? 'source' : 'plan';
+  const codeComments = saved.codeComments === 'source' ? 'source' : 'formatted';
   const layout = LAYOUTS.find((layout) => layout === saved.layout) ?? DEFAULT_SETTINGS.layout;
   const density = DENSITIES.find((density) => density === saved.density) ?? DEFAULT_SETTINGS.density;
-  return { ...DEFAULT_SETTINGS, ...saved, theme, appearance, font, comments, layout, density, overview: saved.overview === true };
+  return {
+    ...DEFAULT_SETTINGS,
+    ...saved,
+    theme,
+    appearance,
+    font,
+    comments,
+    tests,
+    codeComments,
+    layout,
+    density,
+    overview: saved.overview === true,
+    signs: saved.signs !== false,
+  };
 }
 
 export function saveSettings(settings: Settings): Promise<void> {

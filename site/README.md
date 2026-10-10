@@ -23,4 +23,4 @@ Pull requests build and check the site without deploying. GitHub Pages must be e
 
 The artifact can also be hosted by any static web server. All local links and assets are relative. When moving to a different repository URL or a custom domain, update the canonical URL and Open Graph URLs in `site/index.html`.
 
-Product screenshots are copied from `store/assets/`. Run `npm run store-assets` to refresh them when the reader changes. The small interactive hero is explicitly an illustrated review; the full-width previews are actual reader screenshots.
+Product screenshots (`reader-*.jpg`) and the link preview image are copied from `store/assets/`. Run `npm run store-assets` to refresh them when the reader changes. The interactive hero is explicitly an illustrated review with three views (the raw diff, Galley and Clean); the before/after and the six previews are actual reader screenshots.

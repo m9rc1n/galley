@@ -7,13 +7,16 @@
 /* Theme cards use the same tokens as the document they preview. */
 .mr-root,
 .mr-theme-options button {
-  --bg: #fffefa;
-  --fg: #202d25;
-  --muted: #505c52;
-  --soft: #f1f4e9;
-  --rule: #d9dfd2;
-  --code-bg: #f6f7ef;
+  --bg: #fcfdf9;
+  --fg: #29322b;
+  --muted: #566058;
+  --soft: #edf0e8;
+  --rule: #dde2d8;
+  --code-bg: #f3f5ee;
   --accent: #506b38;
+  --card: color-mix(in srgb, var(--soft) 72%, var(--bg));
+  --control-rule: color-mix(in srgb, var(--muted) 80%, var(--bg));
+  --selected-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
   /* Change colours: clear green, amber and rose, so added, edited and removed never look alike. Every
      light palette below re-tints them to sit on its own page tone. */
   --add: #3b6a2b;
@@ -50,7 +53,9 @@
   /* Source files fit 120 characters of their monospace text, plus line numbers and signs. */
   --code-size: calc(var(--body-size) * 0.65 * var(--size-scale));
   --code-width: calc(var(--code-size) * 73.2 + 122px);
-  --card: color-mix(in srgb, var(--soft) 72%, var(--bg));
+  /* Moved code is neither added nor removed: a tint of the palette's accent instead of green or red. */
+  --code-moved: color-mix(in srgb, var(--accent) 8%, var(--bg));
+  --gutter-moved: color-mix(in srgb, var(--accent) 75%, var(--code-bg));
   --body-font: var(--serif);
   --body-size: 20px;
   --size-scale: 1;
@@ -115,10 +120,11 @@
 
 .mr-root[data-theme="paper"],
 .mr-theme-options [data-value="paper"] {
+  --accent: #3d5366;
   --bg: #ffffff;
   --fg: #292929;
   --muted: #55554f;
-  --soft: #f3f3ef;
+  --soft: #f0f1ef;
   --rule: #deded8;
   --code-bg: #f6f6f3;
   --add: #2f6f3e;
@@ -138,12 +144,12 @@
 
 .mr-root[data-theme="slate"],
 .mr-theme-options [data-value="slate"] {
-  --bg: #f5f8fc;
-  --fg: #293e53;
-  --muted: #4f6173;
-  --soft: #eaf0f7;
-  --rule: #d3dfe9;
-  --code-bg: #edf2f8;
+  --bg: #f7f9fc;
+  --fg: #293745;
+  --muted: #53606d;
+  --soft: #eaeef2;
+  --rule: #dbe1e8;
+  --code-bg: #f0f3f6;
   --accent: #466b96;
   /* Teal and cool rose keep the highlights in the page's blue family. */
   --add: #2a6b54;
@@ -166,12 +172,12 @@
   --bg: #f8f1e3;
   --fg: #3b2f22;
   --muted: #65543e;
-  --soft: #efe4cf;
-  --rule: #e3d5ba;
-  --code-bg: #f2e8d4;
+  --soft: #ede5d7;
+  --rule: #ded3bf;
+  --code-bg: #f1e9db;
   /* Warm olive, ochre and brick sit on the paper tone instead of fighting it. */
   --accent: #5a7d2a;
-  --add: #557a2c;
+  --add: #3e6020;
   --add-bg: rgba(85, 122, 44, 0.16);
   --add-wash: rgba(85, 122, 44, 0.08);
   --mod: #745009;
@@ -188,13 +194,13 @@
 
 .mr-root[data-theme="dusk"],
 .mr-theme-options [data-value="dusk"] {
-  --bg: #faf7fd;
-  --fg: #30253e;
-  --muted: #64556f;
-  --soft: #eee7f5;
-  --rule: #d8cde3;
-  --code-bg: #f2ecf8;
-  --accent: #684487;
+  --bg: #faf8fc;
+  --fg: #342d3d;
+  --muted: #625b6c;
+  --soft: #edeaef;
+  --rule: #dfdbe4;
+  --code-bg: #f3f0f5;
+  --accent: #72528f;
   --add: #2d6c4c;
   --add-bg: #d3eddc;
   --add-wash: #ebf5ef;
@@ -238,12 +244,13 @@
 /* Reading palettes added for long reviews; their contrast is checked by e2e/reader.mjs like the rest. */
 .mr-root[data-theme="cream"],
 .mr-theme-options [data-value="cream"] {
-  --bg: #fbf6e9;
-  --fg: #2e2a24;
-  --muted: #5f574a;
-  --soft: #f2ebd9;
-  --rule: #e3dac4;
-  --code-bg: #f5eedc;
+  --accent: #775329;
+  --bg: #fcf8ef;
+  --fg: #302c26;
+  --muted: #625b50;
+  --soft: #eeebe3;
+  --rule: #dfd9ce;
+  --code-bg: #f4f0e7;
   --add: #2f6b33;
   --add-bg: #dcebc9;
   --add-wash: #eef4e2;
@@ -261,6 +268,7 @@
 
 .mr-root[data-theme="eink"],
 .mr-theme-options [data-value="eink"] {
+  --accent: #485a52;
   --bg: #efeee9;
   --fg: #1e1e1c;
   --muted: #53524d;
@@ -287,9 +295,9 @@
   --bg: #f6ead3;
   --fg: #3a2a17;
   --muted: #685234;
-  --soft: #eedfc3;
-  --rule: #e0cdab;
-  --code-bg: #f1e3c8;
+  --soft: #ece0ca;
+  --rule: #deceb1;
+  --code-bg: #f1e5d0;
   --accent: #7a5214;
   --add: #3d6420;
   --add-bg: #dde5be;
@@ -308,12 +316,13 @@
 
 .mr-root[data-theme="seafoam"],
 .mr-theme-options [data-value="seafoam"] {
-  --bg: #eef5f2;
-  --fg: #1f302b;
-  --muted: #4a5d57;
-  --soft: #e2ece8;
-  --rule: #cfddd7;
-  --code-bg: #e6efeb;
+  --accent: #216b68;
+  --bg: #f3f8f5;
+  --fg: #273630;
+  --muted: #51615a;
+  --soft: #e8eeea;
+  --rule: #d8e2dc;
+  --code-bg: #edf2ee;
   --add: #22663f;
   --add-bg: #cde8d6;
   --add-wash: #e3f1e8;
@@ -331,12 +340,13 @@
 
 .mr-root[data-theme="blush"],
 .mr-theme-options [data-value="blush"] {
-  --bg: #fbf1ee;
-  --fg: #33262a;
-  --muted: #645258;
-  --soft: #f3e5e1;
-  --rule: #e6d3ce;
-  --code-bg: #f6eae6;
+  --accent: #97495f;
+  --bg: #fcf7f5;
+  --fg: #332b2e;
+  --muted: #62585c;
+  --soft: #efeae7;
+  --rule: #dfd7d5;
+  --code-bg: #f5efec;
   --add: #2e6a3a;
   --add-bg: #dcead3;
   --add-wash: #eef3e7;
@@ -354,13 +364,13 @@
 
 .mr-root[data-theme="nord"],
 .mr-theme-options [data-value="nord"] {
-  --bg: #eceff4;
+  --bg: #eff2f6;
   --fg: #2e3440;
   --muted: #4c566a;
-  --soft: #e3e8ef;
-  --rule: #d3dae4;
-  --code-bg: #e5e9f0;
-  --accent: #4c6a92;
+  --soft: #e4e8ed;
+  --rule: #d4dae2;
+  --code-bg: #e9edf2;
+  --accent: #486784;
   --add: #2f6b3e;
   --add-bg: #d3e5d3;
   --add-wash: #e4eee6;
@@ -376,149 +386,264 @@
   --code-del: #f0dfe2;
 }
 
+.mr-root[data-theme="ocean"],
+.mr-theme-options [data-value="ocean"] {
+  --bg: #f5f9fa;
+  --fg: #253b43;
+  --muted: #50636a;
+  --soft: #e7edf0;
+  --rule: #d5e0e3;
+  --code-bg: #edf3f5;
+  --accent: #176b77;
+}
+
+.mr-root[data-theme="clay"],
+.mr-theme-options [data-value="clay"] {
+  --bg: #fbf7f2;
+  --fg: #3c322b;
+  --muted: #685c53;
+  --soft: #eee9e2;
+  --rule: #dfd6cc;
+  --code-bg: #f4eee7;
+  --accent: #935638;
+}
+
+.mr-root[data-theme="orchid"],
+.mr-theme-options [data-value="orchid"] {
+  --bg: #fcf8fb;
+  --fg: #3b303e;
+  --muted: #6a5a6d;
+  --soft: #eee9ed;
+  --rule: #e0d6df;
+  --code-bg: #f5eff4;
+  --accent: #86558a;
+}
+
+.mr-root[data-theme="graphite"],
+.mr-theme-options [data-value="graphite"] {
+  --bg: #f4f5f7;
+  --fg: #2d333d;
+  --muted: #58616e;
+  --soft: #e7e9ed;
+  --rule: #d7dce3;
+  --code-bg: #edf0f3;
+  --accent: #4667aa;
+}
+
+/* Surface-first hierarchy: page, code, neutral secondary cards, then controls. The accent is used
+   sparingly for focus and selection; decorative rules are quieter than interactive control borders. */
 .mr-root.is-dark,
 .is-dark .mr-theme-options:where(:not(.mr-layout-options)) button {
-  --bg: #19231e;
-  --fg: #e6ebdd;
-  --muted: #bbc6b8;
-  --soft: #253128;
-  --rule: #354338;
-  --code-bg: #202b24;
-  --accent: #b5d291;
-  --add: #b5d291;
-  --add-bg: rgba(63, 185, 80, 0.24);
-  --add-wash: rgba(63, 185, 80, 0.08);
-  --mod: #e3b341;
-  --del: #dfada0;
-  --del-strike: #c49080;
-  --del-bg: rgba(255, 123, 114, 0.13);
-  /* On a dark page colour needs more strength to read at the same weight. */
-  --ins-band: #384c2f;
-  --gutter-added: #9bb97c;
-  --gutter-modified: #e3b341;
-  --gutter-removed: #c49080;
-  --code-add: rgba(63, 185, 80, 0.11);
-  --code-del: rgba(255, 123, 114, 0.1);
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px -10px rgba(0, 0, 0, 0.6);
-  --raised-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 20px 44px -16px rgba(0, 0, 0, 0.7);
+  --add: #a7ebc0;
+  --add-bg: #224532;
+  --add-wash: #192d23;
+  --mod: #f4cc79;
+  --del: #ffb6c2;
+  --del-strike: #ec91a2;
+  --del-bg: #4b2834;
+  --ins-band: #284c37;
+  --gutter-added: #85d9a3;
+  --gutter-modified: #f4cc79;
+  --gutter-removed: #f59aaa;
+  --code-add: #203b2d;
+  --code-del: #3d252f;
+  --shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+  --control-rule: color-mix(in srgb, var(--fg) 52%, var(--bg));
+  --card-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.5);
+  --raised-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   color-scheme: dark;
+}
+
+.mr-root.is-dark[data-theme="sage"],
+.is-dark .mr-theme-options [data-value="sage"] {
+  --bg: #151a17;
+  --fg: #eef2ed;
+  --muted: #b8c3ba;
+  --soft: #414641;
+  --rule: #454e47;
+  --code-bg: #262d28;
+  --accent: #b5cfa0;
+  --card: #343b35;
 }
 
 .mr-root.is-dark[data-theme="paper"],
 .is-dark .mr-theme-options [data-value="paper"] {
-  --bg: #191919;
-  --fg: #ecece8;
-  --muted: #bdbdb7;
-  --soft: #252525;
-  --rule: #383838;
-  --code-bg: #202020;
+  --bg: #151719;
+  --fg: #f2f2ef;
+  --muted: #bcc0c2;
+  --soft: #414446;
+  --rule: #46494c;
+  --code-bg: #26292c;
+  --accent: #b4c9db;
+  --card: #33373a;
 }
 
 .mr-root.is-dark[data-theme="sepia"],
 .is-dark .mr-theme-options [data-value="sepia"] {
-  --bg: #282219;
-  --fg: #efe4d0;
-  --muted: #c8bba5;
-  --soft: #332c20;
-  --rule: #4b402e;
-  --code-bg: #30281d;
-  --accent: #c4c58b;
+  --bg: #1b1813;
+  --fg: #f3eadc;
+  --muted: #cbc0ae;
+  --soft: #4a463f;
+  --rule: #504a40;
+  --code-bg: #2c2821;
+  --accent: #d4bc8c;
+  --card: #3e3930;
 }
 
 .mr-root.is-dark[data-theme="slate"],
 .is-dark .mr-theme-options [data-value="slate"] {
-  --bg: #1c2530;
-  --fg: #e3eaf2;
-  --muted: #afbccd;
-  --soft: #273445;
-  --rule: #3e5062;
-  --code-bg: #222e3c;
-  --accent: #adc5e6;
+  --bg: #15191f;
+  --fg: #edf1f6;
+  --muted: #b8c2ce;
+  --soft: #41464e;
+  --rule: #424c5a;
+  --code-bg: #262d35;
+  --accent: #abc7e4;
+  --card: #343b43;
 }
 
 .mr-root.is-dark[data-theme="dusk"],
 .is-dark .mr-theme-options [data-value="dusk"] {
-  --bg: #241e2d;
-  --fg: #f0e9f6;
-  --muted: #c5b7d2;
-  --soft: #32293e;
-  --rule: #4c3e5b;
-  --code-bg: #2b2335;
-  --accent: #d3b5ef;
+  --bg: #19181e;
+  --fg: #f0edf5;
+  --muted: #c1bacb;
+  --soft: #44434b;
+  --rule: #49484f;
+  --code-bg: #29282f;
+  --accent: #c4aedb;
+  --card: #36353d;
 }
 
 .mr-root.is-dark[data-theme="contrast"],
 .is-dark .mr-theme-options [data-value="contrast"] {
-  --bg: #101217;
+  --bg: #090b10;
   --fg: #ffffff;
-  --muted: #d2d6df;
-  --soft: #222630;
-  --rule: #787f90;
-  --code-bg: #191d25;
-  --accent: #a6ccff;
+  --muted: #d9e0ed;
+  --soft: #343f53;
+  --rule: #8e9cb2;
+  --code-bg: #1c2535;
+  --accent: #b5d8f3;
+  --card: #293449;
 }
 
 .mr-root.is-dark[data-theme="cream"],
 .is-dark .mr-theme-options [data-value="cream"] {
-  --bg: #1d1a15;
-  --fg: #ede5d3;
-  --muted: #beb4a0;
-  --soft: #28241d;
-  --rule: #3b352b;
-  --code-bg: #23201a;
+  --bg: #1b1915;
+  --fg: #f4eddf;
+  --muted: #c9c1b1;
+  --soft: #4a453e;
+  --rule: #514a40;
+  --code-bg: #2c2821;
+  --accent: #ddc296;
+  --card: #3e3931;
 }
 
 .mr-root.is-dark[data-theme="eink"],
 .is-dark .mr-theme-options [data-value="eink"] {
-  --bg: #1e1e1d;
-  --fg: #e4e3de;
-  --muted: #bbbab4;
-  --soft: #292928;
-  --rule: #3a3a38;
-  --code-bg: #242423;
+  --bg: #191a18;
+  --fg: #eeeee8;
+  --muted: #c0c3ba;
+  --soft: #45473f;
+  --rule: #4b4d46;
+  --code-bg: #2b2d27;
+  --accent: #c5cec1;
+  --card: #363931;
 }
 
 .mr-root.is-dark[data-theme="night"],
 .is-dark .mr-theme-options [data-value="night"] {
-  --bg: #17120c;
-  --fg: #ebd9b6;
-  --muted: #cdb78f;
-  --soft: #221a11;
-  --rule: #372b1c;
-  --code-bg: #1c160e;
-  --accent: #e2b86f;
+  --bg: #1b1711;
+  --fg: #f2e5cc;
+  --muted: #cebea1;
+  --soft: #4e4538;
+  --rule: #564a37;
+  --code-bg: #2e261b;
+  --accent: #dfbf84;
+  --card: #40372a;
 }
 
 .mr-root.is-dark[data-theme="seafoam"],
 .is-dark .mr-theme-options [data-value="seafoam"] {
-  --bg: #15201d;
-  --fg: #ddebe6;
-  --muted: #a9bdb6;
-  --soft: #1e2b27;
-  --rule: #2f3f3a;
-  --code-bg: #1a2622;
+  --bg: #151c1b;
+  --fg: #edf4f1;
+  --muted: #b7c9c3;
+  --soft: #3c4945;
+  --rule: #43524c;
+  --code-bg: #25312e;
+  --accent: #a3cebf;
+  --card: #303f38;
 }
 
 .mr-root.is-dark[data-theme="blush"],
 .is-dark .mr-theme-options [data-value="blush"] {
-  --bg: #211a1c;
-  --fg: #f0e3e6;
-  --muted: #c3afb4;
-  --soft: #2c2326;
-  --rule: #3f3337;
-  --code-bg: #261e21;
+  --bg: #1c181a;
+  --fg: #f5edef;
+  --muted: #c9bdc2;
+  --soft: #4c4549;
+  --rule: #52484c;
+  --code-bg: #2f292c;
+  --accent: #dcb1be;
+  --card: #3f373b;
 }
 
 .mr-root.is-dark[data-theme="nord"],
 .is-dark .mr-theme-options [data-value="nord"] {
-  --bg: #242933;
-  --fg: #e5e9f0;
-  --muted: #aeb7c6;
-  --soft: #2e3440;
-  --rule: #3b4252;
-  --code-bg: #2a303b;
-  --accent: #88c0d0;
+  --bg: #171c23;
+  --fg: #eef2f8;
+  --muted: #bdc7d5;
+  --soft: #404853;
+  --rule: #47515f;
+  --code-bg: #252e3a;
+  --accent: #aecdd6;
+  --card: #343e4c;
+}
+
+.mr-root.is-dark[data-theme="ocean"],
+.is-dark .mr-theme-options [data-value="ocean"] {
+  --bg: #141c21;
+  --fg: #edf4f6;
+  --muted: #b8c8ce;
+  --soft: #3f494e;
+  --rule: #42525c;
+  --code-bg: #283136;
+  --accent: #9acacb;
+  --card: #333c41;
+}
+
+.mr-root.is-dark[data-theme="clay"],
+.is-dark .mr-theme-options [data-value="clay"] {
+  --bg: #1d1916;
+  --fg: #f4ede5;
+  --muted: #cdc0b6;
+  --soft: #4c443e;
+  --rule: #554a42;
+  --code-bg: #2f2823;
+  --accent: #dcb89d;
+  --card: #403832;
+}
+
+.mr-root.is-dark[data-theme="orchid"],
+.is-dark .mr-theme-options [data-value="orchid"] {
+  --bg: #1c181e;
+  --fg: #f4edf5;
+  --muted: #c9bccb;
+  --soft: #49434b;
+  --rule: #514655;
+  --code-bg: #2d292f;
+  --accent: #ceb0d2;
+  --card: #3a353d;
+}
+
+.mr-root.is-dark[data-theme="graphite"],
+.is-dark .mr-theme-options [data-value="graphite"] {
+  --bg: #16191f;
+  --fg: #edf0f6;
+  --muted: #bdc4d0;
+  --soft: #424750;
+  --rule: #464e5b;
+  --code-bg: #292f38;
+  --accent: #b1c0df;
+  --card: #363c46;
 }
 
 .mr-root ::selection {
@@ -581,7 +706,7 @@
   flex: none;
   padding: 3px;
   border-radius: 999px;
-  background: var(--soft);
+  background: var(--code-bg);
 }
 
 .mr-seg button {
@@ -598,9 +723,9 @@
 }
 
 .mr-seg button[aria-pressed="true"] {
-  background: var(--bg);
+  background: var(--selected-bg);
   color: var(--fg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  box-shadow: none;
 }
 
 .mr-seg button.mr-serif-sample {
@@ -638,6 +763,11 @@
   font-size: 11px;
   line-height: 1.6;
   text-align: center;
+}
+
+/* Sheets sit above the page; the reading toolbar keeps the page's quieter tone. */
+.mr-root.is-dark .mr-settings-panel {
+  background: var(--card);
 }
 
 /* ------------------------------------------------------------------ layout */
@@ -1531,6 +1661,78 @@
     margin-block: 72px 60px;
   }
 }
+
+/* ------------------------------------------------------------------ folded files
+   Lockfiles, generated code and whitespace-only edits read as one quiet line each, one click from their
+   changes. A run of them stacks without the usual break between documents. */
+.mr-document:not([hidden]) ~ .mr-document.is-quiet::before {
+  margin-block: 64px 40px;
+}
+.mr-document.is-quiet + .mr-document.is-quiet::before {
+  content: none;
+}
+.mr-document.is-quiet + .mr-document.is-quiet {
+  margin-top: 8px;
+}
+.mr-quiet {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px 14px 20px;
+  border-radius: 12px;
+  background: var(--card);
+}
+.mr-quiet-text {
+  flex: 1;
+  min-width: 0;
+}
+.mr-quiet-name {
+  margin: 0;
+  font: 500 calc(var(--code-size) * 1.05) / 1.5 var(--mono);
+  overflow-wrap: anywhere;
+}
+.mr-quiet-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font: 400 13px / 1.5 var(--sans);
+}
+.mr-quiet-label {
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 11.5px;
+}
+.mr-quiet-show {
+  flex: none;
+}
+.mr-menu-quiet {
+  flex: none;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+.mr-files-folded::before {
+  content: "·";
+  margin: 0 6px;
+}
+@media (max-width: 760px) {
+  .mr-quiet {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+  }
+  .mr-quiet-show {
+    min-height: 44px;
+  }
+}
 .mr-article {
   isolation: isolate;
 }
@@ -1696,50 +1898,106 @@
   }
 }
 
-/* The enlarged diagram. Centred when it fits, scrollable from its top-left corner when it does not. */
+/* The enlarged diagram: a canvas over the whole window. It opens with all of the diagram in view and
+   zooms from there; a large diagram can be dragged, scrolled and pinched around. */
 .mr-lightbox {
   position: fixed;
   inset: 0;
   z-index: 40;
-  display: flex;
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding: 64px 40px 40px;
   background: color-mix(in srgb, var(--bg) 86%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  cursor: zoom-out;
   animation: mr-fade 0.16s ease-out;
 }
-.mr-lightbox-figure {
-  flex: none;
-  margin: auto;
-  padding: 36px 32px;
+.mr-lightbox-stage {
+  position: absolute;
+  inset: 12px;
+  overflow: hidden;
   border-radius: 18px;
   background: var(--code-bg);
   box-shadow: var(--shadow);
+  cursor: zoom-out;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
-.mr-lightbox-figure img {
+.mr-lightbox-stage img {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   max-width: none;
-  height: auto;
+  cursor: zoom-in;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.mr-lightbox-stage.is-movable img {
+  cursor: grab;
+}
+.mr-lightbox-stage.is-dragging,
+.mr-lightbox-stage.is-dragging img {
+  cursor: grabbing;
+}
+.mr-lightbox-bar {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  color: var(--fg);
+  font: 13px / 1 var(--sans);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.mr-lightbox-bar .mr-btn {
+  min-width: 40px;
+  height: 40px;
+  justify-content: center;
+  border-radius: 999px;
+}
+.mr-lightbox-bar .mr-btn:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.5;
+}
+.mr-zoom-level {
+  min-width: 64px;
+  padding: 0 10px;
+  font-variant-numeric: tabular-nums;
+}
+.mr-lightbox-hint {
+  padding: 0 14px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .mr-lightbox-close {
-  position: fixed;
-  top: 14px;
-  right: 14px;
+  position: absolute;
+  top: 24px;
+  right: 24px;
   width: 40px;
   height: 40px;
   background: var(--bg);
   color: var(--fg);
   box-shadow: var(--shadow);
 }
-@media (max-width: 760px) {
-  .mr-lightbox {
-    padding: 60px 12px 12px;
+@media (max-width: 760px), (hover: none) {
+  .mr-lightbox-stage {
+    inset: 8px;
+    border-radius: 14px;
   }
-  .mr-lightbox-figure {
-    padding: 20px 16px;
+  .mr-lightbox-hint {
+    display: none;
+  }
+  .mr-lightbox-bar {
+    bottom: 20px;
+  }
+  .mr-lightbox-close {
+    top: 16px;
+    right: 16px;
   }
 }
 
@@ -1786,13 +2044,23 @@
   --tail-bg: var(--code-del);
   --tail-bar: inset 3px 0 0 var(--gutter-removed);
 }
-/* The gutter keeps old number, new number and sign close together, set apart from the code by space and a hairline. */
+/* The gutter keeps old number, new number and sign close together, set apart from the code by space. */
 .mr-code-lines {
   --gutter: calc((var(--digits, 3) * 2 + 3.4) * 0.6 * var(--code-size) + 27px);
 }
+/* + and − beside changed lines are optional (Reading settings → Review); without them the column narrows to a gap. */
+.mr-root {
+  --sign-width: 2.2ch;
+}
+.mr-root.no-signs {
+  --sign-width: 0.6ch;
+}
+.no-signs .mr-code-sign {
+  visibility: hidden;
+}
 .mr-code-line {
   display: grid;
-  grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) 2.2ch minmax(0, 1fr);
+  grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) var(--sign-width) minmax(0, 1fr);
   width: 100%;
   box-sizing: border-box;
   min-height: 24px;
@@ -1803,8 +2071,7 @@
 }
 .mr-code-text {
   --hang: calc(var(--indent, 0ch) + 2ch);
-  padding-left: calc(var(--hang) + 14px);
-  border-left: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  padding-left: calc(var(--hang) + 15px);
   text-indent: calc(-1 * var(--hang));
   overflow-wrap: anywhere;
 }
@@ -1841,6 +2108,64 @@
 .mode-clean .mr-code-line[data-mr-change="added"] {
   background: transparent;
   box-shadow: none;
+}
+/* Moved code, at both ends: its own calm tint, even in a new or deleted file, and a note that goes to the
+   other end. The note sits in the code column, where the eye already is. */
+.mode-changes .mr-document .mr-code-line[data-mr-moved][data-mr-change] {
+  background: var(--code-moved);
+  box-shadow: inset 3px 0 0 var(--gutter-moved);
+  color: inherit;
+}
+.mode-changes .mr-document .mr-code-lines:has(> :first-child[data-mr-moved][data-mr-change]) {
+  --lead-bg: var(--code-moved);
+  --lead-bar: inset 3px 0 0 var(--gutter-moved);
+}
+.mode-changes .mr-document .mr-code-lines:has(> :last-child[data-mr-moved][data-mr-change]) {
+  --tail-bg: var(--code-moved);
+  --tail-bar: inset 3px 0 0 var(--gutter-moved);
+}
+.mr-move-note {
+  display: grid;
+  grid-template-columns: calc(var(--digits, 3) * 1ch + 0.6ch) calc(var(--digits, 3) * 1ch + 0.6ch) var(--sign-width) minmax(0, 1fr);
+  padding: 6px 16px 2px 12px;
+  background: var(--code-moved);
+  box-shadow: inset 3px 0 0 var(--gutter-moved);
+  font: var(--code-size) / 1.8 var(--mono);
+}
+.mr-move-link {
+  grid-column: 4;
+  justify-self: start;
+  margin-left: 15px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: 600 12px / 1.8 var(--sans);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.mr-move-link::after {
+  content: " →";
+}
+.mr-move-link:hover {
+  text-decoration-style: solid;
+}
+.mr-move-note.is-flash {
+  animation: mr-move-flash 1.2s ease-out;
+}
+@keyframes mr-move-flash {
+  from {
+    box-shadow:
+      inset 3px 0 0 var(--gutter-moved),
+      inset 0 0 0 2px var(--gutter-moved);
+  }
+}
+.mode-clean .mr-move-note {
+  display: none;
+}
+.mr-chip.is-moved .mr-dot {
+  color: var(--gutter-moved);
 }
 
 /* ------------------------------------------------------------------ top bar */
@@ -2228,7 +2553,7 @@
   padding: 0;
   overflow: hidden;
   overscroll-behavior: contain;
-  border: 1px solid var(--rule);
+  border: 0;
   border-radius: 20px;
   background: var(--bg);
   color: var(--fg);
@@ -2265,7 +2590,7 @@
   margin: 0 24px 12px;
   padding: 4px;
   border-radius: 12px;
-  background: var(--soft);
+  background: var(--code-bg);
 }
 .mr-settings-tabs button {
   display: flex;
@@ -2282,10 +2607,9 @@
   cursor: pointer;
 }
 .mr-settings-tabs button[aria-selected="true"] {
-  background: var(--bg);
+  background: var(--selected-bg);
   color: var(--fg);
-  border-color: var(--rule);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+  box-shadow: none;
 }
 .mr-settings-tabs button:hover {
   color: var(--fg);
@@ -2446,9 +2770,7 @@
 
 .mr-theme-options button[aria-pressed="true"] {
   border-color: var(--select);
-  box-shadow:
-    0 0 0 1.5px var(--select),
-    0 10px 24px -14px var(--select);
+  box-shadow: 0 0 0 1px var(--select);
 }
 
 .mr-theme-preview {
@@ -2476,8 +2798,8 @@
 
 .mr-theme-lines i:nth-child(2) {
   height: 7px;
-  background: var(--ins-band);
-  border-left: 2px solid var(--gutter-added);
+  background: var(--soft);
+  border-left: 3px solid var(--accent);
 }
 .mr-theme-lines i:last-child {
   width: 70%;
@@ -2799,6 +3121,10 @@
   box-shadow: var(--card-shadow);
 }
 
+.mr-comment-btn.is-lane.is-beside-code {
+  background: var(--card);
+}
+
 .mr-comment-btn.is-lane.is-gap {
   left: calc(100% + (var(--rail-gap) - 34px) / 2);
   justify-content: center;
@@ -2852,22 +3178,22 @@
 
 /* The text being discussed, or pointed at through its card: a flat neutral tint laid over whatever
    the text already shows (green and red mean changes). */
-.mr-content :is(.mr-targeted, .mr-linked) {
+.mr-content :is(.mr-targeted, .mr-linked, .mr-hovered) {
   --tint: color-mix(in srgb, var(--fg) 6%, transparent);
   border-radius: 4px;
   background-image: linear-gradient(var(--tint), var(--tint));
   box-shadow: 0 0 0 8px var(--tint);
 }
 
-.mr-content .mr-code-line:is(.mr-targeted, .mr-linked) {
+.mr-content .mr-code-line:is(.mr-targeted, .mr-linked, .mr-hovered) {
   border-radius: 0;
   box-shadow: none;
 }
 
-.mr-content .mr-code-line[data-mr-change="added"]:is(.mr-targeted, .mr-linked) {
+.mr-content .mr-code-line[data-mr-change="added"]:is(.mr-targeted, .mr-linked, .mr-hovered) {
   box-shadow: inset 3px 0 0 var(--gutter-added);
 }
-.mr-content .mr-code-line[data-mr-change="removed"]:is(.mr-targeted, .mr-linked) {
+.mr-content .mr-code-line[data-mr-change="removed"]:is(.mr-targeted, .mr-linked, .mr-hovered) {
   box-shadow: inset 3px 0 0 var(--gutter-removed);
 }
 
@@ -3044,7 +3370,8 @@
 
 /* Hidden at once on narrow windows, before the layout moves its cards below their text. */
 @media (max-width: 1279px) {
-  .mr-threads {
+  .mr-threads,
+  .mr-comment-btn.is-lane {
     display: none;
   }
 }
@@ -3275,7 +3602,7 @@
 
 /* Outlined comment cards (Reading settings → Review): hairlines instead of shadows and tones. */
 .mr-root[data-comments="outlined"] :is(.mr-thread, .mr-composer, .mr-reply, .mr-comment-btn:not(.is-lane)) {
-  border: 1px solid var(--rule);
+  border: 1px solid var(--control-rule);
   background: var(--bg);
   box-shadow: none;
 }
@@ -3491,7 +3818,7 @@
 }
 
 .mr-root.is-dark[data-theme="night"] {
-  --hl-comment: #b3a07f;
+  --hl-comment: #cbbda3;
   --hl-keyword: #f2a27d;
   --hl-string: #c7d08a;
   --hl-number: #e8c17a;
@@ -3499,7 +3826,7 @@
   --hl-attr: #e8c17a;
   --hl-builtin: #f0b36b;
   --hl-tag: #c7d08a;
-  --hl-meta: #a89677;
+  --hl-meta: #cbbda3;
 }
 
 .mr-root :is(.hljs-comment, .hljs-quote) {
@@ -3580,7 +3907,7 @@
   width: 100%;
   min-height: 44px;
   padding: 10px 36px 10px 14px;
-  border: 1px solid var(--muted);
+  border: 1px solid var(--control-rule);
   border-radius: 10px;
   background: var(--bg);
   color: var(--fg);
@@ -3599,9 +3926,9 @@
 .mr-size-control {
   display: flex;
   align-items: center;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--control-rule);
   border-radius: 10px;
-  background: var(--soft);
+  background: var(--bg);
 }
 .mr-size-control .mr-btn {
   justify-content: center;
@@ -3624,9 +3951,9 @@
 .mr-type-preview {
   margin: 16px 0 12px;
   padding: 16px 18px;
-  border: 1px solid var(--rule);
+  border: 0;
   border-radius: 12px;
-  background: var(--soft);
+  background: var(--code-bg);
 }
 .mr-type-preview p {
   margin: 0 0 6px;
@@ -3946,4 +4273,688 @@
 .mr-overview-empty {
   color: var(--muted);
   font-style: italic;
+}
+
+/* ---------------------------------------------------------------- views of a code file
+   Code comments and test files have a second way to be read: comments as formatted notes, tests as a
+   test plan. Reading settings → Review chooses, for every file; Source is the exact diff. Either way the
+   rows, line numbers and comment anchors stay the same. */
+/* Code comments as notes: set in the reading type, lined up with the code they describe. Their surface
+   separates them from code; the words inside show what changed. */
+.mr-source-comment {
+  position: relative;
+  margin: 10px 16px 10px calc(12px + 2 * (var(--digits, 3) * 1ch + 0.6ch) + var(--sign-width));
+  padding: 12px 18px 15px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: none;
+  font: var(--code-size) / 1.8 var(--mono);
+}
+/* A comment that moved with its code says so, instead of reading as removed here and new there. */
+.mode-changes .mr-content .mr-source-comment:has([data-mr-moved]) .mr-ghost {
+  color: var(--muted);
+}
+.mode-changes .mr-content .mr-source-comment:has([data-mr-moved]) .mr-ghost::before {
+  content: "Moved";
+  color: var(--accent);
+}
+.mr-source-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font: 500 11px / 1.5 var(--sans);
+  letter-spacing: 0.02em;
+}
+.mr-source-comment-meta::before {
+  content: "//";
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  font: 600 11px / 1 var(--mono);
+}
+.mr-content.mr-source-comment-body {
+  font: calc(16px * var(--type)) / 1.65 var(--body-font);
+}
+.mr-source-comment-body > :last-child {
+  margin-bottom: 0;
+}
+.mr-source-comment-body > :first-child {
+  margin-top: 0;
+}
+.mr-source-comment-body :is(p, ul, ol, blockquote) {
+  max-width: 72ch;
+}
+.mr-content.mr-source-comment-body :is(h1, h2) {
+  margin: 14px 0 8px;
+  font-size: calc(22px * var(--type));
+  line-height: 1.25;
+}
+.mr-content.mr-source-comment-body h3 {
+  margin: 12px 0 6px;
+  font-size: calc(19px * var(--type));
+}
+.mr-source-comment-hint {
+  color: var(--muted);
+  font: 12px / 1.5 var(--sans);
+}
+.is-comment-source .mr-source-comment {
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.is-comment-source .mr-source-comment-meta {
+  display: none;
+}
+@media (max-width: 760px) {
+  .mr-source-comment {
+    margin: 8px 8px 8px 12px;
+    padding: 10px 14px 12px;
+  }
+}
+
+/* ---------------------------------------------------------------- test files: the test plan
+   Status glyphs: + added, • edited, − removed, a ring for unchanged, a dashed ring for to do. */
+.mr-spec-link,
+.mr-spec-section {
+  --glyph: "";
+  --glyph-bg: transparent;
+  --glyph-fg: var(--muted);
+  --glyph-ring: inset 0 0 0 1.5px var(--rule);
+}
+:is(.mr-spec-link, .mr-spec-section)[data-status="added"] {
+  --glyph: "+";
+  --glyph-bg: var(--add-bg);
+  --glyph-fg: var(--add);
+  --glyph-ring: none;
+}
+:is(.mr-spec-link, .mr-spec-section)[data-status="edited"] {
+  --glyph: "•";
+  --glyph-bg: color-mix(in srgb, var(--gutter-modified) 20%, var(--bg));
+  --glyph-fg: var(--mod);
+  --glyph-ring: none;
+}
+:is(.mr-spec-link, .mr-spec-section)[data-status="removed"] {
+  --glyph: "−";
+  --glyph-bg: var(--del-bg);
+  --glyph-fg: var(--del);
+  --glyph-ring: none;
+}
+.mr-spec-link[data-status="moved"] {
+  --glyph: "→";
+  --glyph-bg: color-mix(in srgb, var(--accent) 16%, var(--bg));
+  --glyph-fg: var(--accent);
+  --glyph-ring: none;
+}
+:is(.mr-spec-link, .mr-spec-section).is-todo {
+  --glyph: "";
+  --glyph-bg: transparent;
+  --glyph-ring: none;
+}
+.mr-spec-link::before,
+.mr-spec-glyph {
+  content: var(--glyph);
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--glyph-bg);
+  color: var(--glyph-fg);
+  box-shadow: var(--glyph-ring);
+  font: 700 12px / 1 var(--sans);
+}
+.mr-spec-glyph::before {
+  content: var(--glyph);
+}
+.is-todo:is(.mr-spec-link)::before,
+.is-todo > .mr-spec-heading .mr-spec-glyph {
+  border: 1.5px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+  box-sizing: border-box;
+}
+
+.mr-content .mr-spec-view {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 6px 0 8px;
+  font: 12px / 1.5 var(--sans);
+}
+.mr-spec-view-options button {
+  height: 36px;
+}
+@media (max-width: 760px) {
+  .mr-spec-view-options button {
+    height: 44px;
+  }
+}
+
+.mr-spec-plan {
+  margin: 22px 0 30px;
+  padding: 20px 22px 16px;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--card-shadow);
+}
+.mr-spec-plan-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.mr-spec-kicker {
+  margin: 0 0 4px;
+  color: var(--accent);
+  font: 600 11px / 1.4 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mr-spec-summary {
+  margin: 0;
+  font: 400 calc(26px * var(--type)) / 1.2 var(--heading-font, var(--body-font));
+  letter-spacing: -0.015em;
+}
+.mr-spec-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 0;
+}
+.mr-spec-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 4px 9px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 500 12px / 1.3 var(--sans);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.mr-spec-count::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.mr-spec-count.is-added::before {
+  background: var(--gutter-added);
+}
+.mr-spec-count.is-edited::before {
+  background: var(--gutter-modified);
+}
+.mr-spec-count.is-removed::before {
+  background: var(--gutter-removed);
+}
+.mr-spec-count.is-unchanged::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--rule);
+}
+.mr-spec-count.is-todo::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+.mr-spec-count.is-moved::before {
+  background: var(--gutter-moved);
+}
+.mr-spec-outline {
+  display: flex;
+  flex-direction: column;
+  margin: 16px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+.mr-spec-outline-suite {
+  margin: 12px 0 2px;
+  padding-left: calc(8px + var(--spec-depth, 0) * 18px);
+  color: var(--muted);
+  font: 600 12px / 1.5 var(--sans);
+}
+.mr-spec-outline-suite .mr-spec-name {
+  font: inherit;
+  letter-spacing: 0;
+}
+.mr-spec-outline-suite:first-child {
+  margin-top: 0;
+}
+.mr-spec-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 4px 8px 4px calc(8px + var(--spec-depth, 0) * 18px);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  font: calc(14px * var(--type)) / 1.4 var(--sans);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.mr-spec-link:hover {
+  background: var(--soft);
+}
+@media (hover: none), (max-width: 760px) {
+  .mr-spec-link {
+    min-height: 44px;
+  }
+}
+.mr-spec-link > .mr-spec-flag {
+  margin-left: auto;
+  font-size: 11px;
+}
+.mr-spec-link .mr-spec-status {
+  margin-left: auto;
+}
+.mr-spec-link > .mr-spec-flag + .mr-spec-status {
+  margin-left: 0;
+}
+.mr-spec-link:is([data-status="unchanged"], [data-status="removed"]) {
+  color: var(--muted);
+}
+.mr-spec-link[data-status="removed"] {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--del-strike) 60%, transparent);
+}
+.mr-spec-link[data-status="removed"] .mr-spec-status {
+  text-decoration: none;
+}
+.mr-spec-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font: 12px / 1.5 var(--sans);
+}
+
+/* Suites hold their tests, indented with a guide line; each test is a card that opens to its code. */
+.mr-spec-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mr-spec-section {
+  position: relative;
+  margin-left: calc(var(--spec-depth, 0) * 22px);
+  scroll-margin-top: 72px;
+}
+.mr-spec-section:not([data-depth="0"])::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  bottom: 0;
+  left: -13px;
+  width: 1px;
+  background: var(--rule);
+}
+.mr-spec-heading {
+  padding: 0;
+}
+.mr-content .mr-spec-title {
+  margin: 0;
+  font: inherit;
+}
+.mr-spec-section.is-case,
+.mr-spec-section.is-setup {
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: none;
+}
+.mr-spec-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+}
+.mr-spec-toggle:hover {
+  background: color-mix(in srgb, var(--soft) 60%, transparent);
+}
+.mr-spec-name {
+  flex: 1;
+  min-width: 0;
+  font: 400 calc(19px * var(--type)) / 1.3 var(--heading-font, var(--body-font));
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.mr-spec-name :is(del, ins) {
+  border-radius: 3px;
+}
+.mr-spec-meta {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--muted);
+  font: 500 11px / 1.4 var(--sans);
+}
+.mr-spec-status,
+.mr-spec-flag {
+  flex: none;
+  white-space: nowrap;
+}
+.mr-spec-status {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--fg);
+  font: 600 11px / 1.3 var(--sans);
+}
+.mr-spec-status.is-added {
+  background: var(--add-bg);
+  color: var(--add);
+}
+.mr-spec-status.is-edited {
+  background: color-mix(in srgb, var(--gutter-modified) 18%, var(--bg));
+  color: var(--mod);
+}
+.mr-spec-status.is-removed {
+  background: var(--del-bg);
+  color: var(--del);
+}
+.mr-spec-status.is-moved {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- source files: what changed, by declaration
+   The test plan's card and links, listing functions, classes and types. A link lands on the first changed
+   line and lights it briefly, so the eye finds it. */
+.mr-symbol-kind {
+  flex: none;
+  min-width: 8.5ch;
+  color: var(--muted);
+  font: 500 11px / 1.4 var(--mono);
+}
+:is(.mr-code-line, .mr-source-comment).is-flash {
+  animation: mr-line-flash 1.4s ease-out;
+}
+@keyframes mr-line-flash {
+  from {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  to {
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+  }
+}
+.mr-spec-status.is-unchanged {
+  padding-inline: 0;
+  background: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+.mr-spec-flag {
+  padding: 2px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+}
+.mr-spec-flag.is-todo {
+  border-style: dashed;
+}
+.mr-spec-chevron {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 4px 3px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+}
+[aria-expanded="false"] > .mr-spec-chevron {
+  margin-bottom: 0;
+  transform: rotate(-45deg);
+}
+.mr-spec-section > .mr-code-lines {
+  border-radius: 0 0 12px 12px;
+  box-shadow: none;
+}
+.mr-spec-section:not(.is-collapsed) > .mr-spec-heading .mr-spec-toggle {
+  border-radius: 12px 12px 0 0;
+}
+.mr-spec-section.is-collapsed > .mr-code-lines {
+  display: none;
+}
+/* Lines that only repeat the heading are left out of the plan, unless a discussion or a draft is on them. */
+.mr-spec-file:not(.is-spec-source) [data-mr-spec-boilerplate]:not([data-mr-threads], .mr-targeted) {
+  display: none;
+}
+.mr-spec-file.is-spec-source .mr-spec-section.is-collapsed > .mr-code-lines {
+  display: block;
+}
+/* The first and last rows may be left out, so the padding around a test's code is never tinted. */
+.mr-spec-file:not(.is-spec-source) .mr-spec-section > .mr-code-lines::before,
+.mr-spec-file:not(.is-spec-source) .mr-spec-section > .mr-code-lines::after {
+  background: transparent;
+  box-shadow: none;
+}
+/* A test that is all title (it.todo) is just its heading. */
+.mr-spec-file:not(.is-spec-source) .mr-spec-section.is-bare:not(:has([data-mr-threads], .mr-targeted)) > .mr-code-lines {
+  display: none;
+}
+.mr-spec-file:not(.is-spec-source) .mr-spec-section.is-bare:not(:has([data-mr-threads], .mr-targeted)) > .mr-spec-heading .mr-spec-toggle {
+  border-radius: 12px;
+  cursor: default;
+}
+.mr-spec-file:not(.is-spec-source) .mr-spec-section.is-bare:not(:has([data-mr-threads], .mr-targeted)) .mr-spec-chevron {
+  visibility: hidden;
+}
+
+/* Unchanged tests are shown whole, a little quieter than the changed ones. */
+.mr-spec-section[data-status="unchanged"] .mr-spec-name {
+  color: var(--muted);
+}
+.mr-spec-section.is-case.is-todo {
+  background: var(--card);
+  box-shadow: none;
+}
+.mr-spec-section[data-status="removed"] .mr-spec-name {
+  color: var(--muted);
+}
+
+.mr-spec-section.is-suite {
+  margin-top: 18px;
+}
+.mr-spec-section.is-suite > .mr-spec-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 0 0 10px;
+}
+.mr-spec-section.is-suite > .mr-spec-heading .mr-spec-kicker {
+  width: 100%;
+  margin: 0;
+}
+.mr-content .is-suite .mr-spec-title {
+  font: 400 calc(26px * var(--type)) / 1.2 var(--heading-font, var(--body-font));
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.mr-spec-section.is-suite > .mr-code-lines,
+.mr-spec-section.is-support > .mr-code-lines {
+  border-radius: 10px;
+  box-shadow: none;
+}
+.mr-spec-section.is-support > .mr-spec-heading {
+  padding: 0 0 8px;
+}
+.mr-content .is-support .mr-spec-title {
+  color: var(--muted);
+  font: 600 11px / 1.5 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mode-clean .mr-spec-section.is-removed,
+.mode-clean .mr-spec-link.is-removed {
+  display: none;
+}
+
+/* Source (Reading settings → Review → Test files): the plain diff again, every line. */
+.mr-spec-file.is-spec-source :is(.mr-spec-heading, .mr-spec-plan) {
+  display: none;
+}
+.mr-spec-file.is-spec-source .mr-spec-stream {
+  gap: 0;
+  padding-block: 12px;
+  border-radius: 6px;
+  background: var(--code-bg);
+}
+.mr-spec-file.is-spec-source .mr-spec-section {
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  outline: 0;
+}
+.mr-spec-file.is-spec-source .mr-spec-section::before {
+  display: none;
+}
+.mr-spec-file.is-spec-source .mr-code-lines {
+  border-radius: 0;
+  box-shadow: none;
+}
+.mr-spec-file.is-spec-source .mr-code-lines::before,
+.mr-spec-file.is-spec-source .mr-code-lines::after {
+  display: none;
+}
+@media (max-width: 760px) {
+  .mr-spec-plan {
+    padding: 16px 14px 12px;
+  }
+  .mr-spec-plan-top {
+    flex-direction: column;
+  }
+  .mr-spec-section {
+    margin-left: calc(var(--spec-depth, 0) * 12px);
+  }
+  .mr-spec-section:not([data-depth="0"])::before {
+    left: -8px;
+  }
+  .mr-spec-toggle {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  .mr-spec-meta {
+    order: 3;
+    box-sizing: border-box;
+    width: 100%;
+    justify-content: flex-start;
+    padding-left: 30px;
+  }
+  .is-suite > .mr-spec-heading .mr-spec-meta {
+    padding-left: 0;
+  }
+  .mr-spec-name {
+    font-size: calc(17px * var(--type));
+  }
+  .mr-content .is-suite .mr-spec-title {
+    font-size: calc(22px * var(--type));
+  }
+}
+
+/* Test files read as a compact working outline. The full index is a disclosure, so the first screen
+   reaches the tests rather than repeating their names before the code. */
+.mr-main:has(.mr-document:nth-child(1 of .mr-document:not([hidden])) .mr-spec-file) {
+  padding-top: 36px;
+}
+.mr-document:has(.mr-spec-file) .mr-title.mr-code-title {
+  font-size: calc(30px * var(--type));
+}
+.mr-document:has(.mr-spec-file) .mr-byline {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides the prose byline margin for a compact test file */
+  margin: 16px 0 12px !important;
+  padding-block: 10px;
+}
+.mr-spec-plan {
+  margin: 8px 0 12px;
+  padding: 16px 18px 12px;
+  border-radius: 12px;
+}
+.mr-spec-summary {
+  font-size: calc(22px * var(--type));
+}
+.mr-spec-counts {
+  margin-top: 10px;
+}
+.mr-content .mr-spec-browse {
+  margin: 8px 0 0;
+}
+.mr-content .mr-spec-browse > summary {
+  min-height: 36px;
+  padding: 0;
+  color: var(--fg);
+  font: 500 12px / 1.4 var(--sans);
+}
+.mr-spec-browse .mr-spec-outline {
+  margin-top: 0;
+  padding-top: 8px;
+}
+.mr-spec-note {
+  margin-top: 4px;
+  font-size: 11px;
+}
+.mr-spec-toggle {
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+.mr-spec-toggle .mr-spec-lines {
+  display: none;
+}
+.mr-spec-section.is-suite {
+  margin-top: 10px;
+}
+.mr-spec-section.is-suite > .mr-spec-heading .mr-spec-kicker {
+  display: none;
+}
+.mr-spec-section > .mr-code-lines::before,
+.mr-spec-section > .mr-code-lines::after {
+  height: 6px;
+}
+@media (max-width: 760px) {
+  .mr-main:has(.mr-document:nth-child(1 of .mr-document:not([hidden])) .mr-spec-file) {
+    padding-top: 24px;
+  }
+  .mr-spec-plan {
+    padding: 12px 14px 10px;
+  }
+  .mr-content .mr-spec-browse > summary {
+    min-height: 44px;
+  }
+  .mr-spec-toggle .mr-spec-meta {
+    width: auto;
+    padding-left: 0;
+    margin-left: 28px;
+  }
+}
+
+.mr-content .mr-spec-section {
+  margin-block: 0;
+}
+.mr-content .mr-spec-section.is-suite {
+  margin-top: 10px;
+}
+.mr-spec-section.is-support > .mr-spec-heading {
+  padding-bottom: 0;
+}
+.mr-spec-support-toggle {
+  padding-inline: 0;
+}
+.mr-spec-support-toggle .mr-spec-name {
+  font: 600 11px / 1.5 var(--sans);
+  letter-spacing: 0.06em;
 }

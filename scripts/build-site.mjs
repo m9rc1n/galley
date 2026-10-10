@@ -3,6 +3,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import markdownit from 'markdown-it';
+import { CAPTURES } from './artwork.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const out = `${root}dist/site`;
@@ -12,10 +13,8 @@ for (const file of ['index.html', 'styles.css', 'main.js']) await cp(`${root}sit
 await cp(`${root}src/ui/fonts`, `${out}/fonts`, { recursive: true });
 const assets = {
   'src/icons/icon128.png': 'icon.png',
-  'store/assets/readme-hero-1600x640.png': 'social.png',
-  'store/assets/screenshot-1-changes.jpg': 'reader-changes.jpg',
-  'store/assets/screenshot-3-tables.jpg': 'reader-tables.jpg',
-  'store/assets/screenshot-4-clean-dark.jpg': 'reader-dark.jpg',
+  'store/assets/social-preview-1280x640.png': 'social.png',
+  ...Object.fromEntries(CAPTURES.map((file) => [`store/assets/${file}`, file])),
 };
 for (const [source, target] of Object.entries(assets)) await cp(`${root}${source}`, `${out}/assets/${target}`);
 await mkdir(`${out}/demo`, { recursive: true });

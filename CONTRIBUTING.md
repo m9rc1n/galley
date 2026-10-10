@@ -12,7 +12,71 @@ npm run dev        # dev build in dist/dev with live reload; load it once via ch
 npm run demo       # or: try the reader on a sample merge request, no extension needed
 ```
 
-Node 22.12 or newer is required (22.12+, 24 or 26+). See "Develop in your own Chrome" in the [README](README.md#develop-in-your-own-chrome) for the dev loop.
+Node 22.12 or newer is required (22.12+, 24 or 26+). See [Develop in your own Chrome](#develop-in-your-own-chrome) for the dev loop.
+
+## Develop in your own Chrome
+
+```bash
+npm install
+npm run dev
+```
+
+Then, once: open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose `dist/dev`.
+
+- The dev build is called **Galley (dev)**. It has an orange icon and DEV badges, so it can sit next to the store version; turn the store version off while you develop.
+- Leave `npm run dev` running. Every save rebuilds: content script changes appear in the active GitHub or GitLab tab within a couple of seconds, popup changes the next time you open the popup, and manifest or dev-worker changes need one click on the reload icon of Galley (dev) in `chrome://extensions`.
+- Source maps are included, so DevTools shows the TypeScript sources.
+- The dev build keeps its own settings and GitHub token, separate from the store version.
+- `npm run dev:zip` makes a dev build with the same name and badges that works without `npm run dev` (no live reload), plus a zip of it.
+
+To load a plain build instead: `npm run build`, then **Load unpacked** on `dist/chrome` (Chrome, Edge, Brave, Arc), or in Firefox open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on** and pick `dist/firefox/manifest.json`. `npm run zip` writes store-ready archives to `dist/`.
+
+## Commands
+
+```bash
+npm run dev           # dev build in dist/dev with live reload (see above)
+npm run dev:zip       # one-off dev build that works without the dev server (dist/dev-standalone + zip)
+npm run demo          # build and serve the demo on http://localhost:4173
+npm run site          # build and serve the website, with the demo, on http://localhost:4185
+npm test              # unit tests (Vitest), one project per folder
+npm run test:watch    # unit tests, re-running as you edit
+npm run test:coverage # unit tests with coverage, which must be 100% in every file
+npm run test:e2e      # builds the demo and runs the reader's browser checks (Chrome; CHROME_PATH supported)
+npm run test:site     # browser checks for the built website
+npm run lint          # Biome; npm run lint:fix applies the safe fixes
+npm run format        # Biome formatter; npm run format:check only reports
+npm run typecheck     # TypeScript, no emit
+npm run check         # typecheck, lint, formatting, tests with coverage: what git push runs first
+npm run icons         # redraw the toolbar icons
+npm run store-assets  # real reader captures, store screenshots and artwork (needs Chrome)
+npm run artwork       # preview the artwork and the README on http://localhost:4180
+npm run release       # checks, store-ready zips, privacy page
+```
+
+## How Galley works
+
+1. A content script recognises pull and merge request pages, including in-app navigation, and lists the changed documents and supported source files through the platform's REST API.
+2. It loads both versions of each document, and of each source file when code files are on.
+   - GitLab: the raw files at the merge base and at the head commit.
+   - GitHub: the head file through the same-origin raw URL. The base version is rebuilt by reversing the pull request's patch, and fetched at the merge base only when GitHub omits the patch.
+3. Both versions are parsed with markdown-it (GFM tables, task lists, footnotes, alerts, front matter). Every leaf block (paragraph, list item, heading, table, code block) remembers its source lines.
+4. A block diff matches the two documents. Prose is compared by whitespace-normalised text plus its resolved link and image destinations; code and raw HTML are compared exactly. Edited blocks are paired by word similarity, and inside a pair a word diff marks what changed, using `Intl.Segmenter` tokens and a clean-up pass so rewrites read as phrases rather than confetti. Every diff has a work limit, so hostile input degrades to "replaced" instead of freezing the tab.
+5. The result is sanitised with DOMPurify and shown in a shadow-DOM overlay, so the page's styles and the reader's never mix. Mermaid and highlight.js run in sandboxed extension frames.
+
+| Path | What it is |
+| --- | --- |
+| `src/content/main.ts` | Content script: page detection, the Read button, single-page navigation |
+| `src/platforms/` | GitHub and GitLab adapters, page detection, fetch helpers, token storage |
+| `src/core/` | Markdown parsing into blocks, block diff, word diff, DOM highlighting, patch reversal |
+| `src/ui/` | The reader overlay, its stylesheet, rendering pipeline, settings, sandboxed renderers |
+| `src/popup/` | Toolbar popup: enable self-hosted sites, GitHub token |
+| `src/background/` | Background worker: holds the GitHub token and makes the token-bearing API calls |
+| `demo/` | Sample merge request for trying the reader without the extension |
+| `site/` | The website ([site/README.md](site/README.md)) |
+| `store/` | Store listing copy, artwork templates and generated assets ([store/ARTWORK.md](store/ARTWORK.md)) |
+| `src/testing/` | Helpers shared by the unit tests (never shipped) |
+| `e2e/` | Browser checks of the reader and the website, run in Chrome |
+| `lint/` | Custom lint rules for [Biome](https://biomejs.dev) |
 
 ## Before you open a pull request
 
@@ -83,6 +147,7 @@ Suppressions need a reason after the colon, and a reviewer should be able to agr
 
 ## Guidelines
 
+- **Keep product language clear and friendly.** Follow [docs/COPY.md](docs/COPY.md): explain how Galley helps teams understand changes, use the reader's actual control labels, and keep humor light.
 - **Keep it small and dependency-light.** The reader ships as one script with a separate lazy-loaded Mermaid engine; new runtime dependencies need a good reason, and their licence must be permissive (MIT, BSD, ISC, Apache-2.0). That keeps them compatible with the GPL and leaves room for the commercial licence described under [Licence](#licence). The build lists them in `THIRD_PARTY_NOTICES.txt`.
 - **Never trust document content.** Pull requests come from forks. Everything rendered goes through DOMPurify; don't add paths around it.
 - **Tests for logic, screenshots for looks.** Diffing, parsing, URL handling and the token worker live in `src/core`, `src/platforms` and `src/background` and are unit-tested. UI changes are checked in the demo and by `npm run test:e2e`.

@@ -4,6 +4,8 @@ const svg = (body: string) =>
 export const icons = {
   settings: svg('<path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2.4" fill="var(--bg)"/><circle cx="15" cy="16" r="2.4" fill="var(--bg)"/>'),
   close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  minus: svg('<path d="M5 12h14"/>'),
   check: svg('<path d="M5 12.5l4.2 4.2L19 7"/>'),
   layout: svg('<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M8.5 5v14M15.5 5v14"/>'),
   keyboard: svg('<rect x="3" y="6.5" width="18" height="11" rx="2"/><path d="M7 10.25h.01M10.5 10.25h.01M14 10.25h.01M17 10.25h.01M8 14h8"/>'),

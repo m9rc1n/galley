@@ -8,52 +8,62 @@ Upload `dist/galley-chrome-<version>.zip`, built by `npm run release`.
 
 ## Store listing
 
-**Title** (from the manifest, 50 of 75 characters)
+**Title** (from the manifest, 43 of 75 characters)
 
 ```
-Galley: Markdown reader for pull & merge requests
+Galley: Clearer reviews for GitHub & GitLab
 ```
 
-**Summary** (from the manifest, 128 of 132 characters)
+**Summary** (from the manifest, 109 of 132 characters)
 
 ```
-Read markdown changes in GitHub pull requests and GitLab merge requests as typeset articles, with every edit marked in the text.
+Understand GitHub and GitLab changes: readable docs and code, edits in context, and comments beside the text.
 ```
 
 **Description** (plain text; paste as-is)
 
 ```
-Make room for better reviews.
+Understand changes. Review together.
 
-A good review starts with understanding. Galley gives your team's RFCs, decisions, runbooks and READMEs room to be read carefully and discussed thoughtfully. Our mission is to make the everyday work of reviewing clearer, calmer and easier on the people who do it.
+Galley helps your team understand code and document changes on GitHub and GitLab. Read the explanation, inspect the edits and discuss the details in one clear view.
 
-On any GitHub pull request or GitLab merge request that changes markdown files, Galley adds a Read button. Each changed document opens as a clean, typeset article, with the changes marked inside the text.
+Open a pull request or merge request and press Read. Documents become readable articles, changed words appear inside their sentences, and comments sit beside the text they discuss. Turn on Code files to include supported source and configuration files.
 
-WHAT YOU GET
-• Typography made for long-form reading: a comfortable serif column, real headings, tables, images, task lists, footnotes and alerts.
-• Changes where they happened: inserted words marked, removed words struck through, new and deleted paragraphs marked in place.
-• A link or image that keeps its text but points somewhere new is named in the text.
-• Tables compared cell by cell; code blocks and source files line by line, with syntax colours and wrapped long lines.
-• Existing review threads beside the paragraphs they discuss. Select text, or use the button beside a paragraph, to post a normal review comment.
-• Re-wrapped paragraphs are not reported as changes.
-• Clean mode: hide the markup and read the new version as it will be published, with quiet markers in the margin.
-• Keyboard navigation: J and K for the next and previous change, [ and ] for the next and previous document, R to comment, V to mark a file viewed, C to switch modes, Esc to go back.
-• Paper, Sage, Sepia and Slate palettes, each with light, dark or system appearance; serif or sans text and adjustable text size.
+READ THE CONTENT WITH CONTEXT
+• Documents keep their headings, tables, task lists, footnotes, alerts, images and Mermaid diagrams.
+• Source files keep their old and new line numbers, syntax colours and diff signs. Long lines wrap to fit the screen.
+• Open diagrams in a full-window view, then zoom and move around to inspect the details.
 
-WORKS WHERE YOU REVIEW
-• GitLab.com and self-managed GitLab: uses your signed-in session, nothing to set up. Self-managed instances are enabled from the toolbar popup, one domain at a time.
-• GitHub.com and GitHub Enterprise Server: public repositories work right away. For private repositories, add a fine-grained token in the popup. Galley keeps it in its own storage, away from web pages.
+SEE WHAT CHANGED
+• Added words are highlighted and removed words struck through inside their sentences.
+• Table edits appear in their cells. Changed link destinations are called out even when the link text stays the same.
+• Changes to paragraph wrapping are not marked as text edits. Expand unchanged sections when you need more context.
+• Clean mode shows the updated document with change indicators in the margin.
+• Source changes that are not visible in the rendered document are counted and linked to the platform diff.
 
-BUILT IN THE OPEN
-• Free, GPL-licensed and open source. Inspect the code, permissions, data handling and known limitations at github.com/m9rc1n/galley.
-• Comments stay in your existing GitHub or GitLab review, where teammates can read them without Galley.
+DISCUSS THE DETAILS TOGETHER
+• Read existing threads beside the paragraph or code line they discuss.
+• Select text or point at a paragraph to add a comment. Reply in the thread and keep drafts while you read on.
+• Comments and replies go to the original GitHub or GitLab review. Teammates can join the discussion without installing Galley.
+• Mark files as viewed to keep your place. With a GitHub token, this syncs with GitHub's Viewed status.
+• Return to GitHub or GitLab to approve a request, request changes or resolve threads.
+
+CHOOSE YOUR READING COMFORT
+• 16 palettes, each available in light and dark, with 6 typefaces and 5 text sizes.
+• 5 layouts, with space for text, code or comments, plus compact spacing.
+• 20 keyboard shortcuts for changes, files, conversations, comments and settings.
+
+USE YOUR EXISTING WORKFLOW
+• GitLab.com uses your signed-in session. Enable self-managed GitLab sites from the extension popup, one domain at a time.
+• Public GitHub repositories work right away. Private repositories need a fine-grained token saved in the popup; commenting needs Pull requests: read and write permission.
+• GitHub Enterprise Server is enabled from the popup, with a token saved for that site.
 
 PRIVATE BY DEFAULT
-• No Galley server or account, no analytics, no advertising and no telemetry. Documents and diagrams render in your browser.
-• Galley itself only contacts the GitHub or GitLab site you are using. Images hosted on other websites load only when you choose.
-• Rendered documents are sanitised, so content from forks cannot run scripts or imitate Galley's change markers.
+• Files render in your browser. No Galley server, account, analytics, advertising or telemetry.
+• Galley contacts the GitHub or GitLab site you are using. Images hosted elsewhere load only when you choose.
+• Review content is sanitised before rendering. Your GitHub token stays in extension storage that web pages cannot read.
 
-Read all changed documents in a continuous stream, with changed paragraphs shown first. Reveal nearby unchanged context at any gap. GitLab commenting uses your signed-in session; GitHub commenting needs a token with Pull requests: read and write.
+Free and open source (GPL-3.0-or-later): github.com/m9rc1n/galley
 
 GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. Galley is not affiliated with or endorsed by either company.
 ```
@@ -67,15 +77,17 @@ GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. Galle
 | Field | File | Required |
 | --- | --- | --- |
 | Store icon, 128×128 | `icon-128.png` | Yes |
-| Screenshot 1 | `screenshot-1-changes.jpg` | At least one |
-| Screenshot 2 | `screenshot-2-entry.jpg` | |
-| Screenshot 3 | `screenshot-3-tables.jpg` | |
-| Screenshot 4 | `screenshot-4-clean-dark.jpg` | |
-| Screenshot 5 | `screenshot-5-sepia-settings.jpg` | |
+| Screenshot 1 | `screenshot-1-read.jpg`: "Understand changes. Review together." | At least one |
+| Screenshot 2 | `screenshot-2-button.jpg`: the Read button on a pull request | |
+| Screenshot 3 | `screenshot-3-comments.jpg`: a comment written beside its paragraph | |
+| Screenshot 4 | `screenshot-4-code.jpg`: a source file with a comment beside a line | |
+| Screenshot 5 | `screenshot-5-comfort.jpg`: palettes, typefaces and layouts | |
 | Small promo tile, 440×280 | `promo-small-440x280.jpg` | Yes |
 | Marquee promo tile, 1400×560 | `promo-marquee-1400x560.jpg` | No |
 
-**Homepage URL:** `https://github.com/m9rc1n/galley`
+The screenshots are real reader captures with one line of copy above them; the raw captures are `reader-*.jpg`.
+
+**Homepage URL:** `https://m9rc1n.github.io/galley/`
 
 **Support URL:** `https://github.com/m9rc1n/galley/issues`
 
@@ -84,7 +96,7 @@ GitHub is a trademark of GitHub, Inc. GitLab is a trademark of GitLab Inc. Galle
 **Single purpose**
 
 ```
-Galley shows the markdown documents changed in a GitHub pull request or GitLab merge request as readable, typeset articles, with the changes highlighted.
+Galley helps teams understand GitHub pull requests and GitLab merge requests by showing readable documents and code, edits in context, and review comments beside the relevant text.
 ```
 
 **Permission justifications**
@@ -92,7 +104,7 @@ Galley shows the markdown documents changed in a GitHub pull request or GitLab m
 `storage`
 
 ```
-Saves the user's reading preferences (theme, typeface, text size, Changes or Clean mode, external images) and local Viewed progress in chrome.storage.local on the user's device. An optional GitHub access token is kept separately in the extension's own IndexedDB, which content scripts and web pages cannot read; only the extension's background worker uses it.
+Saves the user's reading preferences (palette, typeface, text size, layout, Changes or Clean mode, external images) and local Viewed progress in chrome.storage.local on the user's device. An optional GitHub access token is kept separately in the extension's own IndexedDB, which content scripts and web pages cannot read; only the extension's background worker uses it.
 ```
 
 `scripting`

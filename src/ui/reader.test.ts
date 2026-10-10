@@ -342,16 +342,22 @@ it('shows the palettes six to a page, turns the pages, and opens on the page of 
   await ui.open(review());
   ui.click('[data-act="settings"]');
   const pages = [...ui.shadow().querySelectorAll('.mr-palette-page')];
-  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6]);
+  expect(pages.map((page) => page.querySelectorAll('[data-value]').length)).toEqual([6, 6, 4]);
   // Nord is on the second page, so the settings open there.
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'auto' });
-  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(false);
   expect(ui.q('.mr-carousel-dot[data-page="1"]').getAttribute('aria-current')).toBe('true');
   ui.click('[data-act="palette-prev"]');
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 0, behavior: 'smooth' });
   expect(ui.q<HTMLButtonElement>('[data-act="palette-prev"]').disabled).toBe(true);
   ui.click('.mr-carousel-dot[data-page="1"]');
   expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 1280, behavior: 'smooth' });
+  ui.q('.mr-palette-track').scrollLeft = 1280;
+  ui.click('[data-act="palette-next"]');
+  expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ left: 2560, behavior: 'smooth' });
+  expect(ui.q<HTMLButtonElement>('[data-act="palette-next"]').disabled).toBe(true);
+  ui.click('[data-setting="theme"] [data-value="ocean"]');
+  expect(ui.q('.mr-root').dataset.theme).toBe('ocean');
   // A palette inside a page is chosen like any other setting.
   ui.click('[data-setting="theme"] [data-value="night"]');
   expect(ui.q('.mr-root').dataset.theme).toBe('night');
@@ -398,7 +404,7 @@ it("offers the request's own title and description as a first document, sanitise
   ui.close();
   await ui.open(review({ overview: { ...overview, description: '  ' } }));
   expect(ui.q('.mr-overview').hidden).toBe(false);
-  expect(ui.q('.mr-overview-empty').textContent).toBe('No description.');
+  expect(ui.q('.mr-overview-empty').textContent).toBe('No description was added to this request.');
 });
 
 it('hides the description switch when the platform has no description to show', async () => {
@@ -760,11 +766,13 @@ it('uses the old path and source coordinates when commenting on a removed file',
   expect(composer.getAttribute('aria-label')).toBe('New comment on docs/old.md, old line 3');
 });
 
-it('reflects renamed and unchanged documents and warns about edits that Markdown cannot show', async () => {
+it('folds renamed, unchanged documents until asked, and warns about edits that Markdown cannot show', async () => {
   const renamed = { ...guide, oldPath: 'old.md', status: 'renamed' as const };
   await ui.open(review({ docs: [renamed], load: async () => ({ base: 'Same.', head: 'Same.' }) }));
   expect(ui.q('.mr-file-btn').title).toBe('Renamed: old.md → docs/guide.md');
-  expect(ui.q('.mr-byline').textContent).toContain('Moved, text unchanged');
+  expect(ui.q('.mr-quiet-reason').textContent).toBe('Renamed from old.md, text unchanged.');
+  ui.click('[data-act="show-quiet"]');
+  await vi.waitFor(() => expect(ui.q('.mr-byline')?.textContent).toContain('Moved, text unchanged'));
   expect(ui.q('.mr-empty-changes')).toBeTruthy();
   await ui.open(review({ load: async () => ({ base: 'Text.\n\n<!-- old -->', head: 'Text.\n\n<!-- changed -->' }) }));
   expect(ui.q('.mr-chip.is-hidden').textContent).toContain('2 lines not shown');
@@ -1004,13 +1012,90 @@ it('keeps the comment control while the pointer crosses the margin to it, and dr
   // Pointing at the control marks the paragraph it would comment on.
   button.dispatchEvent(new Event('pointerover', { bubbles: true }));
   expect(paragraph.classList).toContain('mr-linked');
-  move(ui.q('.mr-main'), 965, 700);
+  // Left of the text, away from the paragraph, it goes.
+  move(ui.q('.mr-main'), 100, 700);
   expect(button.hidden).toBe(true);
   ui.q('.mr-main').dispatchEvent(new Event('pointerover', { bubbles: true }));
   expect(paragraph.classList).not.toContain('mr-linked');
   paragraph.dispatchEvent(new Event('pointerover', { bubbles: true }));
   ui.q('.mr-root').dispatchEvent(new Event('pointerleave'));
   expect(button.hidden).toBe(true);
+});
+
+it('turns the + and − beside changed code lines off and on from Review settings, and remembers it', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ codeFiles: true }));
+  const code = { path: 'src/main.ts', oldPath: 'src/main.ts', kind: 'code' as const, status: 'modified' as const };
+  await ui.open(review({ docs: [], codeDocs: [code], load: async () => ({ base: 'const value = 1;\n', head: 'const value = 2;\n' }) }));
+  const toggle = ui.q('[data-act="signs"]');
+  expect(toggle.getAttribute('aria-checked')).toBe('true');
+  expect(ui.q('.mr-root').classList.contains('no-signs')).toBe(false);
+  ui.click('[data-act="signs"]');
+  expect(toggle.getAttribute('aria-checked')).toBe('false');
+  expect(ui.q('.mr-root').classList.contains('no-signs')).toBe(true);
+  // The signs stay in the rows, so line numbers and comment targets are untouched.
+  expect([...ui.shadow().querySelectorAll('.mr-code-sign')].map((sign) => sign.textContent)).toEqual(['−', '+']);
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!).signs).toBe(false));
+  ui.click('[data-act="signs"]');
+  expect(ui.q('.mr-root').classList.contains('no-signs')).toBe(false);
+});
+
+it('offers a comment from the comments column level with any text, and keeps it on the way to the control', async () => {
+  localStorage.setItem('galley:settings', JSON.stringify({ scope: 'all' }));
+  await ui.open(
+    review({
+      load: async () => ({ base: 'First line.\n\nSecond line.\n\nThird line.\n', head: 'First line!\n\nSecond line.\n\nThird line!\n' }),
+      prepareComment: async () => ({ kind: 'inline', label: 'Inline', post: vi.fn() }),
+    }),
+  );
+  const [first, second, third] = [...ui.shadow().querySelectorAll<HTMLElement>('.mr-content p')];
+  const button = ui.q('.mr-comment-btn');
+  const main = ui.q('.mr-main');
+  const pointer = (type: string, target: Element, clientX: number, clientY: number) => {
+    const event = new MouseEvent(type, { bubbles: true, composed: true, clientX, clientY });
+    Object.defineProperty(event, 'pointerType', { value: 'mouse' });
+    target.dispatchEvent(event);
+  };
+  // The comments column starts where the text ends (960px); what is level with a point is the text there.
+  Object.defineProperty(ShadowRoot.prototype, 'elementFromPoint', {
+    configurable: true,
+    value: (_x: number, y: number) => (y >= 500 ? third : y >= 400 ? main : first),
+  });
+  pointer('pointermove', main, 1100, 520);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 5');
+  expect(button.hidden).toBe(false);
+  // Between blocks the nearest text within 48px takes it; farther from any, it stays put.
+  pointer('pointermove', main, 1100, 450);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 5');
+  expect(button.hidden).toBe(false);
+  pointer('pointermove', main, 1100, 445);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  // Back over the text, away from the line, it goes.
+  pointer('pointermove', main, 900, 520);
+  expect(button.hidden).toBe(true);
+
+  // From the first line towards its control below, passing over the second line keeps it.
+  ui.bounds(button, 600, 1000);
+  pointer('pointerover', first, 400, 310);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  pointer('pointerover', second, 700, 460);
+  pointer('pointermove', second, 700, 460);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  pointer('pointermove', main, 1010, 620);
+  pointer('pointerover', button, 1100, 620);
+  pointer('pointermove', button, 1100, 620);
+  vi.advanceTimersByTime(400);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  // Stopping on the second line on the way gives it the control.
+  pointer('pointermove', first, 400, 310);
+  pointer('pointermove', second, 700, 460);
+  vi.advanceTimersByTime(400);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 3');
+  // Moving away from the control is not heading for it.
+  pointer('pointerover', first, 400, 310);
+  pointer('pointerover', second, 300, 460);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 3');
+  vi.useRealTimers();
 });
 
 it('comments on source files as on documents: beside the code when there is room, between the lines otherwise', async () => {
@@ -1069,19 +1154,23 @@ it('enlarges a diagram in a dialog, pauses reading shortcuts, and returns focus 
   expect(box.hidden).toBe(false);
   expect(enlarged.getAttribute('src')).toBe(image.getAttribute('src'));
   expect(enlarged.alt).toBe(image.alt);
-  expect(enlarged.style.width).toBe('1120px');
+  // The whole diagram fits the window: 900 × 300 grows until its width meets the margins.
+  expect(enlarged.style.width).toBe('1216px');
   expect(ui.shadow().activeElement).toBe(ui.q('.mr-lightbox-close'));
   ui.scroll.mockClear();
   ui.key('j');
   expect(ui.scroll).not.toHaveBeenCalled();
   ui.key('Tab');
-  expect(ui.shadow().activeElement).toBe(ui.q('.mr-lightbox-close'));
+  expect(ui.shadow().activeElement!.closest('.mr-lightbox')).toBe(box);
   ui.key('Escape');
   expect(box.hidden).toBe(true);
   expect(enlarged.getAttribute('src')).toBeNull();
   expect(ui.shadow().activeElement).toBe(zoom);
   expect(document.querySelector('#galley-reader')).toBeTruthy();
+  // Clicking the diagram itself keeps it open; the backdrop around it closes it.
   zoom.click();
   enlarged.click();
+  expect(box.hidden).toBe(false);
+  ui.click('.mr-lightbox-stage');
   expect(box.hidden).toBe(true);
 });
