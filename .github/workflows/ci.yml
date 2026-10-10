@@ -59,6 +59,8 @@ jobs:
       # run if coverage drops under the thresholds in vitest.config.ts.
       - name: Unit tests with coverage
         run: npm run test:coverage
+      - name: Pages preview lifecycle
+        run: npm run test:pages
       - name: Coverage per folder
         if: ${{ !cancelled() && matrix.node == 22 && hashFiles('coverage/coverage-summary.json') != '' }}
         run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"

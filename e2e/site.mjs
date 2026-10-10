@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import puppeteer from 'puppeteer-core';
+import { checkSitePreview } from './site-preview.mjs';
 import { startSiteServer } from '../scripts/serve-site.mjs';
 
 const chrome =
@@ -169,6 +170,7 @@ try {
     'Live demo controls must fit on a phone',
   );
   await page.screenshot({ path: 'reports/site/demo-mobile.png' });
+  await checkSitePreview(page, origin);
   assert.deepEqual(errors, [], 'Browser errors');
   assert.deepEqual(failures, [], 'Failed resources');
   assert.deepEqual(external, [], 'The website and demo should load without external requests');
