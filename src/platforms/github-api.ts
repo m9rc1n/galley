@@ -1,3 +1,4 @@
+import { detectRepository, type GitHubRepoContext } from './detect.ts';
 import { GRAPHQL_OPERATIONS } from './github-queries.ts';
 import { HttpError } from './http.ts';
 
@@ -30,10 +31,17 @@ const safeDecode = (value: string) => {
   }
 };
 
+/** Reading a repository's documents: one ref resolved to its commit, and the file tree at a commit. */
+function repositoryRead(resource: string, search: URLSearchParams): boolean {
+  const keys = [...search.keys()];
+  if (resource === 'commits') return keys.every((key) => key === 'sha' || key === 'per_page');
+  return /^git\/trees\/[^/]+$/.test(resource) && keys.every((key) => key === 'recursive');
+}
+
 /**
- * The only GitHub API calls Galley makes, for the pull request open in the tab (`page`, when known).
- * The background worker refuses everything else, so a compromised page cannot use it as a general
- * proxy for the reviewer's token.
+ * The only GitHub API calls Galley makes, for the pull request or repository open in the tab (`page`,
+ * when known). The background worker refuses everything else, so a compromised page cannot use it as
+ * a general proxy for the reviewer's token. A repository page can only read that repository's tree.
  */
 export function allowedRequest(origin: string, page: string | null, url: string, method: string, body?: string): boolean {
   const { rest, graphql } = apiEndpoints(origin);
@@ -44,12 +52,16 @@ export function allowedRequest(origin: string, page: string | null, url: string,
     return false;
   }
   let pull: RegExpExecArray | null = null;
+  let repository: { owner: string; repo: string } | null = null;
   if (page) {
-    pull = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/|$)/.exec(new URL(page).pathname);
-    if (!pull) return false;
+    const at = new URL(page);
+    pull = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/|$)/.exec(at.pathname);
+    // Without the page's document only GitHub pages are recognised; the worker checks the address alone.
+    repository = pull ? null : (detectRepository(at) as GitHubRepoContext | null);
+    if (!pull && !repository) return false;
   }
   if (`${target.origin}${target.pathname}` === graphql && !target.search) {
-    if (method !== 'POST' || !body) return false;
+    if (repository || method !== 'POST' || !body) return false;
     let payload: { query?: unknown; variables?: Record<string, unknown> };
     try {
       payload = JSON.parse(body);
@@ -73,12 +85,19 @@ export function allowedRequest(origin: string, page: string | null, url: string,
   const path = target.pathname.slice(base.pathname.replace(/\/$/, '').length);
   const m = /^\/repos\/([^/]+)\/([^/]+)\/(.+)$/.exec(path);
   if (!m) return false;
-  if (pull && (safeDecode(m[1]) !== pull[1].toLowerCase() || safeDecode(m[2]) !== pull[2].toLowerCase())) return false;
+  const owner = pull?.[1] ?? repository?.owner;
+  const repo = pull?.[2] ?? repository?.repo;
+  if (owner && (safeDecode(m[1]) !== owner.toLowerCase() || safeDecode(m[2]) !== repo!.toLowerCase())) return false;
   const resource = m[3];
   const number = /^pulls\/(\d+)/.exec(resource)?.[1];
   if (pull && number && number !== pull[3]) return false;
-  if (method === 'GET') return /^pulls\/\d+(?:\/files|\/comments)?$/.test(resource) || /^compare\/[^/]+$/.test(resource);
-  if (method === 'POST') return /^pulls\/\d+\/comments$/.test(resource) && !target.search;
+  if (method === 'GET') {
+    if (repository) return repositoryRead(resource, target.searchParams);
+    if (/^pulls\/\d+(?:\/files|\/comments)?$/.test(resource) || /^compare\/[^/]+$/.test(resource)) return true;
+    // Tests call without a page, and may use every endpoint; a pull request page never reads trees.
+    return !page && repositoryRead(resource, target.searchParams);
+  }
+  if (method === 'POST') return !repository && /^pulls\/\d+\/comments$/.test(resource) && !target.search;
   return false;
 }
 

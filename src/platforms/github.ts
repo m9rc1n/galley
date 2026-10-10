@@ -24,7 +24,7 @@ const MAX_PAGES = 10;
 const READ_RETRY_DELAYS = [250, 750];
 
 /** Briefly retry transient reads, keeping the same URL/revision. Writes never pass through here. */
-async function readWithRetry<T>(read: () => Promise<T>): Promise<T> {
+export async function readWithRetry<T>(read: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await read();
@@ -43,6 +43,19 @@ async function readWithRetry<T>(read: () => Promise<T>): Promise<T> {
   }
 }
 
+/** A file read same-origin with the reader's GitHub session, retried briefly when the connection fails. */
+export function readRawFile(url: string): Promise<string> {
+  return readWithRetry(async () => {
+    try {
+      return await getText(url, { cache: 'no-store' });
+    } catch (err) {
+      // A connection can also fail while consuming an otherwise successful response body.
+      if (err instanceof TypeError) throw new HttpError(0, url, null);
+      throw err;
+    }
+  });
+}
+
 function mapStatus(status: string): DocStatus {
   if (status === 'added' || status === 'copied') return 'added';
   if (status === 'removed') return 'removed';
@@ -50,7 +63,8 @@ function mapStatus(status: string): DocStatus {
   return 'modified';
 }
 
-function explain(err: unknown, hasToken: boolean): Error {
+/** What a failed GitHub request means for the reader; `notFound` explains a 404 in this context. */
+export function explainGitHub(err: unknown, hasToken: boolean, notFound: () => ReaderError): Error {
   if (!(err instanceof HttpError)) return err instanceof Error ? err : new Error(String(err));
   const remaining = err.headers?.get('x-ratelimit-remaining');
   if ((err.status === 403 || err.status === 429) && remaining === '0') {
@@ -66,8 +80,14 @@ function explain(err: unknown, hasToken: boolean): Error {
     return new ReaderError('Your GitHub token is not authorized for this organization.', 'Authorize the token for SSO in your GitHub token settings.', true);
   }
   if (err.status === 401) return new ReaderError('GitHub rejected the token.', 'Replace it in the Galley toolbar popup.', true);
-  if (err.status === 404) {
-    return hasToken
+  if (err.status === 404) return notFound();
+  if (err.status === 0) return new ReaderError('Could not reach GitHub.', 'Check your connection and try again.');
+  return new ReaderError(`GitHub returned an error (${err.status}).`, 'Try again in a moment.');
+}
+
+function explain(err: unknown, hasToken: boolean): Error {
+  return explainGitHub(err, hasToken, () =>
+    hasToken
       ? new ReaderError(
           'GitHub could not find this pull request with your token.',
           'Make sure the token can read this repository (Contents and Pull requests: read-only).',
@@ -77,10 +97,8 @@ function explain(err: unknown, hasToken: boolean): Error {
           'This pull request is in a private repository.',
           'Add a read-only GitHub token in the Galley toolbar popup to read private pull requests.',
           true,
-        );
-  }
-  if (err.status === 0) return new ReaderError('Could not reach GitHub.', 'Check your connection and try again.');
-  return new ReaderError(`GitHub returned an error (${err.status}).`, 'Try again in a moment.');
+        ),
+  );
 }
 
 /**
@@ -118,18 +136,7 @@ export async function loadGitHub(ctx: GitHubContext, github: GitHubApi): Promise
   // Same-origin raw URLs work for public and private repositories alike: the browser session
   // authorises them and GitHub redirects to raw.githubusercontent.com.
   const raw = (sha: string, path: string) => `${repoUrl}/raw/${sha}/${encodePath(path)}`;
-  const readRaw = (sha: string, path: string) => {
-    const url = raw(sha, path);
-    return readWithRetry(async () => {
-      try {
-        return await getText(url, { cache: 'no-store' });
-      } catch (err) {
-        // A connection can also fail while consuming an otherwise successful response body.
-        if (err instanceof TypeError) throw new HttpError(0, url, null);
-        throw err;
-      }
-    });
-  };
+  const readRaw = (sha: string, path: string) => readRawFile(raw(sha, path));
 
   let mergeBase: Promise<string> | null = null;
   const getMergeBase = () =>
