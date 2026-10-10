@@ -1,6 +1,0 @@
-export function formatLimit(perMinute: number) {
-  if (perMinute === 1) {
-    return '1 request per minute';
-  }
-  return `${perMinute} requests per minute`;
-}
