@@ -44,10 +44,13 @@ npm run test:coverage # unit tests with coverage, which must be 100% in every fi
 npm run test:e2e      # builds the demo and runs the reader's browser checks (Chrome; CHROME_PATH supported)
 npm run test:site     # browser checks for the built website
 npm run test:pages    # preview lifecycle, file isolation and publisher checks
+npm run screenshots   # screenshots of the reader in the demo at several widths, light and dark (needs Chrome)
+npm run docs:check    # ADR and RFC records, generated indexes, relative links and anchors in every Markdown file
+npm run docs:index    # regenerate the ADR and RFC indexes
 npm run lint          # Biome; npm run lint:fix applies the safe fixes
 npm run format        # Biome formatter; npm run format:check only reports
 npm run typecheck     # TypeScript, no emit
-npm run check         # typecheck, lint, formatting, tests with coverage and Pages preview checks
+npm run check         # typecheck, lint, formatting, tests with coverage, Pages preview checks and the docs check
 npm run icons         # redraw the toolbar icons
 npm run store-assets  # real reader captures, store screenshots and artwork (needs Chrome)
 npm run artwork       # preview the artwork and the README on http://localhost:4180
@@ -78,6 +81,22 @@ npm run release       # checks, store-ready zips, privacy page
 | `src/testing/` | Helpers shared by the unit tests (never shipped) |
 | `e2e/` | Browser checks of the reader and the website, run in Chrome |
 | `lint/` | Custom lint rules for [Biome](https://biomejs.dev) |
+| `docs/` | Documentation: guide, architecture, design, decisions, proposals, how-tos ([docs/README.md](docs/README.md)) |
+| `.claude/skills/` | Skills for coding agents ([AGENTS.md](AGENTS.md)); `.agents/skills` links to the same folder |
+
+## Documentation, decisions and proposals
+
+[docs/README.md](docs/README.md) is the map. The parts contributors use most:
+
+- [Architecture](docs/architecture/README.md), the [security model](docs/architecture/security-model.md) and the [storage inventory](docs/architecture/storage.md): how the pieces fit and which boundaries must hold.
+- [Design](docs/design/README.md): principles, tokens, the [UI map](docs/design/ui-map.md) of every surface, interaction patterns and the accessibility bar.
+- [How-to guides](docs/how-to/README.md): adding a setting, a palette, a shortcut or a GitHub API call, and verifying a UI change (`npm run screenshots`).
+- [Architecture decision records](docs/adr/README.md): read the ones for the area you are changing. A change that contradicts one comes with a new ADR that supersedes it.
+- [RFCs](docs/rfcs/README.md): new surfaces, new stored data, new permissions and multi-step work start as an RFC, numbered after the issue that hosts its discussion.
+
+ADRs and RFCs link to each other in their front matter, and their indexes are generated: run `npm run docs:index` after adding one. `npm run docs:check` (part of `npm run check`) fails on broken relative links or anchors, stale indexes and one-way links.
+
+Coding agents start at [AGENTS.md](AGENTS.md), which points them to the same documents and to the skills in `.claude/skills/`.
 
 ## Before you open a pull request
 

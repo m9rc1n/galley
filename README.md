@@ -75,7 +75,7 @@ No Galley account needed. Private repositories and self-hosted sites have a few 
 - **Want to look first?** The [live demo](https://m9rc1n.github.io/galley/demo/) runs the real reader on a sample merge request in your browser.
 - **Firefox** builds are attached to every [release](https://github.com/m9rc1n/galley/releases); the add-ons listing is not published yet. Building from source is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The [user guide](docs/GUIDE.md) covers every setting, token and platform detail.
+The [user guide](docs/GUIDE.md) covers every setting, token and platform detail. Everything else, from architecture and design decisions to proposals and how-to guides, starts at [docs/README.md](docs/README.md).
 
 ## Keys
 
@@ -142,7 +142,7 @@ The [privacy policy](PRIVACY.md) has the details. Security reports go through [S
 
 ## Contributing
 
-Tell us what makes your reviews harder: a long document, missing context, an accessibility barrier, a conversation that is hard to follow. [Issues](https://github.com/m9rc1n/galley/issues) and pull requests shape the project. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup, architecture and contribution guidelines, [PUBLISHING.md](PUBLISHING.md) the store release steps, and [store/ARTWORK.md](store/ARTWORK.md) how every image in this README is made.
+Tell us what makes your reviews harder: a long document, missing context, an accessibility barrier, a conversation that is hard to follow. [Issues](https://github.com/m9rc1n/galley/issues) and pull requests shape the project. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup, architecture and contribution guidelines, [PUBLISHING.md](PUBLISHING.md) the store release steps, and [store/ARTWORK.md](store/ARTWORK.md) how every image in this README is made. Larger ideas start as [RFCs](docs/rfcs/README.md); the decisions behind the code are in the [architecture decision records](docs/adr/README.md).
 
 ## License
 
