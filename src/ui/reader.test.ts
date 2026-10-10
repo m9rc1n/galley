@@ -1063,10 +1063,13 @@ it('offers a comment from the comments column level with any text, and keeps it 
   pointer('pointermove', main, 1100, 520);
   expect(button.getAttribute('aria-label')).toBe('Comment on line 5');
   expect(button.hidden).toBe(false);
-  // Level with the space between blocks, it stays put; back over the text, away from the line, it goes.
+  // Between blocks the nearest text within 48px takes it; farther from any, it stays put.
   pointer('pointermove', main, 1100, 450);
   expect(button.getAttribute('aria-label')).toBe('Comment on line 5');
   expect(button.hidden).toBe(false);
+  pointer('pointermove', main, 1100, 445);
+  expect(button.getAttribute('aria-label')).toBe('Comment on line 1');
+  // Back over the text, away from the line, it goes.
   pointer('pointermove', main, 900, 520);
   expect(button.hidden).toBe(true);
 

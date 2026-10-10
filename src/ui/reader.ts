@@ -424,6 +424,8 @@ const RAIL_SPACE = 296;
 const CARD_GAP = 12;
 /** On the way to the comment control, passing over other text keeps it; stopping on a block this long moves it. */
 const AIM_DELAY = 280;
+/** In the comments column, the text level with the pointer, or failing that the nearest text this close above or below. */
+const LANE_OFFSETS = [0, 8, -8, 16, -16, 24, -24, 32, -32, 40, -40, 48, -48];
 
 class Reader {
   private readonly host = document.createElement('div');
@@ -1950,15 +1952,19 @@ class Reader {
       return;
     }
     // On wide screens the comments column is a lane: pointing into it, level with any text, offers to
-    // comment on that text. Level with the space between two blocks, the control stays where it is.
+    // comment on that text. Between blocks the nearest text takes it; far from any, the control stays.
     const article = this.el.article.getBoundingClientRect();
     if (
       this.root.classList.contains('has-rail') &&
       e.clientX >= article.right &&
       !node.closest('.mr-thread, .mr-composer, .mr-topbar, .mr-settings, .mr-menu')
     ) {
-      const probe = this.shadow.elementFromPoint((article.left + article.right) / 2, e.clientY);
-      const hit = probe && this.blockAt(probe);
+      let hit: Hit | null = null;
+      for (const offset of LANE_OFFSETS) {
+        const probe = this.shadow.elementFromPoint((article.left + article.right) / 2, e.clientY + offset);
+        hit = probe && this.blockAt(probe);
+        if (hit) break;
+      }
       if (hit && hit.el !== this.hover?.el) this.hoverBlock(hit, e);
       return;
     }

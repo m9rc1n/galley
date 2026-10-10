@@ -58,6 +58,22 @@ export async function checkLargeReview(browser, demoUrl, screenshots) {
   assert.deepEqual(jumps, { move: { focused: true, visible: true }, line: true });
   await page.screenshot({ path: join(screenshots, 'galley-large-moved.png') });
 
+  // The comments column offers a comment at every height beside the code, between lines and notes too.
+  const column = await inspect(() => {
+    const s = document.querySelector('#galley-reader').shadowRoot;
+    const code = s.querySelector('[aria-label="src/limits/rate-limiter.ts"] .mr-code-lines');
+    s.querySelector('.mr-root').scrollTop += code.getBoundingClientRect().top - 80;
+    const rect = code.getBoundingClientRect();
+    return { x: rect.right + 100, top: Math.max(rect.top, 70), bottom: Math.min(rect.bottom, innerHeight - 20) };
+  });
+  const missed = [];
+  for (let y = column.top; y < column.bottom; y += 12) {
+    await page.mouse.move(5, y);
+    await page.mouse.move(column.x, y, { steps: 2 });
+    if (await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-comment-btn').hidden)) missed.push(Math.round(y));
+  }
+  assert.deepEqual(missed, [], 'The comments column offers a comment level with every part of the code');
+
   // Show changes opens a folded file in place.
   await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('.mr-document.is-quiet [data-act="show-quiet"]').click());
   await page.waitForFunction(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-quiet').length === 3);
