@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { APPEARANCES, DEFAULT_SETTINGS, DENSITIES, FONTS, LAYOUTS, THEMES, loadSettings, saveSettings } from './settings.ts';
+import { APPEARANCES, DEFAULT_SETTINGS, DENSITIES, FONTS, LAYOUTS, THEMES, loadSettings, saveSettings, updateSettings } from './settings.ts';
 
 afterEach(() => localStorage.clear());
 
@@ -138,4 +138,46 @@ it('uses the defaults when extension storage holds nothing yet, or cannot be rea
   });
   localStorage.setItem('galley:settings', JSON.stringify({ font: 'mono' }));
   expect((await loadSettings()).font).toBe('mono');
+});
+
+it('keeps a newer opening choice when an open reader saves a reading preference', async () => {
+  await saveSettings({ ...DEFAULT_SETTINGS, readButton: false });
+  expect(await updateSettings({ font: 'mono' })).toMatchObject({ font: 'mono', readButton: false });
+  expect(await updateSettings({ readButton: true }, true)).toMatchObject({ font: 'mono', readButton: true });
+  localStorage.setItem('galley:settings', JSON.stringify({ readButton: 'no' }));
+  expect((await loadSettings()).readButton).toBe(true);
+});
+
+it('persists successive reading choices together before another reader opens', async () => {
+  await saveSettings({ ...DEFAULT_SETTINGS, readButton: false });
+  const changes = [updateSettings({ theme: 'paper' }), updateSettings({ font: 'mono' }), updateSettings({ density: 'compact' })];
+  expect(await loadSettings()).toMatchObject({ readButton: false, theme: 'paper', font: 'mono', density: 'compact' });
+  await Promise.all(changes);
+});
+
+it('reports denied or malformed settings to controls that must preserve a saved choice', async () => {
+  localStorage.setItem('galley:settings', '{bad');
+  await expect(loadSettings(true)).rejects.toThrow();
+  localStorage.clear();
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('Denied');
+  });
+  await expect(updateSettings({ readButton: false }, true)).rejects.toThrow('Denied');
+  vi.stubGlobal('chrome', {
+    storage: {
+      local: {
+        get: async () => ({}),
+        set: async () => {
+          throw new Error('Extension write denied');
+        },
+      },
+    },
+  });
+  await expect(saveSettings(DEFAULT_SETTINGS, true)).rejects.toThrow('Extension write denied');
+  vi.stubGlobal('chrome', {
+    get storage(): never {
+      throw new Error('Extension context invalidated');
+    },
+  });
+  await expect(loadSettings(true)).rejects.toThrow('Extension context invalidated');
 });

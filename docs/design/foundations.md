@@ -177,5 +177,5 @@ Icons are inline SVG strings in `src/ui/icons.ts`: `settings`, `close`, `plus`, 
 ## Other surfaces
 
 - **Launcher** (`src/ui/launcher.ts`): its own shadow root and inline styles; a near-black pill (near-white in dark) at the bottom right, 44 pixels high, with the document count; red count on error.
-- **Popup** (`src/popup/`): its own small token set (`--bg`, `--fg`, `--muted`, `--rule`, `--soft`, `--accent`) following the system appearance, 340 pixels wide, system font.
+- **Popup** (`src/popup/`): its own small token set (`--bg`, `--fg`, `--muted`, `--rule`, `--soft`, `--accent`) following the system appearance, 380 pixels wide with 24-pixel side padding, system font. The full-width Read action has 12 pixels of space before the page label; section padding is 16 pixels. Popup spacing is scoped separately from the extension settings page.
 - **Website** (`site/`): Newsreader headlines and DM Sans text, self-hosted; see [site/README.md](../../site/README.md).

@@ -19,6 +19,10 @@ Learn how to read changes in context, discuss them with your team and adjust Gal
 
 Open a pull or merge request and press **Read** in the bottom-right corner. The number on the button counts the changed documents (Markdown files), or the supported source files when a request changes no documents. Every changed document then appears in one continuous stream, with a small divider between files. A new or deleted file says so in its byline.
 
+You can also open Galley's toolbar popup and choose **Read this review**, or press <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd>. On repository pages, the popup offers **Read docs** instead. The browser's extension shortcut settings let you change **Read this page in Galley**; the suggested shortcut may already be taken by another extension.
+
+Prefer opening from the toolbar? Choose **Settings…** in the popup and turn off **Read button on the page**. This hides both page buttons and stops the requests used to count a review's files. Files are fetched only when you ask to open the reader. Turning it off keeps an open reader and its drafts in place; opening again focuses that reader.
+
 Optionally, the request's own title and description come first (**Settings → Review → Title & description**), and changed source and configuration files follow the documents (**Settings → Review → Code files**). Both are off by default and remembered for future reviews. Code contents are fetched only when code files are on.
 
 ## The reader
@@ -33,6 +37,8 @@ Optionally, the request's own title and description come first (**Settings → R
 ## Settings
 
 Press <kbd>,</kbd> or the sliders in the top bar. The settings open as a sheet (a bottom sheet on phones) with four tabs.
+
+**Settings…** in the toolbar popup opens the extension's separate settings page, where **Opening the reader** holds **Read button on the page**. The page button starts on; reading preferences and the opening choice are saved together in this browser.
 
 | Tab | What it holds |
 | --- | --- |

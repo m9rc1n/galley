@@ -166,7 +166,7 @@ it('traps focus in settings, persists appearance, and uses Escape to close the d
   for (let i = 0; i < 8; i++) ui.click('[data-act="smaller"]');
   expect(ui.q('.mr-root').style.getPropertyValue('--body-size')).toBe('17px');
   expect(ui.q('.mr-root').classList).toContain('is-dark');
-  expect(JSON.parse(localStorage.getItem('galley:settings')!).font).toBe('sans');
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!).font).toBe('sans'));
   ui.key('Escape');
   expect(ui.q('.mr-main').inert).toBe(false);
   expect(ui.shadow().activeElement).toBe(ui.q('[data-act="settings"]'));
@@ -494,7 +494,7 @@ it('holds external document and thread images until an explicit action, with con
   await ui.open(review({ load: async () => ({ base: '', head: img }) }));
   ui.click('[data-value="load"]');
   expect(ui.q('img').getAttribute('src')).toBe('https://tracker.example/a.png');
-  expect(JSON.parse(localStorage.getItem('galley:settings')!).images).toBe('load');
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!).images).toBe('load'));
 });
 
 it('navigates change targets and headings without following the platform page links', async () => {

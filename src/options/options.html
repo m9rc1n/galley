@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Galley settings</title>
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <header><span class="brand">galley</span><span class="muted">Understand changes. Review in peace.</span></header>
+    <main>
+      <h1>Galley settings</h1>
+      <p class="muted">Choose how you open the reader. Your choices stay in this browser.</p>
+      <section aria-labelledby="opening-title">
+        <h2 id="opening-title">Opening the reader</h2>
+        <label class="setting-row" for="read-button">
+          <span>Read button on the page<small>Turn it off to keep the page clear and fetch files only when you ask.</small></span>
+          <input type="checkbox" role="switch" aria-checked="false" id="read-button" disabled />
+        </label>
+        <p class="muted">You can always open a review or project docs from Galley’s toolbar popup.</p>
+        <p class="muted">Press <b>Alt+Shift+R</b>, or change <b>Read this page in Galley</b> in your browser’s extension shortcut settings.</p>
+      </section>
+      <p id="status" role="status"></p>
+      <button type="button" id="retry" class="secondary" hidden>Try again</button>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -53,7 +53,7 @@ import {
   type ReviewRelated,
 } from './repo-views.ts';
 import repoCss from './repo.css';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, TEXT_SIZES, type Settings } from './settings.ts';
+import { DEFAULT_SETTINGS, loadSettings, updateSettings, TEXT_SIZES, type Settings } from './settings.ts';
 import { applyReadingControls, keyGroups, nextTab, PaletteCarousel, READING_SECTIONS, selectTab, settingsSheet, type Shortcuts } from './settings-sheet.ts';
 
 /**
@@ -2108,7 +2108,7 @@ class RepoReader {
     this.applySettings();
     if (patch.images === 'load' && this.rendered)
       for (const img of this.rendered.content.querySelectorAll<HTMLImageElement>('img[data-mr-src]')) loadImage(img);
-    void saveSettings(this.settings);
+    void updateSettings(patch);
   }
 
   private applySettings(): void {

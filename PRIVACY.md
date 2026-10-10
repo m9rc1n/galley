@@ -13,7 +13,7 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 ## What Galley handles, and why
 
-**Pull and merge request content.** On GitHub and GitLab pages, Galley reads the page address to recognise pull and merge requests. When you open the reader, it requests the list of changed files and the contents of the changed markdown files from that same GitHub or GitLab site (on GitHub.com, through GitHub's API at api.github.com), using your existing session there or your GitHub token (see below). If you enable code files, it also requests supported source and configuration files from the same review. It also reads the review's existing comment threads, to show them beside the paragraphs they discuss. The content is rendered on your device, kept in memory only while the page is open, and not sent anywhere else.
+**Pull and merge request content.** On GitHub and GitLab pages, Galley reads the page address to recognise pull and merge requests. With **Read button on the page** on (the default), it requests the review's metadata and list of changed files to show the button's count. Turn the button off in **Settings…** in the toolbar popup to make these requests only when you choose **Read this review** or the extension shortcut; opening the popup itself requests no review content. When you open the reader, it requests the contents of the changed markdown files from that same GitHub or GitLab site (on GitHub.com, metadata and file lists through GitHub's API at api.github.com), using your existing session there or your GitHub token (see below). If you enable code files, it also requests supported source and configuration files from the same review. It also reads the review's existing comment threads, to show them beside the paragraphs they discuss. The content is rendered on your device, kept in memory only while the page is open, and not sent anywhere else.
 
 **Repository documents.** On GitHub and GitLab repository pages (a repository, one of its folders or one of its Markdown files), Galley reads the page address to offer **Read docs**, and requests nothing more until you press it. When you do, it asks the same GitHub or GitLab site which commit the branch or tag on the page points to, lists the files of that repository at that commit (on GitHub.com, through GitHub's API at api.github.com, using your token if you saved one), and reads the Markdown documents you open, and those the project map reads, from that same site with your existing session. When you choose **Read configuration** in the architecture views, it reads the repository's configuration files (such as Compose files, CI workflows, Kubernetes manifests and Terraform) from that same site in the same way, and reads them inside a sandbox in your browser; nothing in them is run, and no cluster, cloud account or CI service is contacted. In a pull or merge request, **Project docs** reads the same repository's documents at the review's base or head commit, in the same way. The documents, configuration, the map built from them and your reading history are kept in memory only while the reader is open, and are not stored or sent anywhere else.
 
@@ -29,7 +29,7 @@ Galley is a browser extension that shows the markdown documents changed in GitHu
 
 **Reading position.** So you can pick up where you left off, Galley remembers which file you were reading in a review and how far into it, for your 50 most recent reviews. It keeps only a fingerprint of the review's address, a fingerprint of the file's path and a scroll offset, never the address or path themselves, in extension storage (local storage in the demo), on your device.
 
-**Preferences.** Your theme, typeface, text size, display mode, paragraph filter, code-files option, file order, folding and external-images choice are stored in your browser's extension storage.
+**Preferences.** Your page-button choice, theme, typeface, text size, display mode, paragraph filter, code-files option, file order, folding and external-images choice are stored in your browser's extension storage.
 
 **Sites you enable.** If you enable Galley on a self-hosted GitLab or GitHub Enterprise site, your browser records that permission for that one domain. You can disable it in the Galley popup or in your browser's extension settings.
 
@@ -45,6 +45,7 @@ Documents and comments can embed images hosted on other websites. Galley does no
 
 ## Your choices
 
+- Turn off **Read button on the page** in **Settings…** in the popup to fetch files only when you ask to open the reader.
 - Remove your GitHub token in the Galley popup.
 - Disable Galley on a self-hosted site in the popup.
 - Uninstall Galley to delete everything it stored.

@@ -101,6 +101,8 @@ sequenceDiagram
 
 Sources are cached per review, so reopening the reader on the same review is instant; saving or removing a token in the popup reloads the open review on that site without a page reload. See [ADR 0007](../adr/0007-rebuild-github-base-from-the-patch.md) for how GitHub versions are loaded within the unauthenticated rate limit.
 
+The sequence above is the default, with **Read button on the page** on. The content script first reads that setting; off, it only detects the page and makes no platform requests. The popup asks for `galley:page-state` to name the page without loading it. **Read this review**, **Read docs**, and the worker's `read-page` extension command send `galley:open-reader`; only then does the content script load the matching source. These messages accept only Galley's own extension contexts, never another content script or a page-provided URL. An already open reader is focused rather than replaced. The options page writes only the page-button choice, and reader controls merge only their changed preferences, so an open reader preserves that newer choice.
+
 ## Rendering a document
 
 ```mermaid
@@ -150,7 +152,8 @@ A failure keeps the draft; writes are never retried ([ADR 0008](../adr/0008-comm
 | `src/core/` | Pure logic, no DOM: Markdown units, block and word diffs, limits, DOM highlighting of ops, patch reversal, paths and links, reading order, folded-file rules, chapters; repository listing budgets, the document index, architecture and decision views, notes and their export | `markdown.ts`, `blockdiff.ts`, `worddiff.ts`, `limits.ts`, `highlight.ts`, `patch.ts`, `paths.ts`, `order.ts`, `quiet.ts`, `chapters.ts`, `discovery.ts`, `docindex.ts`, `architecture.ts`, `notes.ts` | Node in tests |
 | `src/ui/` | The reader: overlay, rendering pipeline, settings, storage of progress and positions, sandbox frames and their clients, code views, chapters UI; the repository reader, its views and the notes store | `reader.ts`, `reader.css`, `render.ts`, `reading.ts`, `settings.ts`, `viewed.ts`, `positions.ts`, `sandbox.ts`, `*-frame.ts`, `code*.ts`, `specs.ts`, `symbols.ts`, `moves.ts`, `source-comments.ts`, `diagrams.ts`, `chapters.ts`, `icons.ts`, `fonts.ts`, `repo-reader.ts`, `repo-views.ts`, `repo.css`, `configs.ts`, `project-store.ts`; shared by both readers: `dom.ts` (chips, settings rows, switches, selects, text fields) and `settings-sheet.ts` | jsdom in tests |
 | `src/background/` | The only holder of GitHub tokens; allowlisted API proxy; restores enabled sites | `worker.ts` | Node in tests |
-| `src/popup/` | Enable a self-hosted site; save or remove a GitHub token | `popup.ts`, `popup.html`, `popup.css` | jsdom in tests |
+| `src/popup/` | Open the current reader; enable a self-hosted site; save or remove a GitHub token; open extension settings | `popup.ts`, `popup.html`, `popup.css` | jsdom in tests |
+| `src/options/` | Choose whether the page offers a Read button | `options.ts`, `options.html`, `options.css` | jsdom in tests |
 | `src/dev/` | Live reload for `npm run dev` | `reload.ts` | Node in tests |
 | `src/testing/` | Test helpers; never shipped | `reader.ts`, `repo.ts`, `render.ts`, `http.ts`, `indexeddb.ts`, `sandbox.ts` | — |
 | `demo/` | The real reader on a sample review; `?spec`, `?comments`, `?large`, `?chapters`, `?code-only`, `?diagram-error`; `?repo` for the repository reader on a sample handbook | `main.ts`, `index.html`, `samples/` | Browser |

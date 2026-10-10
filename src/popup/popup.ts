@@ -1,5 +1,6 @@
 import { BUILT_IN_ORIGINS, siteScript, siteScriptId } from '../platforms/sites.ts';
 import { getToken, migrateTokens, setToken } from '../platforms/tokens.ts';
+import { OPEN_READER, PAGE_STATE, type PageState } from '../platforms/page-actions.ts';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -22,6 +23,39 @@ async function isEnabled(origin: string): Promise<boolean> {
     chrome.scripting.getRegisteredContentScripts({ ids: [siteScriptId(origin)] }),
   ]);
   return granted && scripts.length > 0;
+}
+
+/** The content script names the page without fetching or exposing its source. */
+async function renderReader(tabId: number | undefined): Promise<void> {
+  const section = $('#reader');
+  section.replaceChildren();
+  if (tabId === undefined) return;
+  let state: PageState;
+  try {
+    state = await chrome.tabs.sendMessage(tabId, { type: PAGE_STATE });
+  } catch {
+    return;
+  }
+  section.hidden = false;
+  const status = el('p', state.label, 'muted');
+  status.setAttribute('role', 'status');
+  if (state.kind === 'unavailable') {
+    section.append(status);
+    return;
+  }
+  const read = el('button', state.kind === 'review' ? 'Read this review' : 'Read docs');
+  read.addEventListener('click', async () => {
+    read.disabled = true;
+    try {
+      const result = (await chrome.tabs.sendMessage(tabId, { type: OPEN_READER })) as PageState;
+      if (result.kind === 'unavailable') status.textContent = result.label;
+      else window.close();
+    } catch {
+      status.textContent = 'The reader could not open. Reload the page and try again.';
+    }
+    read.disabled = false;
+  });
+  section.append(read, status);
 }
 
 /** Self-hosted GitLab and GitHub Enterprise need a one-time permission for their domain. */
@@ -55,6 +89,7 @@ async function renderSite(origin: string | null, tabId: number | undefined): Pro
     await chrome.scripting.registerContentScripts([siteScript(origin)]).catch(() => {});
     if (tabId !== undefined) await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }).catch(() => {});
     await renderSite(origin, tabId);
+    await renderReader(tabId);
   });
   section.append(el('p', `Using self-hosted GitLab or GitHub Enterprise on ${host}?`, 'muted'), on);
 }
@@ -122,6 +157,7 @@ async function renderToken(origin: string): Promise<void> {
 async function main(): Promise<void> {
   await migrateTokens().catch(() => {});
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await renderReader(tab?.id);
   let url: URL | null = null;
   try {
     url = tab?.url ? new URL(tab.url) : null;
@@ -141,3 +177,7 @@ if (__GALLEY_DEV__) {
 }
 
 void main();
+
+$('#settings').addEventListener('click', () => {
+  void chrome.runtime.openOptionsPage();
+});

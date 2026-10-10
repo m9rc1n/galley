@@ -30,6 +30,7 @@ const common = {
 const bundles = [
   { name: 'content', entryPoints: ['src/content/main.ts'], outfile: 'dist/.build/content.js', shipped: true },
   { name: 'popup', entryPoints: ['src/popup/popup.ts'], outfile: 'dist/.build/popup.js', shipped: true },
+  { name: 'options', entryPoints: ['src/options/options.ts'], outfile: 'dist/.build/options.js', shipped: true },
   { name: 'background', entryPoints: ['src/background/worker.ts'], outfile: 'dist/.build/background.js', shipped: true },
   // Mermaid and highlight.js run only inside sandboxed frames (src/ui/sandbox.ts), never in the page.
   // Mermaid, unmodified from npm, is minified: readable it is over 10 MB, and addons.mozilla.org does not
@@ -119,6 +120,9 @@ async function assemble() {
     await cp(`${root}dist/.build/background.js`, `${out}/background.js`);
     await cp(`${root}src/popup/popup.html`, `${out}/popup.html`);
     await cp(`${root}src/popup/popup.css`, `${out}/popup.css`);
+    await cp(`${root}dist/.build/options.js`, `${out}/options.js`);
+    await cp(`${root}src/options/options.html`, `${out}/options.html`);
+    await cp(`${root}src/options/options.css`, `${out}/options.css`);
     await cp(`${root}src/icons`, `${out}/icons`, { recursive: true });
     await writeFile(`${out}/THIRD_PARTY_NOTICES.txt`, notices);
     const m = structuredClone(manifest);

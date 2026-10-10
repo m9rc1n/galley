@@ -30,7 +30,7 @@ import css from './reader.css';
 import { loadReaderFonts } from './fonts.ts';
 import { loadImage, platformLink, renderDocument, renderSnippet, type RenderedBlock, type RenderedDoc } from './render.ts';
 import { filterDocument, paragraphTarget, selectionTarget } from './reading.ts';
-import { DEFAULT_SETTINGS, LAYOUTS, TEXT_SIZES, loadSettings, saveSettings, type Layout, type Settings } from './settings.ts';
+import { DEFAULT_SETTINGS, LAYOUTS, TEXT_SIZES, loadSettings, updateSettings, type Layout, type Settings } from './settings.ts';
 import { applyReadingControls, keyGroups, nextTab, PaletteCarousel, READING_SECTIONS, selectTab, settingsSheet, type Shortcuts } from './settings-sheet.ts';
 
 const STATUS_LABEL: Record<DocStatus, string> = { added: 'New', removed: 'Deleted', modified: 'Edited', renamed: 'Renamed' };
@@ -1406,7 +1406,7 @@ class Reader {
     this.settings = { ...this.settings, ...patch };
     this.applySettings();
     if (patch.images === 'load') this.loadImages(this.root);
-    void saveSettings(this.settings);
+    void updateSettings(patch);
   }
 
   /** Load held external images inside `scope`, after an explicit click or the Always setting. */

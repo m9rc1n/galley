@@ -29,6 +29,7 @@ export default defineConfig({
       folder('ui', { environment: 'jsdom' }),
       folder('content', { environment: 'jsdom' }),
       folder('popup', { environment: 'jsdom' }),
+      folder('options', { environment: 'jsdom' }),
       folder('dev', { environment: 'node' }),
       { extends: true as const, define: { __GALLEY_DEV__: true }, test: { name: 'dev-build', include: [DEV_BUILD_TESTS], environment: 'jsdom' as const } },
     ],

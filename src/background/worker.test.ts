@@ -15,6 +15,8 @@ let listener: Listener;
 beforeEach(async () => {
   const addListener = vi.fn();
   vi.stubGlobal('chrome', {
+    commands: { onCommand: { addListener: vi.fn() } },
+    tabs: { query: vi.fn(async () => []), sendMessage: vi.fn() },
     runtime: { id: EXTENSION_ID, onMessage: { addListener }, onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } },
     storage: { local: { get: async () => ({}), remove: async () => undefined } },
     permissions: { getAll: vi.fn(async () => ({ origins: ['https://gitlab.com/*', 'https://git.example.com/*'] })) },
@@ -141,6 +143,7 @@ it('starts even when saved tokens cannot be migrated yet', async () => {
     throw new Error('storage unavailable');
   });
   vi.stubGlobal('chrome', {
+    commands: { onCommand: { addListener: vi.fn() } },
     runtime: { id: EXTENSION_ID, onMessage: { addListener: vi.fn() }, onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } },
     storage: { local: { get, remove: async () => undefined } },
   });
@@ -148,4 +151,23 @@ it('starts even when saved tokens cannot be migrated yet', async () => {
   await import('./worker.ts');
   await vi.waitFor(() => expect(get).toHaveBeenCalledOnce());
   await new Promise((resolve) => setTimeout(resolve, 0));
+});
+
+it('opens the current tab only on the reader command, and leaves unavailable tabs alone', async () => {
+  const command = vi.mocked(chrome.commands.onCommand.addListener).mock.calls[0][0];
+  const query = chrome.tabs.query as unknown as ReturnType<typeof vi.fn>;
+  const sendMessage = chrome.tabs.sendMessage as unknown as ReturnType<typeof vi.fn>;
+  query.mockResolvedValue([{ id: 7 } as chrome.tabs.Tab]);
+  sendMessage.mockResolvedValue({ kind: 'review' });
+  command('unrelated');
+  expect(query).not.toHaveBeenCalled();
+  command('read-page');
+  await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledExactlyOnceWith(7, { type: 'galley:open-reader' }));
+  query.mockResolvedValueOnce([]);
+  command('read-page');
+  await vi.waitFor(() => expect(query).toHaveBeenCalledTimes(2));
+  expect(sendMessage).toHaveBeenCalledOnce();
+  sendMessage.mockRejectedValueOnce(new Error('No content script'));
+  command('read-page');
+  await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(2));
 });
