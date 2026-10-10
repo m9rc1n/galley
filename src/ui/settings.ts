@@ -43,6 +43,8 @@ export type Density = (typeof DENSITIES)[number];
 export interface Settings {
   theme: Theme;
   appearance: Appearance;
+  /** A soft glow across the top edge of a review, fading as reading begins. */
+  topGlow: boolean;
   font: (typeof FONTS)[number];
   /** Index into TEXT_SIZES. */
   size: number;
@@ -74,6 +76,7 @@ export const TEXT_SIZES = [17, 18, 20, 22, 24];
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'sage',
   appearance: 'auto',
+  topGlow: true,
   font: 'serif',
   size: 2,
   mode: 'changes',
@@ -147,6 +150,7 @@ export async function loadSettings(): Promise<Settings> {
     layout,
     density,
     overview: saved.overview === true,
+    topGlow: saved.topGlow !== false,
     signs: saved.signs !== false,
     fold: saved.fold !== false,
     order: saved.order === 'listed' ? 'listed' : 'suggested',

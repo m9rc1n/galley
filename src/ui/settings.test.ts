@@ -73,6 +73,14 @@ it('shows + and − beside changed code lines unless they were turned off', asyn
   expect((await loadSettings()).signs).toBe(true);
 });
 
+it('starts with a top glow and remembers when it is turned off', async () => {
+  expect(DEFAULT_SETTINGS.topGlow).toBe(true);
+  await saveSettings({ ...DEFAULT_SETTINGS, topGlow: false });
+  expect((await loadSettings()).topGlow).toBe(false);
+  localStorage.setItem('galley:settings', JSON.stringify({ topGlow: 'no' }));
+  expect((await loadSettings()).topGlow).toBe(true);
+});
+
 it('remembers how test files and code comments read, and starts with the plan and formatted notes', async () => {
   expect(DEFAULT_SETTINGS).toMatchObject({ tests: 'plan', codeComments: 'formatted' });
   await saveSettings({ ...DEFAULT_SETTINGS, tests: 'source', codeComments: 'source' });

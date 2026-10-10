@@ -1810,51 +1810,66 @@
 }
 .mr-quiet-show {
   flex: none;
+  height: 36px;
+  padding: 0 12px;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--rule));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg));
+  color: var(--fg);
+  font: 500 13px / 1 var(--sans);
 }
-/* A file's own controls end its byline: Viewed beside Fold, two quiet pills at text height, each with a
-   finger-sized target around it, so the byline keeps its height on phones. A folded file keeps them too. */
+.mr-quiet-show:hover {
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
+}
+/* The checkbox marks progress; the disclosure puts a file away. Clear labels stay visible on phones. */
 .mr-file-actions,
 .mr-quiet-actions {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 .mr-file-actions {
   margin-left: auto;
 }
-.mr-btn:is(.mr-fold-file, .mr-file-viewed) {
-  position: relative;
-  height: 24px;
-  padding: 0 12px;
-  border: 1px solid var(--rule);
-  color: var(--muted);
-  font: 500 12px / 1 var(--sans);
+.mr-file-meta {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  min-width: 0;
 }
-.mr-btn.mr-file-viewed {
-  padding-left: 8px;
-}
-:is(.mr-fold-file, .mr-file-viewed)::after {
+.mr-file-actions::before {
   content: "";
-  position: absolute;
-  inset: -10px -4px;
+  width: 1px;
+  height: 16px;
+  margin-right: 8px;
+  background: var(--rule);
+}
+.mr-btn:is(.mr-fold-file, .mr-file-viewed) {
+  height: 34px;
+  padding: 0 8px;
+  gap: 8px;
+  border-radius: 6px;
+  color: var(--muted);
+  font: 500 13px / 1 var(--sans);
 }
 :is(.mr-fold-file, .mr-file-viewed):hover {
-  border-color: color-mix(in srgb, var(--fg) 30%, var(--rule));
   color: var(--fg);
 }
 .mr-file-viewed-box {
   display: inline-grid;
   place-items: center;
   box-sizing: border-box;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border: 1.5px solid var(--control-rule);
   border-radius: 3px;
 }
 .mr-file-viewed[aria-checked="true"] {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--fg);
 }
 .mr-file-viewed[aria-checked="true"] .mr-file-viewed-box {
@@ -1863,8 +1878,8 @@
 }
 .mr-file-viewed[aria-checked="true"] .mr-file-viewed-box::after {
   content: "";
-  width: 6px;
-  height: 3px;
+  width: 7px;
+  height: 4px;
   border-bottom: 1.5px solid var(--bg);
   border-left: 1.5px solid var(--bg);
   transform: translateY(-1px) rotate(-45deg);
@@ -1874,26 +1889,30 @@
   opacity: 0.55;
 }
 .mr-file-action-icon {
-  display: none;
+  display: inline-flex;
+  align-items: center;
 }
-/* On phones the byline stays one line: Viewed is its box, Fold an arrow, and the facts sit closer. */
+.mr-file-action-icon svg {
+  width: 16px;
+  height: 16px;
+}
 @media (max-width: 760px) {
   .mr-byline {
     column-gap: 12px;
   }
-  .mr-file-action-label {
-    display: none;
+  .mr-file-meta {
+    column-gap: 12px;
   }
-  .mr-file-action-icon {
-    display: inline-flex;
-  }
-  .mr-file-action-icon svg {
-    width: 14px;
-    height: 14px;
+  .mr-file-actions::before {
+    content: none;
   }
   .mr-btn:is(.mr-fold-file, .mr-file-viewed) {
-    height: 22px;
-    padding: 0 8px;
+    height: 44px;
+  }
+}
+@media (max-width: 360px) {
+  .mr-file-meta {
+    flex-basis: 100%;
   }
 }
 .mr-document.is-folded > :not(.mr-quiet) {
@@ -1919,6 +1938,9 @@
   }
   .mr-quiet-show {
     min-height: 44px;
+  }
+  .mr-quiet-actions {
+    justify-content: space-between;
   }
 }
 .mr-article {
@@ -2377,25 +2399,19 @@
   -webkit-backdrop-filter: saturate(180%) blur(16px);
   backdrop-filter: saturate(180%) blur(16px);
   border-bottom: 1px solid transparent;
-  transition:
-    border-color 0.2s ease,
-    transform 0.28s ease;
-}
-
-.mr-topbar.is-scrolled {
-  border-bottom-color: var(--rule);
+  transition: transform 0.28s ease;
 }
 
 /* Light washes down from the whole top edge: teal, violet and rose blend with the palette's accent.
    The broad glow stays anchored to the screen, gently brightening and fading until reading begins. */
 .mr-topbar {
-  --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 24%), transparent);
-  --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 24%), transparent);
-  --aurora-c: color-mix(in srgb, color-mix(in srgb, #f472b6 55%, var(--accent)) var(--aurora-strength, 24%), transparent);
+  --aurora-a: color-mix(in srgb, color-mix(in srgb, #2dd4bf 60%, var(--accent)) var(--aurora-strength, 20%), transparent);
+  --aurora-b: color-mix(in srgb, color-mix(in srgb, #a78bfa 60%, var(--accent)) var(--aurora-strength, 20%), transparent);
+  --aurora-c: color-mix(in srgb, color-mix(in srgb, #f472b6 55%, var(--accent)) var(--aurora-strength, 20%), transparent);
   overflow-x: clip;
 }
 .mr-root.is-dark .mr-topbar {
-  --aurora-strength: 32%;
+  --aurora-strength: 26%;
 }
 .mr-topbar::before,
 .mr-topbar::after {
@@ -2408,13 +2424,19 @@
   transition: opacity 0.5s ease;
 }
 .mr-topbar::before {
-  height: 240px;
+  height: 280px;
   mask-image: linear-gradient(#000, rgba(0, 0, 0, 0.55) 28%, rgba(0, 0, 0, 0.12) 65%, transparent);
-  animation: mr-aurora-glow 12s ease-in-out infinite alternate;
+  animation: mr-aurora-glow 24s ease-in-out infinite alternate;
 }
 .mr-topbar::after {
   height: 64px;
+  opacity: 0.45;
   mask-image: linear-gradient(#000, transparent);
+}
+.no-top-glow .mr-topbar::before,
+.no-top-glow .mr-topbar::after {
+  content: none;
+  animation: none;
 }
 .mr-topbar.is-scrolled::before,
 .mr-topbar.is-scrolled::after {
@@ -2423,7 +2445,7 @@
 }
 @keyframes mr-aurora-glow {
   from {
-    filter: opacity(0.65);
+    filter: opacity(0.85);
   }
   to {
     filter: opacity(1);
@@ -5362,6 +5384,10 @@
   }
   .mr-spec-plan {
     padding: 12px 14px 10px;
+  }
+  .mr-spec-count {
+    gap: 5px;
+    padding: 3px 7px;
   }
   .mr-content .mr-spec-browse > summary {
     min-height: 44px;

@@ -193,6 +193,7 @@ const TEMPLATE = `
             </div>
           </div>
         </div>
+        <div class="mr-set-row"><span id="mr-top-glow-label">Top glow<small>A soft wash of color to ease into a review</small></span><button class="mr-switch" data-act="top-glow" role="switch" aria-checked="true" aria-labelledby="mr-top-glow-label"></button></div>
       </section>
       <section class="mr-settings-section" aria-label="Typography">
         <div class="mr-set-row"><label for="mr-typeface">Typeface</label><div class="mr-font-select"><select id="mr-typeface" aria-label="Typeface"><option value="galley">Galley</option><option value="serif">Newsreader</option><option value="sans">DM Sans</option><option value="georgia">Georgia</option><option value="system">System</option><option value="mono">Monospace</option></select>${icons.chevronDown}</div></div>
@@ -845,8 +846,8 @@ class Reader {
       const moved = other.rendered!.blocks.filter((block) => 'mrMoved' in block.el.dataset).length;
       const byline = other.section.querySelector('.mr-byline')!;
       byline.querySelector('.is-moved')?.remove();
-      // Before the file's own controls, which always end the byline.
-      byline.querySelector('.mr-file-actions')!.before(chip('moved', `${moved} moved`));
+      // Alongside the file's other counts.
+      byline.querySelector('.mr-file-meta')!.append(chip('moved', `${moved} moved`));
       refreshSymbols(other.rendered!);
     }
     this.schedule(true);
@@ -867,7 +868,12 @@ class Reader {
     if ('modified' in counts && counts.modified) meta.append(chip('modified', `${counts.modified.toLocaleString('en-US')} edited`));
     if (counts.added) meta.append(chip('added', `${counts.added.toLocaleString('en-US')} added`));
     if (counts.removed) meta.append(chip('removed', `${counts.removed.toLocaleString('en-US')} removed`));
-    const show = actionButton('Show changes', 'show-quiet', 'mr-outline mr-quiet-show');
+    const show = actionButton('', 'show-quiet', 'mr-quiet-show');
+    const icon = h('span', 'mr-file-action-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    // biome-ignore lint/plugin: a bundled icon constant.
+    icon.innerHTML = icons.down;
+    show.append(h('span', '', 'Show changes'), icon);
     show.setAttribute('aria-label', `Show changes in ${doc.path}`);
     const text = h('div', 'mr-quiet-text');
     text.append(name, meta);
@@ -1026,13 +1032,16 @@ class Reader {
     const actions = h('span', 'mr-file-actions');
     const fold = actionButton('', 'fold-file', 'mr-fold-file');
     const icon = h('span', 'mr-file-action-icon');
+    icon.setAttribute('aria-hidden', 'true');
     // biome-ignore lint/plugin: a bundled icon constant.
     icon.innerHTML = icons.up;
     fold.append(icon, h('span', 'mr-file-action-label', 'Fold'));
     fold.title = 'Fold this file to one line';
     fold.setAttribute('aria-label', `Fold ${doc.path}`);
     actions.append(this.viewedToggle(doc), fold);
-    line.append(actions);
+    const facts = h('span', 'mr-file-meta');
+    facts.append(...line.childNodes);
+    line.append(facts, actions);
     return line;
   }
 
@@ -1394,6 +1403,8 @@ class Reader {
     overviewToggle.closest<HTMLElement>('.mr-set-row')!.hidden = Boolean(this.source) && !this.source?.overview;
     if (this.overview) this.overview.hidden = !s.overview;
     this.shadow.querySelector('[data-act="signs"]')!.setAttribute('aria-checked', String(s.signs));
+    this.shadow.querySelector('[data-act="top-glow"]')!.setAttribute('aria-checked', String(s.topGlow));
+    r.classList.toggle('no-top-glow', !s.topGlow);
     this.shadow.querySelector('[data-act="fold"]')!.setAttribute('aria-checked', String(s.fold));
     // Turning folding off opens every folded file; turned on, it folds files as they load.
     if (!s.fold)
@@ -1983,6 +1994,9 @@ class Reader {
         return;
       case 'signs':
         this.update({ signs: !this.settings.signs });
+        return;
+      case 'top-glow':
+        this.update({ topGlow: !this.settings.topGlow });
         return;
       case 'zoom-diagram':
         this.openLightbox(action);

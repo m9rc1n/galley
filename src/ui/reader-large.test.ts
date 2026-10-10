@@ -96,6 +96,23 @@ it('shows code moved from one file to another at both ends, and maps what change
 
 const files = () => [...ui.shadow().querySelectorAll<HTMLElement>('.mr-document')].map((section) => section.getAttribute('aria-label'));
 
+it('turns the top glow off and on in Appearance settings, and keeps the choice when reopened', async () => {
+  await ui.open(review());
+  expect(ui.q('[data-act="top-glow"]').getAttribute('aria-checked')).toBe('true');
+  expect(ui.q('.mr-root').classList.contains('no-top-glow')).toBe(false);
+  ui.click('[data-act="top-glow"]');
+  expect(ui.q('[data-act="top-glow"]').getAttribute('aria-checked')).toBe('false');
+  expect(ui.q('.mr-root').classList.contains('no-top-glow')).toBe(true);
+  await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('galley:settings')!).topGlow).toBe(false));
+  ui.close();
+  await ui.open(review());
+  expect(ui.q('[data-act="top-glow"]').getAttribute('aria-checked')).toBe('false');
+  expect(ui.q('.mr-root').classList.contains('no-top-glow')).toBe(true);
+  ui.click('[data-act="top-glow"]');
+  expect(ui.q('[data-act="top-glow"]').getAttribute('aria-checked')).toBe('true');
+  expect(ui.q('.mr-root').classList.contains('no-top-glow')).toBe(false);
+});
+
 it('reads each source file with its tests, and skippable files last, or as listed', async () => {
   localStorage.setItem('galley:settings', JSON.stringify({ codeFiles: true }));
   const docs = [code('package-lock.json'), code('src/quota.test.ts'), code('src/quota.ts'), code('src/other.ts')];

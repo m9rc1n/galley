@@ -196,6 +196,21 @@ try {
     }
   }
   await page.setViewport({ width: 1440, height: 1000 });
+  // The top glow is optional, independently of the palette and brightness.
+  const glow = () =>
+    inspect(() => {
+      const s = document.querySelector('#galley-reader').shadowRoot;
+      return {
+        checked: s.querySelector('[data-act="top-glow"]').getAttribute('aria-checked'),
+        layers: ['::before', '::after'].map((pseudo) => getComputedStyle(s.querySelector('.mr-topbar'), pseudo).content),
+      };
+    });
+  assert.equal((await glow()).checked, 'true');
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="top-glow"]').click());
+  assert.deepEqual(await glow(), { checked: 'false', layers: ['none', 'none'] });
+  await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelector('[data-act="top-glow"]').click());
+  assert.equal((await glow()).checked, 'true');
+  assert.ok((await glow()).layers.every((content) => content !== 'none'));
   // The bar names the current document; settings live in a sheet, paths and progress in the documents menu.
   assert.equal(
     await inspect(() => document.querySelector('#galley-reader').shadowRoot.querySelectorAll('.mr-topbar [data-mode], .mr-topbar [data-scope]').length),
