@@ -1,0 +1,42 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createRateLimiter } from './rate-limiter';
+
+describe('Rate limits for batch uploads', () => {
+  let limiter: ReturnType<typeof createRateLimiter>;
+
+  beforeEach(() => {
+    limiter = createRateLimiter({ perMinute: 100 });
+  });
+
+  it('accepts requests within the limit', () => {
+    const response = limiter.request('client-a');
+
+    expect(response.allowed).toBe(true);
+    expect(response.remaining).toBe(99);
+  });
+
+  it('rejects requests after the limit is reached', () => {
+    for (let i = 0; i < 100; i++) {
+      limiter.request('client-a');
+    }
+
+    expect(limiter.request('client-a').allowed).toBe(false);
+  });
+
+  it('keeps a separate limit for each client', () => {
+    limiter.request('client-a');
+
+    expect(limiter.request('client-b').remaining).toBe(99);
+  });
+
+  describe('When an upload needs more capacity', () => {
+    it('returns the wait time with a rejected request', () => {
+      const response = limiter.request('client-a', { count: 101 });
+
+      expect(response.allowed).toBe(false);
+      expect(response.retryAfter).toBe(60);
+    });
+
+    it.todo('resets the limit after one minute');
+  });
+});
