@@ -6,9 +6,12 @@
     <title>Galley</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
-  <body>
+  <body class="toolbar-popup">
     <header>
-      <span class="brand">galley</span>
+      <div class="popup-heading">
+        <span class="brand">galley</span>
+        <button type="button" id="settings" class="secondary">Settings…</button>
+      </div>
       <span class="muted">Understand changes. Review in peace.</span>
     </header>
 
@@ -31,9 +34,8 @@
     </section>
 
     <footer class="muted">
-      <button type="button" id="settings" class="secondary">Settings…</button>
-      Open the reader with <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd>, or use the button on the page. In the reader: <kbd>J</kbd>/<kbd>K</kbd> changes,
-      <kbd>[</kbd>/<kbd>]</kbd> files, <kbd>C</kbd> clean view, <kbd>Esc</kbd> close.
+      <p>Open the reader with <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>R</kbd>, or use the button on the page.</p>
+      <p>In the reader: <kbd>J</kbd>/<kbd>K</kbd> changes, <kbd>[</kbd>/<kbd>]</kbd> files, <kbd>C</kbd> clean view, <kbd>Esc</kbd> close.</p>
     </footer>
     <script src="popup.js"></script>
   </body>

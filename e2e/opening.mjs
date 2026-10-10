@@ -38,12 +38,14 @@ export async function checkOpening(executablePath, screenshots) {
     page.on('request', (request) => {
       const url = new URL(request.url());
       if (url.protocol === 'chrome-extension:' || url.protocol === 'data:') return void request.continue();
-      if (request.isNavigationRequest())
+      if (request.isNavigationRequest()) {
+        const attributes = url.hostname === 'gitlab.com' ? ' data-project-full-path="team/repo" data-project-id="7"' : '';
         return void request.respond({
           status: 200,
           contentType: 'text/html',
-          body: '<!doctype html><html lang="en"><title>Example project</title><body data-project-full-path="team/repo" data-project-id="7"><h1>Example project</h1></body></html>',
+          body: `<!doctype html><html lang="en"><title>Example project</title><body${attributes}><h1>Example project</h1></body></html>`,
         });
+      }
       if (!url.pathname.startsWith('/api/')) return void request.respond({ status: 404, body: '' });
       requests.push(url.pathname);
       let body;
@@ -80,6 +82,18 @@ export async function checkOpening(executablePath, screenshots) {
     await popup.waitForSelector('#reader button');
     assert.equal(await popup.$eval('#reader button', (button) => button.textContent), 'Read this review');
     assert.equal(requests.length, 0, 'Opening the popup must not fetch review content');
+    const readerSpacing = await popup.$eval('#reader', (section) => {
+      const button = section.querySelector('button').getBoundingClientRect();
+      const label = section.querySelector('p').getBoundingClientRect();
+      return { gap: label.top - button.bottom, height: button.height };
+    });
+    assert.ok(readerSpacing.gap >= 12, `The page label needs breathing room below Read: ${JSON.stringify(readerSpacing)}`);
+    assert.ok(readerSpacing.height >= 44, 'The Read action must remain easy to click');
+    for (const appearance of ['light', 'dark']) {
+      await popup.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: appearance }]);
+      assert.equal(await popup.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'The toolbar must not scroll sideways');
+      await popup.screenshot({ path: join(screenshots, `opening-popup-review-${appearance}.png`) });
+    }
     await popup.screenshot({ path: join(screenshots, 'opening-popup-review.png') });
     await popup.$eval('#reader button', (button) => button.click());
     console.log('Opening: toolbar action chosen.');
@@ -112,6 +126,40 @@ export async function checkOpening(executablePath, screenshots) {
     );
     console.log('Opening: repository reader loaded.');
     await page.evaluate(() => document.querySelector('#galley-repo-reader').shadowRoot.querySelector('[data-act="close"]').click());
+
+    const longRepository = `acme/${'architecture'.repeat(6)}`;
+    const github = await visit(`https://github.com/${longRepository}`);
+    assert.deepEqual(await state(github), { kind: 'repository', label: longRepository });
+    await settings.evaluate(() => chrome.action.openPopup());
+    const githubPopupTarget = await browser.waitForTarget((target) => target.url() === `${extension}/popup.html`);
+    const githubPopup = await githubPopupTarget.asPage();
+    await githubPopup.waitForSelector('#reader button');
+    await githubPopup.waitForSelector('#token-form', { visible: true });
+    assert.equal(await githubPopup.$eval('#reader button', (button) => button.textContent), 'Read docs');
+    assert.equal(
+      await githubPopup.$eval('#reader p', (label) => label.getBoundingClientRect().height > Number.parseFloat(getComputedStyle(label).lineHeight)),
+      true,
+      'Long repository names must wrap rather than crowd the action or scroll sideways',
+    );
+    for (const appearance of ['light', 'dark']) {
+      await githubPopup.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: appearance }]);
+      assert.equal(await githubPopup.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      assert.equal(
+        await githubPopup.$eval('#settings', (button) => button.getBoundingClientRect().bottom <= innerHeight),
+        true,
+        'Settings must be visible without scrolling through the token form',
+      );
+      assert.equal(
+        await githubPopup.$$eval('#token-form input, #token-form button', (controls) =>
+          controls.every((control) => control.getBoundingClientRect().height >= 44),
+        ),
+        true,
+        'The token field and Save token action need comfortable targets',
+      );
+      await githubPopup.screenshot({ path: join(screenshots, `opening-popup-github-${appearance}.png`) });
+    }
+    await githubPopup.evaluate(() => window.close());
+    await visit('https://gitlab.com/team/repo');
     await settings.bringToFront();
     await settings.click('#read-button');
     await settings.waitForFunction(() => document.querySelector('#status').textContent === 'The Read button is on.');
