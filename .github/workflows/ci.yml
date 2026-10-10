@@ -37,6 +37,10 @@ jobs:
       # `biome ci` lints and fails on any file `npm run format` would change.
       - name: Lint and formatting
         run: npx biome ci . --reporter=github
+      # ADR and RFC indexes match their records, decisions and proposals link both ways, and every
+      # relative link and anchor in the repository's Markdown resolves.
+      - name: Documentation
+        run: npm run test:docs && npm run docs:check
 
   test:
     name: Tests (Node ${{ matrix.node }})
